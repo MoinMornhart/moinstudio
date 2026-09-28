@@ -1,0 +1,26 @@
+# MoinStudio – Kanal-Konfiguration (frei editierbar)
+# Stil-Vorgaben für Thumbnails und Schnitt entstehen beim Neuaufbau neu (Neustart 28.09.2026).
+
+channels:
+  - id: moinmornhart
+    name: MoinMornhart
+    language: de
+    # Ausschließlich Minecraft-Gaming-Content, bis Philip etwas anderes festlegt.
+    content_scope:
+      - minecraft
+    video_types:
+      - minecraft
+
+  - id: moinmorni
+    name: MoinMorni
+    language: de
+    # Streaming-Highlights: Reactions (alle Themen) und Gaming (alle Spiele, auch Minecraft).
+    content_scope:
+      - reaction
+      - gaming
+      - minecraft
+    video_types:
+      - reaction
+      - stream_highlight
+      - gaming
+      - minecraft

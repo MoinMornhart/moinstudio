@@ -1,0 +1,29 @@
+# Installierte Werkzeuge & Plugins
+
+Jede Installation, die MoinStudio oder die Entwicklung benötigt, wird hier dokumentiert.
+Installationen mit Admin-Rechten, Käufe, Anmeldungen oder Lizenzannahmen erfolgen nur nach Rückfrage bei Philip.
+
+| Datum | Name | Version | Quelle | Zweck | Admin? |
+|-------|------|---------|--------|-------|--------|
+| 2026-09-26 | gitleaks | 8.30.1 | winget `Gitleaks.Gitleaks` (github.com/gitleaks/gitleaks, MIT) | Secret-Scan vor jedem Push | nein (user scope) |
+| 2026-09-26 | FFmpeg (full build, gyan.dev) | 9.0.2 | winget `Gyan.FFmpeg` (gyan.dev, GPL) | Entwicklung/Tests für den Schnitt-Reiter | nein (user scope) |
+| 2026-09-26 | Blender (portable ZIP) | 5.2.2 LTS | download.blender.org (GPL), SHA256 aus `blender-5.2.2.sha256` | Thumbnail-Rendering im Hintergrund, von MoinStudio selbst geladen nach `%LOCALAPPDATA%\MoinStudio\bl\5.2.2` | nein |
+| 2026-09-26 | FFmpeg (BtbN win64 GPL) | 9.0 (n9.0.2) | github.com/BtbN/FFmpeg-Builds (GPL), SHA256 aus `checksums.sha256` | Schnitt und Analyse, von MoinStudio selbst geladen nach `%LOCALAPPDATA%\MoinStudio\ffmpeg\9.0` | nein |
+| 2026-09-26 | uv | 0.12.19 | github.com/astral-sh/uv (Apache-2.0/MIT), SHA256 aus `.sha256` | Python-Laufzeit für Whisper, Pose-Erkennung u. a., von MoinStudio selbst geladen nach `%LOCALAPPDATA%\MoinStudio\uv\0.12.19` | nein |
+| 2026-09-26 | koffi (npm) | 3.3.1 | npmjs.com/package/koffi (MIT) | Aufruf von `NtSuspendProcess`/`NtResumeProcess`, um Render-Prozesse bei Pause wirklich anzuhalten | nein |
+| 2026-09-26 | Mesa3D (mesa-dist-win, nur 2 DLLs) | 26.2.1 | github.com/pal1000/mesa-dist-win (MIT), SHA256 fest hinterlegt | Software-OpenGL für Blender auf Rechnern ohne GPU; wird nur dann vom Hardware-Test geladen | nein |
+| 2026-09-26 | Blender (portable ZIP, Rückfall) | 4.5.9 LTS | download.blender.org (GPL), SHA256 aus `blender-4.5.9.sha256` | Rückfall, wenn Blender 5.x auf der CPU abstürzt (z. B. VMs ohne RDTSCP); nur vom Hardware-Test geladen | nein |
+| 2026-09-26 | pngjs (npm) | 7.0.0 | npmjs.com/package/pngjs (MIT) | PNG lesen/schreiben für Skins (reines JavaScript) | nein |
+| 2026-09-26 | sharp (npm) | 0.35.4 | npmjs.com/package/sharp (Apache-2.0, libvips LGPL) | Bildbearbeitung im Compositing (Skalieren, Unschärfe, Masken, Farbe, JPEG) | nein |
+| 2026-09-26 | @napi-rs/canvas (npm) | 1.0.9 | npmjs.com/package/@napi-rs/canvas (MIT) | Text, Pfeile und Formen im Compositing | nein |
+| 2026-09-26 | Schriften Anton, Bebas Neue, Bangers, Lilita One | – | github.com/google/fonts (SIL OFL 1.1, Lizenztexte in `resources/fonts`) | Thumbnail-Text mit Umlauten | nein |
+| 2026-09-26 | Schrift Luckiest Guy | – | github.com/google/fonts (Apache-2.0, Lizenztext in `resources/fonts`) | Thumbnail-Text | nein |
+| 2026-09-26 | yaml (npm) | 2.9.1 | npmjs.com/package/yaml (ISC) | Kanal-Konfiguration `config/channels.yaml` lesen (Kanal-Stil für die Thumbnail-Planung) | nein |
+| 2026-09-26 | Minecraft Java Edition client.jar | 26.3 | offizieller Mojang-Server piston-data.mojang.com, SHA1 aus dem Versions-Manifest (Minecraft-EULA; Philip besitzt das Spiel, Zustimmung am 26.09.2026) | nur für Entwicklung und Tests auf diesem Rechner: echte Texturen und Modelle für Items, Blöcke und Welt; liegt unter `%LOCALAPPDATA%\MoinStudio\mc\26.3`, nie im Repo und nie im Installer. Auf Philips PC liest die App seine eigene Installation. | nein |
+| 2026-09-27 | opentype.js (npm) | 1.3.4 | npmjs.com/package/opentype.js (MIT) | Baut aus den Pixel-Schriftbildern des lokal installierten Minecraft eine TTF-Schrift für Gaming-Texte. Die Schrift entsteht auf Philips Rechner im Cache (`%LOCALAPPDATA%\MoinStudio\mc\<Version>\moin-minecraft.ttf`) und liegt nie im Repo oder Installer. | nein |
+| 2026-09-27 | Python 3.12 (über uv) mit rembg 2.0, onnxruntime (CPU), OpenCV headless, Pillow | rembg 2.0.x | pypi.org (rembg MIT, onnxruntime MIT, opencv-python-headless Apache-2.0, Pillow HPND), eingerichtet mit dem vorhandenen uv in `%LOCALAPPDATA%\MoinStudio\py\vorlage` | Spiele-Vorlagen: Person aus fremdem Thumbnail freistellen und Hintergrund füllen, läuft auf der CPU. Die App richtet es beim ersten Gebrauch selbst ein. | nein |
+| 2026-09-27 | Modell u2net_human_seg (rembg) | – | github.com/danielgatis/rembg Releases (MIT), wird von rembg nach `%USERPROFILE%\.rembg\models` geladen (176 MB) | Personen-Erkennung für Spiele-Vorlagen | nein |
+| 2026-09-27 | CC0-Modelle von Poly Haven (je nach Szene) | – | api.polyhaven.com (CC0, ohne Konto) | Echte Gegenstände als Requisiten (Pistole, Kamera, Möbel …); landen im Datenordner `props/`, Lizenz-Log in `props/lizenzen.md` | nein |
+| 2026-09-28 | Python 3.12 (über uv) mit faster-whisper 1.x (CTranslate2, PyAV) | 1.x | pypi.org (faster-whisper MIT, ctranslate2 MIT, av BSD), eingerichtet mit dem vorhandenen uv in `%LOCALAPPDATA%\MoinStudio\py\whisper` | Transkription im Schnitt-Reiter, lokal. Auf Rechnern mit NVIDIA-GPU zusätzlich `nvidia-cublas-cu12` und `nvidia-cudnn-cu12` 9.x (NVIDIA-Lizenz, frei weitergebbar als pip-Paket, ca. 1 GB). Die App richtet es beim ersten Gebrauch selbst ein. | nein |
+| 2026-09-28 | Whisper-Modelle (faster-whisper-small, -medium, -large-v3-turbo) | – | huggingface.co/Systran bzw. mobiuslabsgmbh (MIT), ohne Konto, Cache `%USERPROFILE%\.cache\huggingface` | Spracherkennung; welches Modell geladen wird, entscheidet der Hardware-Test (auf diesem Rechner `small`, ca. 480 MB) | nein |
+| 2026-09-28 | MoinStudio-Add-on für Blender (eigenes) | 1.0.0 | `blender/moinstudio_addon.py` aus diesem Repo (keine fremden Plugins) | Thumbnails selbst in Blender bearbeiten: Seitenleiste „MoinStudio“ mit Pose, Gesichtsausdruck und „Als Thumbnail rendern“. „Blender zum Bearbeiten einrichten“ kopiert es in Blenders Nutzerordner (`%APPDATA%\Blender Foundation\Blender\<Version>\scripts\addons`) und legt die Startmenü-Verknüpfung „Blender (MoinStudio)“ an; „In Blender öffnen“ lädt es auch ohne Einrichtung. | nein |
