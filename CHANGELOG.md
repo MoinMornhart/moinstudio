@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-29
+
+> Adobe-Erkennung (ungetestet)
+
 ### Hinzugefügt
 
 - Adobe-Erkennung (ungetestet): Premiere, Photoshop und After Effects werden in den Programmordnern und in der Registry gefunden, mit Version und Beta-Kennzeichnung. Die Karte „Adobe“ in den Einstellungen zeigt das Ergebnis (ROADMAP 8.2).
