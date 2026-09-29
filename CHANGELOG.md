@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-29
+
+> Freunde auch bei Reaction, Gaming und Spiele-Vorlage
+
 ### Hinzugefügt
 - Freunde auch bei Reaction, Gaming und Spiele-Vorlage (Philip: z. B. Chained Together mit einem Freund): Auswahl „Mit im Bild“ in jeder Karte. Bei Reaction und Gaming steht der Freund neben Philip zur Randseite, beide etwas kleiner, Text und Pfeil meiden beide. Bei Spiele-Vorlagen ersetzen Freunde weitere Personen der Vorlage (alle werden entfernt), sonst stehen sie neben Philip – Größe und Tiefe passend zur Vorlage.
 

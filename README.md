@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.12.0** (2026-09-29): Freunde auch bei Reaction, Gaming und Spiele-Vorlage
 - **0.11.0** (2026-09-29): Skin per Minecraft-Name, aufgeräumter Thumbnail-Reiter, bessere Spiele-Vorlagen
 - **0.10.0** (2026-09-29): Lebendiger Text auch bei Minecraft-Thumbnails
 - **0.9.1** (2026-09-29): Spiele-Vorlage: sauberer Hintergrund mit LaMa, Arm zielt automatisch aufs Ziel
 - **0.9.0** (2026-09-29): Änderungen unter jedem Thumbnail schreiben, Aufträge löschen, Spiele-Vorlage in der App, lebendiger Text, Reaction und Gaming getrennt
-- **0.8.0** (2026-09-29): Eigenes Bild: Hintergrund hochladen und Pose frei beschreiben; Serie „Minecraft durchspielen“ entfernt
 <!-- CHANGELOG:END -->
 
 ## Installation
