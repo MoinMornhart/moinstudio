@@ -44,26 +44,44 @@ const ass = (s: number): string => {
   const sek = s % 60
   return `${h}:${String(m).padStart(2, '0')}:${sek.toFixed(2).padStart(5, '0')}`
 }
-const sauber = (t: string): string => t.replace(/[{}\\]/g, '').replace(/\s+/g, ' ').trim()
+export const sauber = (t: string): string => t.replace(/[{}\\]/g, '').replace(/\s+/g, ' ').trim()
 
-/** Untertitel aus den Wortzeiten, nur für behaltene Wörter, kurze gut lesbare Einblendungen. */
-export function untertitelAss(abschnitte: Abschnitt[], liste: Schnittliste, stil: UntertitelStil): string {
+export interface UntertitelWort {
+  wort: string
+  /** Zeiten im geschnittenen Video */
+  a: number
+  b: number | null
+}
+
+/** Behaltene Wörter zu kurzen, gut lesbaren Einblendungen gruppiert (für ASS zum Einbrennen und SRT für Premiere). */
+export function untertitelGruppen(abschnitte: Abschnitt[], liste: Schnittliste, maxWoerter: number): { woerter: UntertitelWort[]; start: number; ende: number }[] {
   const { imSchnitt } = zeitAbbildung(liste.behalten)
   const woerter = abschnitte
     .flatMap((a) => a.woerter)
-    .map((w) => ({ ...w, a: imSchnitt((w.start + w.ende) / 2) === null ? null : imSchnitt(w.start) ?? imSchnitt((w.start + w.ende) / 2)!, b: imSchnitt(w.ende) }))
-    .filter((w): w is typeof w & { a: number } => w.a !== null && sauber(w.wort) !== '')
-  const gruppen: (typeof woerter)[] = []
-  let g: typeof woerter = []
+    .map((w) => ({ wort: w.wort, a: imSchnitt((w.start + w.ende) / 2) === null ? null : imSchnitt(w.start) ?? imSchnitt((w.start + w.ende) / 2)!, b: imSchnitt(w.ende) }))
+    .filter((w): w is UntertitelWort => w.a !== null && sauber(w.wort) !== '')
+  const gruppen: UntertitelWort[][] = []
+  let g: UntertitelWort[] = []
   for (const w of woerter) {
     const letzter = g[g.length - 1]
-    if (letzter && (g.length >= stil.woerter || w.a - (letzter.b ?? letzter.a) > 0.6 || /[.!?…]$/.test(letzter.wort))) {
+    if (letzter && (g.length >= maxWoerter || w.a - (letzter.b ?? letzter.a) > 0.6 || /[.!?…]$/.test(letzter.wort))) {
       gruppen.push(g)
       g = []
     }
     g.push(w)
   }
   if (g.length) gruppen.push(g)
+  return gruppen.map((gr, i) => {
+    const start = gr[0]!.a
+    const naechster = gruppen[i + 1]?.[0]?.a
+    const ende = Math.min((gr[gr.length - 1]!.b ?? gr[gr.length - 1]!.a) + 0.25, naechster ?? Infinity)
+    return { woerter: gr, start, ende: Math.max(ende, start + 0.3) }
+  })
+}
+
+/** Untertitel aus den Wortzeiten, nur für behaltene Wörter, kurze gut lesbare Einblendungen. */
+export function untertitelAss(abschnitte: Abschnitt[], liste: Schnittliste, stil: UntertitelStil): string {
+  const gruppen = untertitelGruppen(abschnitte, liste, stil.woerter)
   const groesse = Math.round(stil.hoehe * 0.058)
   const kopf = `[Script Info]
 ScriptType: v4.00+
@@ -79,14 +97,11 @@ Style: Moin,Arial,${groesse},${stil.karaoke ? '&H0000D7FF' : '&H00FFFFFF'},&H00F
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `
-  const zeilen = gruppen.map((gr, i) => {
-    const start = gr[0]!.a
-    const naechster = gruppen[i + 1]?.[0]?.a
-    const ende = Math.min((gr[gr.length - 1]!.b ?? gr[gr.length - 1]!.a) + 0.25, naechster ?? Infinity)
+  const zeilen = gruppen.map(({ woerter: gr, start, ende }) => {
     const text = stil.karaoke
       ? gr.map((w, j) => `{\\k${Math.max(1, Math.round((((gr[j + 1]?.a ?? w.b ?? w.a + 0.3) as number) - w.a) * 100))}}${sauber(w.wort)}`).join(' ')
       : gr.map((w) => sauber(w.wort)).join(' ')
-    return `Dialogue: 0,${ass(start)},${ass(Math.max(ende, start + 0.3))},Moin,,0,0,0,,${text}`
+    return `Dialogue: 0,${ass(start)},${ass(ende)},Moin,,0,0,0,,${text}`
   })
   return kopf + zeilen.join('\n') + '\n'
 }

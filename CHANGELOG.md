@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Schnitt für Premiere (ungetestet): Knopf „Für Premiere“ im Schnitt schreibt die Sequenz als FCP7-XML (alle Schnitte aus dem Original, Zooms als Keyframes, Kapitel als Marker) und die Untertitel als SRT. In Premiere über Datei → Importieren weiterschneiden (ROADMAP 8.3).
+
 ## [0.26.0] - 2026-09-29
 
 > Adobe-Erkennung (ungetestet)

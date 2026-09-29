@@ -206,6 +206,18 @@ function Export({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): R
         <button className="btn primary" disabled={!!p.auftrag} onClick={() => void window.moin.schnittExport(p.id).then(neuLaden)}>
           {p.exportiert ? 'Neu exportieren' : 'Exportieren'}
         </button>
+        <button
+          className="btn"
+          title="Sequenz mit allen Schnitten, Zooms und Kapitel-Markern plus Untertitel (SRT) zum Weiterschneiden in Premiere – noch nicht mit Premiere getestet"
+          onClick={() =>
+            void window.moin.schnittPremiere(p.id).then(
+              (r) => setMeldung(`Für Premiere gespeichert: ${r.xml}${r.srt ? ' (+ Untertitel)' : ''}. In Premiere: Datei → Importieren.`),
+              (e: unknown) => setMeldung(String(e))
+            )
+          }
+        >
+          Für Premiere (ungetestet)
+        </button>
         {info && (
           <>
             <button className="btn" onClick={() => void window.moin.schnittExportSpeichern(p.id).then((f) => f && setMeldung(`Gespeichert: ${f}`))}>

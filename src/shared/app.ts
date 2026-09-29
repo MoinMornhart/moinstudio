@@ -101,7 +101,8 @@ export const IPC = {
   planungRhythmusSetzen: 'planung:rhythmus-setzen',
   /** Ereignis: Karten im Datenordner haben sich geändert */
   planungGeaendert: 'planung:geaendert',
-  adobeStatus: 'adobe:status'
+  adobeStatus: 'adobe:status',
+  schnittPremiere: 'schnitt:premiere'
 } as const
 
 /** Planung (ROADMAP 7.2/7.3): Spalten des Boards in fester Reihenfolge */
@@ -463,6 +464,8 @@ export interface MoinApi {
   planungClaudeStand(auftrag: string): Promise<PlanungClaudeStand | null>
   /** Adobe (ROADMAP M8, ungetestet); neu = erneut suchen */
   adobeStatus(neu?: boolean): Promise<AdobeStatus>
+  /** Sequenz für Premiere (FCP7-XML) und Untertitel (SRT) schreiben, ungetestet */
+  schnittPremiere(id: string): Promise<{ xml: string; srt: string | null }>
   onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
