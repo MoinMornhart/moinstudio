@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-09-29
+
+> Plan für die Adobe-Anbindung
+
 ### Dokumentation
 
 - Plan für die Adobe-Anbindung (ROADMAP M8): Premiere-Sequenz als FCP7-XML und Photoshop-Datei mit Ebenen, ohne Plugin; alles bleibt „ungetestet“, bis es auf einem Rechner mit Adobe geprüft ist.
