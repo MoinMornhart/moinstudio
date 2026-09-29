@@ -23,6 +23,8 @@ extraResources:
       - '**/*.py'
   - from: resources/minecraft
     to: minecraft
+  - from: resources/prompts
+    to: prompts
 
 asar: true
 

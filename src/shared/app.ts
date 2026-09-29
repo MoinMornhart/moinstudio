@@ -48,7 +48,54 @@ export const IPC = {
   setupStep: 'ui:setup-step',
   openLink: 'app:open-link',
   claudeLogin: 'claude:login',
+  thumbSkins: 'thumb:skins',
+  thumbSkinAdd: 'thumb:skin-add',
+  thumbSkinUpdate: 'thumb:skin-update',
+  thumbSkinBild: 'thumb:skin-bild',
+  thumbStart: 'thumb:start',
+  thumbAuftraege: 'thumb:auftraege',
+  thumbErgebnis: 'thumb:ergebnis',
+  thumbSpeichern: 'thumb:speichern'
 } as const
+
+/** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
+export interface ThumbSkin {
+  id: string
+  name: string
+  datei: string
+  /** „ich“ = Philips Hauptskin (genau einer), sonst Freund */
+  rolle: 'ich' | 'freund'
+  slim: boolean | null
+}
+
+export interface ThumbStart {
+  beschreibung: string
+  kanal?: string
+  /** Skin-IDs der Freunde, die mit ins Bild sollen */
+  freunde?: string[]
+  anzahl?: number
+}
+
+export interface ThumbAuftrag {
+  id: string
+  titel: string
+  state: string
+  progress: number | null
+  step: string
+  error: string | null
+  createdAt: string
+}
+
+export interface ThumbErgebnis {
+  varianten: {
+    titel: string
+    warum: string
+    vorbild: { kanal: string; titel: string; url: string } | null
+    bild: string | null
+    warnungen: string[]
+    fehler: string | null
+  }[]
+}
 
 export interface SetupChecks {
   claudeDesktop: boolean
@@ -170,27 +217,20 @@ export interface MoinApi {
   openLink(key: ExternalLink): Promise<void>
   /** Öffnet ein Terminal mit Anthropics offiziellem Login (claude auth login) */
   claudeLogin(): Promise<void>
-  /** null = noch kein Datenordner */
-  /** Skin eines Freundes per Minecraft-Name holen (Mojang, Cache im Datenordner) und in die Bibliothek legen */
-  /** Einmal-Outfit: neuer Skin mit umgefärbter Kleidung (part: hose, schuhe, oberteil, aermel; color: rot, blau …) */
-  /** Startet den Job „Thumbnail planen“ (Claude-Abo); liefert die Job-ID */
-  /** Logo auswählen (Server-Logo oder Projekt-Logo): Pfad und kleine Vorschau; null = abgebrochen */
-  /** Reaction-Thumbnail: öffnet den Dateidialog fürs Original und startet den Job; null = abgebrochen */
-  /** Spiele-Vorlage: fremdes Thumbnail wählen, Philip ersetzt die Person darin */
-  /** Veränderungen (ROADMAP 6): Referenz-Thumbnail wählen, Claude analysiert es und baut es eigenständig mit Philips Skin neu */
-  /** Alle Thumbnail-Aufträge (neueste zuerst) mit Status und fertigen Varianten */
-  /** Bild eines Auftrags als Data-URL (nur Dateien im Datenordner) */
-  /** Speichern-unter-Dialog; liefert den Zielpfad oder null */
-  /** Blender-Datei einer Variante sichtbar in Blender öffnen, mit MoinStudio-Add-on (ROADMAP 6.6) */
-  /** Add-on dauerhaft installieren und Startmenü-Verknüpfung anlegen (ROADMAP 6.6) */
-  /** Schnitt (ROADMAP 7.1): Video wählen und importieren (Analyse, Waveform, Vorschau); null = abgebrochen */
-  /** Schnitt planen (ROADMAP 7.5): mit Claude oder nur Rohschnitt; target = Sekunden (0 = Rohschnitt-Länge) */
-  /** Von Hand geänderten Plan speichern (Timeline, ROADMAP 7.6) */
-  /** Datei für Musik, Intro oder Outro wählen (ROADMAP 7.7); null = abgebrochen */
-  /** Fertiges Video rendern (ROADMAP 7.7) */
-  /** Soundeffekte im Sound-Ordner (Datenordner/sounds) */
-  /** Sound- oder Meme-Ordner im Explorer öffnen (wird angelegt) */
-  /** Fertiges Video an einen Ort nach Wahl kopieren */
-  /** Kapitelmarken als Text für die YouTube-Beschreibung (ROADMAP 7.9); null = keine */
-  /** Nachbearbeitung per Freitext: Variante `index` eines Auftrags ändern („Apfel größer“); liefert die Job-ID */
+  /** Skin-Bibliothek (Datenordner/skins) */
+  thumbSkins(): Promise<ThumbSkin[]>
+  /** Dateidialog: Skins hochladen; rolle „ich“ = Philips Hauptskin */
+  thumbSkinAdd(rolle: 'ich' | 'freund'): Promise<ThumbSkin[]>
+  /** Umbenennen, zum Hauptskin machen oder entfernen */
+  thumbSkinUpdate(id: string, patch: { name?: string; rolle?: 'ich'; entfernen?: boolean }): Promise<ThumbSkin[]>
+  /** Skin-Bild als Data-URL */
+  thumbSkinBild(id: string): Promise<string | null>
+  /** Startet den Job „Thumbnail“ (Claude plant, Blender rendert); liefert die Job-ID */
+  thumbStart(start: ThumbStart): Promise<string>
+  /** Alle Thumbnail-Aufträge, neueste zuerst */
+  thumbAuftraege(): Promise<ThumbAuftrag[]>
+  /** Fertige Varianten eines Auftrags mit Bild und Vorbild */
+  thumbErgebnis(jobId: string): Promise<ThumbErgebnis | null>
+  /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
+  thumbSpeichern(jobId: string, index: number): Promise<string | null>
 }

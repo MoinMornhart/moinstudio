@@ -5,7 +5,8 @@ import { join } from 'node:path'
 const DEV: Record<string, string> = {
   config: 'config',
   blender: 'blender',
-  minecraft: 'resources/minecraft'
+  minecraft: 'resources/minecraft',
+  prompts: 'resources/prompts'
 }
 
 export function resourceDir(name: keyof typeof DEV | string): string {

@@ -10,6 +10,7 @@ import { probeRenderJob, type ProbeRenderPayload } from './blender'
 import { registerJobsIpc } from './ipc'
 import type { SettingsStore } from '../data/settings'
 import { JobQueue } from './queue'
+import { registerThumbnailIpc } from '../thumbnail/ipc'
 
 /**
  * Legt die Warteschlange an, registriert Job-Arten und IPC. Fundament (Neustart 28.09.): nur der Probe-Render als
@@ -19,12 +20,13 @@ export function setupJobs(
   root: string,
   tools: ToolManager,
   hardware: HardwareController,
-  _settings: SettingsStore,
+  settings: SettingsStore,
   getWindow: () => BrowserWindow | undefined
 ): { queue: JobQueue; enqueueProbe: () => Promise<string> } {
   const queue = new JobQueue(join(root, 'jobs'))
   queue.register('probe-render', probeRenderJob)
   registerJobsIpc(queue, getWindow)
+  registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()

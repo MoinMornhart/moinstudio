@@ -13,6 +13,30 @@ process.stdin.on('end', () => {
     out({ type: 'result', subtype: 'error_during_execution', is_error: true, result: "You've hit your session limit · resets 3:45pm", session_id: sessionId })
     process.exit(1)
   }
+  if (input.includes('Thumbnail-Planer')) {
+    // Planungsauftrag: beim ersten Mal ein Plan mit Fehler (unbekannte Pose), nach der Korrektur ein gültiger
+    const korrigiert = input.includes('# Korrektur')
+    const plan = {
+      varianten: [
+        {
+          titel: 'Kampf an der Klippe',
+          vorbild: 'gomme-helden3-schmockyyy',
+          warum: 'Zwei Kämpfer, Gegner fällt',
+          szene: {
+            welt: { art: 'klippe', kante: 2 },
+            himmel: 'regenbogen',
+            figuren: [
+              { id: 'ich', pose: korrigiert ? 'sturmangriff' : 'tanzen', position: [0, 0], blick: 70, item: { name: 'diamond_sword', hand: 'r' } },
+              { id: 'simpell', pose: 'getroffen', position: [2.8, 3], blick: -60, hoehe: 0.5 }
+            ],
+            kamera: { modus: 'kampf', thema: 'simpell' }
+          }
+        }
+      ]
+    }
+    out({ type: 'result', subtype: 'success', is_error: false, result: '', structured_output: plan, session_id: sessionId })
+    return
+  }
   const keyPresent = Object.keys(process.env).some((k) => k.toUpperCase() === 'ANTHROPIC_API_KEY')
   out({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'mcp__moinstudio__render' }] } })
   out({ type: 'assistant', message: { content: [{ type: 'text', text: 'Hallo Philip' }] } })

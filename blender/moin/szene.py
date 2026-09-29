@@ -225,6 +225,26 @@ def _gesicht_sichtbar(scene, cam, fig, raster=5):
     return treffer / (raster * raster)
 
 
+def _sicht_versperrt(scene, cam, haupt, raster=12):
+    """Anteil des Bildes, in dem Welt oder Objekte näher an der Kamera sind als 70 % des Abstands zur Hauptfigur
+    (Figuren, Items und Mobs zählen nicht: die gehören ins Bild)."""
+    tiefe = bpy.context.evaluated_depsgraph_get()
+    von = cam.matrix_world.translation
+    grenze = (haupt.kopf_mitte() - von).length * 0.7
+    frame = [cam.matrix_world @ v for v in cam.data.view_frame(scene=scene)]  # oben rechts, unten rechts, unten links, oben links
+    gesperrt = 0
+    for a in range(raster):
+        for b in range(raster):
+            u, v = (a + 0.5) / raster, (b + 0.5) / raster
+            oben = frame[3].lerp(frame[0], u)
+            unten = frame[2].lerp(frame[1], u)
+            p = oben.lerp(unten, v)
+            ok, ort, _, _, ob, _ = scene.ray_cast(tiefe, von, (p - von).normalized(), distance=grenze)
+            if ok and ob is not None and ob.name.split(".")[0] in ("klippe", "dorf", "meerwelt", "hoehle", "nether") or (ok and ob is not None and ob.name.startswith("objekt")):
+                gesperrt += 1
+    return gesperrt / (raster * raster)
+
+
 def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     """Bildbericht mit Warnungen für die Selbstprüfung: Köpfe, Items, Mobs im Bild, keine verdeckten Gesichter."""
     info = {"kamera_abweichung": round(fehler, 4), "linse": cam.data.lens, "figuren": {}, "items": {}}
@@ -232,8 +252,11 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     for f, fig in figuren:
         o, u = fig.kopf_punkte()
         ecken = [_bildpunkt(scene, cam, p) for p in fig.kopf_ecken()]
+        koerper = [_bildpunkt(scene, cam, ob.matrix_world @ Vector(c)) for ob in fig.teile.values() for c in ob.bound_box]
         info["figuren"][f["id"]] = {"kopf": _bildpunkt(scene, cam, (o + u) / 2), "kopf_oben": _bildpunkt(scene, cam, o), "kopf_unten": _bildpunkt(scene, cam, u),
-                                    "kopf_box": [min(e[0] for e in ecken), min(e[1] for e in ecken), max(e[0] for e in ecken), max(e[1] for e in ecken)]}
+                                    "kopf_box": [min(e[0] for e in ecken), min(e[1] for e in ecken), max(e[0] for e in ecken), max(e[1] for e in ecken)],
+                                    # ganze Figur (für den Textsatz: Text nie über dem Skin)
+                                    "box": [min(e[0] for e in koerper), min(e[1] for e in koerper), max(e[0] for e in koerper), max(e[1] for e in koerper)]}
     info["mobs"] = []
     for m, mob in mobs:
         pts = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
@@ -268,6 +291,12 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
         info["figuren"][f["id"]]["gesicht_sichtbar"] = round(anteil, 2)
         if anteil < (0.75 if i == 0 else 0.5):
             warnungen.append(f"Gesicht von {f['id']} verdeckt oder abgewandt ({int(anteil * 100)} % sichtbar)")
+    # Versperrt etwas die Sicht? Strahlen durch ein Bildraster: trifft ein Strahl Welt oder Objekt deutlich vor der
+    # Hauptfigur, steht es zwischen Kamera und Szene (z. B. ein Block direkt vor der Linse)
+    verdeckt = _sicht_versperrt(scene, cam, figuren[0][1])
+    info["sicht_versperrt"] = round(verdeckt, 2)
+    if verdeckt > 0.12:
+        warnungen.append(f"Etwas versperrt die Sicht ({int(verdeckt * 100)} % des Bildes liegen vor der Hauptfigur)")
     for m in info["mobs"]:
         if _im_bild(m["box"]) < 0.5:
             warnungen.append(f"Mob {m['art']} kaum sichtbar")
@@ -404,6 +433,20 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
 
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
+    geraet = r.get("geraet", "CPU")  # aus dem Hardware-Test: OPTIX, CUDA, HIP, ONEAPI, METAL oder CPU
+    if geraet != "CPU":
+        try:
+            prefs = bpy.context.preferences.addons["cycles"].preferences
+            prefs.compute_device_type = geraet
+            prefs.refresh_devices() if hasattr(prefs, "refresh_devices") else prefs.get_devices()
+            gefunden = False
+            for d in prefs.devices:
+                d.use = d.type == geraet
+                gefunden = gefunden or d.use
+            if gefunden:
+                scene.cycles.device = "GPU"
+        except (TypeError, KeyError, AttributeError):
+            pass  # GPU in dieser Sitzung nicht verfügbar: CPU (funktioniert immer)
     scene.cycles.samples = r.get("samples", 48)
     scene.cycles.use_denoising = True
     try:

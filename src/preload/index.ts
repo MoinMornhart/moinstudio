@@ -6,6 +6,7 @@ import {
   type JobAction,
   type MoinApi,
   type TabId,
+  type ThumbStart,
   type ToolProgressEvent,
   type ToolStatus,
   type UpdateStatus
@@ -74,6 +75,14 @@ const api: MoinApi = {
   },
   openLink: (key: ExternalLink) => ipcRenderer.invoke(IPC.openLink, key),
   claudeLogin: () => ipcRenderer.invoke(IPC.claudeLogin),
+  thumbSkins: () => ipcRenderer.invoke(IPC.thumbSkins),
+  thumbSkinAdd: (rolle: 'ich' | 'freund') => ipcRenderer.invoke(IPC.thumbSkinAdd, rolle),
+  thumbSkinUpdate: (id: string, patch: { name?: string; rolle?: 'ich'; entfernen?: boolean }) => ipcRenderer.invoke(IPC.thumbSkinUpdate, id, patch),
+  thumbSkinBild: (id: string) => ipcRenderer.invoke(IPC.thumbSkinBild, id),
+  thumbStart: (start: ThumbStart) => ipcRenderer.invoke(IPC.thumbStart, start),
+  thumbAuftraege: () => ipcRenderer.invoke(IPC.thumbAuftraege),
+  thumbErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbErgebnis, jobId),
+  thumbSpeichern: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbSpeichern, jobId, index)
 }
 
 contextBridge.exposeInMainWorld('moin', api)
