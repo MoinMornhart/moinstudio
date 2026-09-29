@@ -34,8 +34,9 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
 7. **Himmel für die Stimmung:** tag oder abend für Abenteuer, nacht für Grusel, blutrot für harte Kämpfe, gewitter für
    dramatische Duelle.
 8. **Text sparsam** (Stilbuch: die meisten Vorbilder haben keinen). Wenn Text wirklich hilft, dann höchstens ein Eintrag
-   mit 1–3 Wörtern in `text` der Variante, z. B. `[{"text": "TAG 100", "farbe": "gelb"}]`. Farben: weiss, gelb (Zahlen),
-   gold, gruen, tuerkis, rot. Die Lage wählt MoinStudio automatisch so, dass nie etwas Wichtiges verdeckt wird. Sonst
+   mit 1–3 Wörtern in `text` der Variante, z. B. `[{"text": "TAG 100"}]`. Die Farbe lässt du am besten weg: dann passt MoinStudio
+   sie ans Bild an (nur wenn es wirklich zählt, feste Farbe: weiss, gelb, gold, gruen, tuerkis, rot). Lage und leichte
+   Schräglage wählt MoinStudio automatisch und zufällig an einer freien Stelle, nie über etwas Wichtigem. Sonst
    `"text": []`.
 9. **Kamera:** `kampf` bei zwei Kämpfern, `nah` bei Held plus Thema, `gefahr` oder `tiefe` für Abgründe und Gruben (mit
    `hoehe` 20–40 für die Aufsicht), `held` für Heldenposen von unten.

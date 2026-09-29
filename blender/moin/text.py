@@ -1,11 +1,13 @@
 """Text auf dem Thumbnail (ROADMAP 5.2) mit der echten Minecraft-Schrift aus der Spieldatei.
 
-Stilbuch 10: 1–3 Wörter, Minecraft-Pixelschrift, weiß (Zahlen gelb/gold) mit hartem schwarzem Schatten nach unten rechts,
-oben mittig oder in einer freien Ecke – nie über Gesicht, Figur, gehaltenem Item oder Mob. Die Lage wird automatisch
+Stilbuch 10: 1–3 Wörter, Minecraft-Pixelschrift mit hartem Schatten nach unten rechts, lebendig platziert (zufällig an
+einer freien Stelle, leicht schräg, Farbe passend zum Bild – Philip, 29.09.) – nie über Gesicht, Figur, gehaltenem Item oder Mob. Die Lage wird automatisch
 aus dem Szenenbericht gewählt; passt nichts, wird der Text kleiner. Reine Pixel-Arbeit mit numpy (kein Rendern).
 """
 import json
 import os
+import random
+import zlib
 
 import bpy
 import numpy as np
@@ -97,11 +99,47 @@ def _box_fuer(platz, bw, bh, rand=0.035):
     return [x, y, x + bw, y + bh]
 
 
+def _drehe(schicht, grad):
+    """Dreht eine RGBA-Schicht (H×W×4) um ihre Mitte – nächster Nachbar, damit die Pixelschrift scharf bleibt."""
+    if abs(grad) < 0.1:
+        return schicht
+    h, w = schicht.shape[:2]
+    r = np.radians(grad)
+    c, s = np.cos(r), np.sin(r)
+    nh, nw = int(abs(h * c) + abs(w * s)) + 2, int(abs(w * c) + abs(h * s)) + 2
+    ys, xs = np.mgrid[0:nh, 0:nw].astype(np.float32)
+    ys -= nh / 2
+    xs -= nw / 2
+    # Rückwärts abbilden: Zielpunkt → Quellpunkt
+    qx = c * xs + s * ys + w / 2
+    qy = -s * xs + c * ys + h / 2
+    ok = (qx >= 0) & (qx < w) & (qy >= 0) & (qy < h)
+    aus = np.zeros((nh, nw, 4), dtype=np.float32)
+    aus[ok] = schicht[qy[ok].astype(int), qx[ok].astype(int)]
+    return aus
+
+
+def _farbe_fuer(a, box, rng):
+    """Kräftige Minecraft-Textfarbe, die sich vom Bild unter dem Text am besten abhebt (unter den besten zwei zufällig)."""
+    H, W = a.shape[:2]
+    teil = a[int(box[1] * H):max(int(box[1] * H) + 1, int(box[3] * H)), int(box[0] * W):max(int(box[0] * W) + 1, int(box[2] * W)), :3]
+    grund = np.clip(teil.reshape(-1, 3).mean(axis=0), 0, 1)  # Bildpixel eines PNG liegen in sRGB vor
+    hell = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    # kräftige Farben bekommen einen Vorzug vor Weiß (Philip: „farblich bisschen anpassen“), solange sie sich abheben
+    wertung = sorted(((float(np.linalg.norm(np.array(c) - grund)) + 0.6 * abs(hell(c) - hell(grund)) + (0.35 if n != "weiss" else 0), n) for n, c in FARBEN.items()), reverse=True)
+    return rng.choice(wertung[:2])[1]
+
+
 def setze_text(bild_pfad, bericht, texte, assets, ausgabe):
-    """`texte`: Liste von {"text": "ICH GEGEN SIMPELL", "farbe": "weiss", "platz": "auto"}. Schreibt das Bild mit Text
-    und gibt die gewählten Boxen und Warnungen zurück."""
+    """`texte`: Liste von {"text": "ICH GEGEN SIMPELL", "farbe": "auto"|"weiss"|…, "platz": "auto"}. Schreibt das Bild
+    mit Text und gibt die gewählten Boxen und Warnungen zurück.
+
+    Lebendig statt steif (Philip, 29.09.): Der Platz wird zufällig unter den freien Stellen gewählt (oben bevorzugt),
+    der Text steht leicht schräg (3–7°), und ohne feste Farbe passt sie sich dem Bild an. Der Zufall hängt am Bild,
+    ein Bild bleibt also reproduzierbar."""
     a, img = _bild_array(bild_pfad)
     H, W = a.shape[:2]
+    rng = random.Random(zlib.crc32(os.path.basename(bild_pfad).encode()) + sum(len(t.get("text", "")) for t in texte))
     schrift = Schrift(assets)
     # Wichtiges: ganze Figuren, Items, Mobs (plus etwas Luft)
     wichtig = []
@@ -116,46 +154,64 @@ def setze_text(bild_pfad, bericht, texte, assets, ausgabe):
         masken = [schrift.satz(z) for z in zeilen]
         glyph_h = max(m.shape[0] for m in masken)
         breite_px = max(m.shape[1] for m in masken)
+        grad = rng.uniform(3.0, 7.0) * rng.choice((-1, 1)) if t.get("neigung", "auto") == "auto" else float(t["neigung"])
         wahl = None
         # Größe: Zeilenhöhe 16 % der Bildhöhe, bei Platzmangel schrittweise bis 7 %
         for anteil in (0.16, 0.14, 0.12, 0.10, 0.085, 0.07):
             k = max(1, int(round(anteil * H / glyph_h)))
             bw = (breite_px + 1) * k / W
             bh = (glyph_h * len(zeilen) + 1) * k * 1.15 / H
+            # Schräglage braucht etwas mehr Höhe
+            bh_schraeg = bh + bw * W / H * abs(np.sin(np.radians(grad)))
             if bw > 0.92:
                 continue
-            # Wunschplatz zuerst; ist er belegt, weicht der Text in einen anderen freien Platz aus
-            plaetze = [t["platz"]] + [p for p in PLAETZE if p != t["platz"]] if t.get("platz", "auto") != "auto" else PLAETZE
-            for p in plaetze:
-                box = _box_fuer(p, bw, bh)
-                stoert = sum(_ueberlappung(box, w) for w in wichtig + belegt)
-                if stoert == 0:
-                    wahl = (k, box, p)
-                    break
-            if wahl:
+            if t.get("platz", "auto") != "auto":
+                plaetze = [_box_fuer(t["platz"], bw, bh_schraeg)] + [_box_fuer(p, bw, bh_schraeg) for p in PLAETZE if p != t["platz"]]
+                frei = [b for b in plaetze if sum(_ueberlappung(b, w) for w in wichtig + belegt) == 0][:1]
+            else:
+                # viele Kandidaten, oben bevorzugt; unter den freien einer zufällig
+                xs = np.linspace(0.03, 0.97 - bw, 9) if bw < 0.94 else [0.03]
+                oben = [[x, y, x + bw, y + bh_schraeg] for y in (0.03, 0.07, 0.11) for x in xs]
+                unten = [[x, 0.97 - bh_schraeg - dy, x + bw, 0.97 - dy] for dy in (0.0, 0.04) for x in xs]
+                frei = [b for b in oben if sum(_ueberlappung(b, w) for w in wichtig + belegt) == 0]
+                if not frei:
+                    frei = [b for b in unten if sum(_ueberlappung(b, w) for w in wichtig + belegt) == 0]
+            if frei:
+                wahl = (k, rng.choice(frei), "frei")
                 break
         if not wahl:  # kein freier Platz: kleinste Größe, geringste Überdeckung, Warnung
             k = max(1, int(round(0.07 * H / glyph_h)))
             bw, bh = (breite_px + 1) * k / W, (glyph_h * len(zeilen) + 1) * k * 1.15 / H
             box, p = min(((_box_fuer(p, bw, bh), p) for p in PLAETZE), key=lambda bp: sum(_ueberlappung(bp[0], w) for w in wichtig))
             wahl = (k, box, p)
+            grad = 0.0
             warnungen.append(f"Text „{t['text']}“ findet keinen freien Platz und überdeckt Wichtiges")
         k, box, p = wahl
         belegt.append(box)
-        farbe = np.array(FARBEN.get(t.get("farbe", "weiss"), FARBEN["weiss"]), dtype=np.float32)
+        farbname = t.get("farbe") if t.get("farbe") in FARBEN else _farbe_fuer(a, box, rng)
+        farbe = np.array(FARBEN[farbname], dtype=np.float32)
         schatten = farbe * 0.25  # wie im Spiel: Schatten = Textfarbe auf ein Viertel
-        y0 = int(box[1] * H)
-        for zi, m in enumerate(masken):
-            gross = np.kron(m, np.ones((k, k), dtype=bool))
-            zx = int(box[0] * W + ((box[2] - box[0]) * W - gross.shape[1]) / 2)
-            zy = y0 + int(zi * glyph_h * k * 1.15)
+        # Text als eigene Schicht setzen, drehen und dann mittig in die Box legen
+        zeilen_px = [np.kron(m, np.ones((k, k), dtype=bool)) for m in masken]
+        sw = max(z.shape[1] for z in zeilen_px) + k + 2
+        sh = int(glyph_h * k * 1.15 * len(zeilen_px)) + k + 2
+        schicht = np.zeros((sh, sw, 4), dtype=np.float32)
+        for zi, gross in enumerate(zeilen_px):
+            zx = (sw - k - gross.shape[1]) // 2
+            zy = int(zi * glyph_h * k * 1.15)
             for dx, dy, col in ((k, k, schatten), (0, 0, farbe)):
                 ys, xs = np.nonzero(gross)
-                ys, xs = ys + zy + dy, xs + zx + dx
-                ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W)
-                a[ys[ok], xs[ok], :3] = col
-                a[ys[ok], xs[ok], 3] = 1.0
-        ergebnis.append({"text": t["text"], "platz": p, "box": [round(v, 3) for v in box], "pixel": k})
+                schicht[ys + zy + dy, xs + zx + dx, :3] = col
+                schicht[ys + zy + dy, xs + zx + dx, 3] = 1.0
+        schicht = _drehe(schicht, grad)
+        mx, my = (box[0] + box[2]) / 2 * W, (box[1] + box[3]) / 2 * H
+        x0, y0 = int(mx - schicht.shape[1] / 2), int(my - schicht.shape[0] / 2)
+        ys, xs = np.nonzero(schicht[..., 3] > 0.5)
+        zy, zx = ys + y0, xs + x0
+        ok = (zy >= 0) & (zy < H) & (zx >= 0) & (zx < W)
+        a[zy[ok], zx[ok], :3] = schicht[ys[ok], xs[ok], :3]
+        a[zy[ok], zx[ok], 3] = 1.0
+        ergebnis.append({"text": t["text"], "platz": p, "box": [round(v, 3) for v in box], "pixel": k, "neigung": round(grad, 1), "farbe": farbname})
     aus = bpy.data.images.new("mit_text", W, H, alpha=True)
     aus.pixels[:] = np.flipud(a).ravel()
     aus.filepath_raw = ausgabe

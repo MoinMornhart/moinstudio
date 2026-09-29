@@ -64,7 +64,8 @@ def waehle_farbe(grund, rng, ohne=("rot",)):
         if name in ohne:
             continue
         abstand = sum((a - b) ** 2 for a, b in zip(c, grund)) ** 0.5
-        wertung.append((abstand + 0.6 * abs(_hell(c) - _hell(grund)), name))
+        # kräftige Farben bekommen einen Vorzug vor Weiß, solange sie sich vom Grund abheben
+        wertung.append((abstand + 0.6 * abs(_hell(c) - _hell(grund)) + (0.35 if name != "weiss" else 0), name))
     wertung.sort(reverse=True)
     return rng.choice(wertung[:2])[1]
 
