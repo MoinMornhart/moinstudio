@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-09-29
+
+> Schnitt: Untertitel, Zooms, geschnittene Vorschau
+
 ### Hinzugefügt
 - Untertitel und Zooms (ROADMAP 6.6): Untertitel aus dem Transkript, klar oder Wort für Wort hervorgehoben, nur für behaltene Stellen; sanfte Zooms auf Höhepunkte (Ausrufe zuerst, höchstens alle 20 s). „Vorschau rendern“ zeigt den fertigen Schnitt im Reiter.
 
