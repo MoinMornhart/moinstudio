@@ -3,6 +3,7 @@ import { rmSync } from 'node:fs'
 import { userInfo } from 'node:os'
 import { join } from 'node:path'
 import { pipeName } from '@shared/rpc'
+import { IPC } from '@shared/app'
 import { writeJsonAtomic } from '../data/jsonfile'
 import type { SettingsStore } from '../data/settings'
 import type { HardwareController } from '../hardware/controller'
@@ -30,6 +31,8 @@ export interface AppRpcDeps {
   hardware: HardwareController
   jobs: JobQueue
   enqueueProbe: () => Promise<string>
+  /** Schnitt (ROADMAP 6.9): gleiche Funktionen wie im Reiter */
+  schnitt: { starteImport: (video: string, kanal?: string) => Promise<string>; aufruf: (kanal: string, ...a: unknown[]) => Promise<unknown> }
 }
 
 /** Startet den Pipe-Server der App und registriert die Methoden für den MCP-Server. */
@@ -80,6 +83,46 @@ export async function startAppRpc(deps: AppRpcDeps): Promise<RpcServer> {
     return { ...img, path: result.image }
   })
   rpc.handle('probe.render', () => deps.enqueueProbe())
+  // Schnitt aus Claude Desktop (ROADMAP 6.9): video_edit
+  rpc.handle('schnitt', async (p) => {
+    const { aktion, projekt, pfad, kanal, wunsch, auswahl } = (p ?? {}) as { aktion?: string; projekt?: string; pfad?: string; kanal?: string; wunsch?: string; auswahl?: unknown }
+    const a = deps.schnitt.aufruf
+    switch (aktion) {
+      case 'projekte':
+        return a(IPC.schnittProjekte)
+      case 'importieren':
+        if (!pfad) throw new Error('pfad fehlt')
+        return { projekt: await deps.schnitt.starteImport(pfad, kanal ?? 'MoinMornhart'), hinweis: 'Import, Transkript und Rohschnitt laufen nacheinander von selbst.' }
+      case 'schnitt': {
+        const [liste, transkript] = (await Promise.all([a(IPC.schnittListe, projekt), a(IPC.schnittTranskript, projekt)])) as [{ dauer: number; behalten: { start: number; ende: number }[]; entfernt: { start: number; ende: number; grund: string; text?: string; aus?: boolean }[] } | null, { start: number; ende: number; text: string }[] | null]
+        if (!liste) return { hinweis: 'Noch kein Rohschnitt – Import und Transkript abwarten.' }
+        const nachher = liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
+        return {
+          vorher: Math.round(liste.dauer),
+          nachher: Math.round(nachher),
+          entfernt: liste.entfernt.filter((e) => !e.aus && e.grund !== 'pause').map((e) => ({ grund: e.grund, start: e.start, ende: e.ende, text: e.text })),
+          pausenGekuerzt: liste.entfernt.filter((e) => !e.aus && e.grund === 'pause').length,
+          transkript: (transkript ?? []).map((s) => ({ start: s.start, ende: s.ende, text: s.text }))
+        }
+      }
+      case 'aendern':
+        return { auftrag: await a(IPC.schnittWunsch, projekt, wunsch) }
+      case 'vorschau':
+        return { auftrag: await a(IPC.schnittVorschau, projekt) }
+      case 'export':
+        return { auftrag: await a(IPC.schnittExport, projekt) }
+      case 'export_info':
+        return a(IPC.schnittExportInfo, projekt)
+      case 'highlights':
+        return { auftrag: await a(IPC.schnittHighlightsStart, projekt) }
+      case 'highlights_liste':
+        return a(IPC.schnittHighlights, projekt)
+      case 'clips':
+        return { auftrag: await a(IPC.schnittClips, projekt, auswahl) }
+      default:
+        throw new Error(`Unbekannte Aktion: ${String(aktion)}`)
+    }
+  })
 
   await rpc.listen()
   await writeJsonAtomic(pipeInfoFile(), rpc.info(app.getVersion()))

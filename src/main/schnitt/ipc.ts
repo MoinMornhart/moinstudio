@@ -43,8 +43,15 @@ export function registerSchnittIpc(
   hardware: HardwareController,
   getWindow: () => BrowserWindow | undefined,
   starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
-): { starteImport: (video: string, kanal?: string) => Promise<string>; starteWunsch: (id: string, wunsch: string) => Promise<string> } {
+): { starteImport: (video: string, kanal?: string) => Promise<string>; starteWunsch: (id: string, wunsch: string) => Promise<string>; aufruf: (kanal: string, ...a: unknown[]) => Promise<unknown> } {
   queue.register('schnitt-import', importJob)
+  // Jede Schnitt-Funktion ist über IPC (Oberfläche) und über aufruf() (Claude Desktop, ROADMAP 6.9) erreichbar
+  const methoden = new Map<string, (...a: unknown[]) => Promise<unknown>>()
+  const biete = <A extends unknown[]>(kanal: string, fn: (...a: A) => unknown): void => {
+    const f = async (...a: unknown[]): Promise<unknown> => fn(...(a as A))
+    methoden.set(kanal, f)
+    ipcMain.handle(kanal, (_e, ...a: unknown[]) => f(...a))
+  }
   queue.register('schnitt-transkript', transkriptJob)
   queue.register('schnitt-rohschnitt', rohschnittJob)
   queue.register('schnitt-wunsch', wunschJob)
@@ -127,30 +134,30 @@ export function registerSchnittIpc(
     return auftrag
   }
 
-  ipcMain.handle(IPC.schnittProjekte, async (): Promise<SchnittProjekt[]> => {
+  biete(IPC.schnittProjekte, async (): Promise<SchnittProjekt[]> => {
     const daten = await datenOrdner(settings)
     return (await ladeProjekte(daten)).map((p) => alsAnsicht(daten, p))
   })
-  ipcMain.handle(IPC.schnittImport, async (_e, kanal: unknown): Promise<string | null> => {
+  biete(IPC.schnittImport, async (kanal: unknown): Promise<string | null> => {
     const win = getWindow()
     const opts = { title: 'Rohvideo wählen', filters: [{ name: 'Video', extensions: VIDEO_ENDUNGEN }], properties: ['openFile' as const] }
     const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
     if (wahl.canceled || !wahl.filePaths[0]) return null
     return starteImport(wahl.filePaths[0], typeof kanal === 'string' ? kanal : undefined)
   })
-  ipcMain.handle(IPC.schnittWellenform, async (_e, id: unknown): Promise<{ aufloesung: number; werte: number[] } | null> => {
+  biete(IPC.schnittWellenform, async (id: unknown): Promise<{ aufloesung: number; werte: number[] } | null> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     if (!p?.wellenform) return null
     return JSON.parse(await readFile(join(projektOrdner(daten, p.id), 'wellenform.json'), 'utf8')) as { aufloesung: number; werte: number[] }
   })
-  ipcMain.handle(IPC.schnittTranskript, async (_e, id: unknown): Promise<Abschnitt[] | null> => {
+  biete(IPC.schnittTranskript, async (id: unknown): Promise<Abschnitt[] | null> => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'transkript.jsonl'), 'utf8').catch(() => null)
     return text === null ? null : liesAbschnitte(text)
   })
-  ipcMain.handle(IPC.schnittTranskriptStart, async (_e, id: unknown) => starteTranskript(String(id)))
-  ipcMain.handle(IPC.schnittRohschnittStart, async (_e, id: unknown) => starteRohschnitt(String(id)))
+  biete(IPC.schnittTranskriptStart, async (id: unknown) => starteTranskript(String(id)))
+  biete(IPC.schnittRohschnittStart, async (id: unknown) => starteRohschnitt(String(id)))
   // Schnitt ändern (ROADMAP 6.5): direkt in der Schnittliste, Wunsch in Worten als Auftrag
   const aendereListe = async (id: string, f: (l: Schnittliste) => Schnittliste): Promise<Schnittliste> => {
     const daten = await datenOrdner(settings)
@@ -159,8 +166,8 @@ export function registerSchnittIpc(
     await writeFile(datei, JSON.stringify(neu, null, 1))
     return neu
   }
-  ipcMain.handle(IPC.schnittUmschalten, (_e, id: unknown, index: unknown) => aendereListe(String(id), (l) => umschalten(l, Number(index))))
-  ipcMain.handle(IPC.schnittBereich, (_e, id: unknown, start: unknown, ende: unknown, raus: unknown, text: unknown) =>
+  biete(IPC.schnittUmschalten, (id: unknown, index: unknown) => aendereListe(String(id), (l) => umschalten(l, Number(index))))
+  biete(IPC.schnittBereich, (id: unknown, start: unknown, ende: unknown, raus: unknown, text: unknown) =>
     aendereListe(String(id), (l) => bereichSetzen(l, Number(start), Number(ende), raus === true, typeof text === 'string' ? text : undefined))
   )
   const starteWunsch = async (id: unknown, wunsch: unknown): Promise<string> => {
@@ -174,8 +181,8 @@ export function registerSchnittIpc(
     await aendereProjekt(daten, String(id), (p) => ({ auftraege: [...(p.auftraege ?? []), auftrag] }))
     return auftrag
   }
-  ipcMain.handle(IPC.schnittWunsch, (_e, id: unknown, wunsch: unknown) => starteWunsch(id, wunsch))
-  ipcMain.handle(IPC.schnittEinstellungen, async (_e, id: unknown, patch: unknown) => {
+  biete(IPC.schnittWunsch, (id: unknown, wunsch: unknown) => starteWunsch(id, wunsch))
+  biete(IPC.schnittEinstellungen, async (id: unknown, patch: unknown) => {
     const daten = await datenOrdner(settings)
     const q = (patch ?? {}) as { untertitel?: string; zooms?: boolean }
     await aendereProjekt(daten, String(id), (p) => ({
@@ -186,7 +193,7 @@ export function registerSchnittIpc(
       }
     }))
   })
-  ipcMain.handle(IPC.schnittVorschau, async (_e, id: unknown): Promise<string> => {
+  biete(IPC.schnittVorschau, async (id: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const ffmpeg = await tools.exePath(FFMPEG)
     if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
@@ -198,7 +205,7 @@ export function registerSchnittIpc(
     return auftrag
   })
   // Export für YouTube (ROADMAP 6.7)
-  ipcMain.handle(IPC.schnittExport, async (_e, id: unknown): Promise<string> => {
+  biete(IPC.schnittExport, async (id: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const ffmpeg = await tools.exePath(FFMPEG)
     if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
@@ -210,7 +217,7 @@ export function registerSchnittIpc(
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
   })
-  ipcMain.handle(IPC.schnittExportInfo, async (_e, id: unknown) => {
+  biete(IPC.schnittExportInfo, async (id: unknown) => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'export.json'), 'utf8').catch(() => null)
     if (!text) return null
@@ -218,7 +225,7 @@ export function registerSchnittIpc(
     const p = await ladeProjekt(daten, String(id))
     return { ...e, url: `${medienUrl(e.datei)}?v=${p?.export ?? 0}`, kapitelText: kapitelText(e.kapitel) }
   })
-  ipcMain.handle(IPC.schnittExportSpeichern, async (_e, id: unknown): Promise<string | null> => {
+  biete(IPC.schnittExportSpeichern, async (id: unknown): Promise<string | null> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     if (!p?.export) return null
@@ -230,7 +237,7 @@ export function registerSchnittIpc(
     return wahl.filePath
   })
   // Übergabe ans Thumbnail: Claude sieht sich das fertige Video an und schlägt Thumbnails vor
-  ipcMain.handle(IPC.schnittThumbnail, async (_e, id: unknown): Promise<string> => {
+  biete(IPC.schnittThumbnail, async (id: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     if (!p?.quelle) throw new Error('Projekt nicht gefunden.')
@@ -243,19 +250,19 @@ export function registerSchnittIpc(
     await aendereProjekt(daten, id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
   }
-  ipcMain.handle(IPC.schnittHighlightsStart, async (_e, id: unknown): Promise<string> => {
+  biete(IPC.schnittHighlightsStart, async (id: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     if (!p) throw new Error('Projekt nicht gefunden.')
     const payload: HighlightPayload = { daten, projekt: p.id, claudeCli: await findClaudeCli() }
     return neuerAuftrag(daten, p.id, 'schnitt-highlights', `Schnitt: ${p.name} Höhepunkte`, payload)
   })
-  ipcMain.handle(IPC.schnittHighlights, async (_e, id: unknown): Promise<Highlight[] | null> => {
+  biete(IPC.schnittHighlights, async (id: unknown): Promise<Highlight[] | null> => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'highlights.json'), 'utf8').catch(() => null)
     return text === null ? null : (JSON.parse(text) as Highlight[])
   })
-  ipcMain.handle(IPC.schnittClips, async (_e, id: unknown, auswahl: unknown): Promise<string> => {
+  biete(IPC.schnittClips, async (id: unknown, auswahl: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     const ffmpeg = await tools.exePath(FFMPEG)
@@ -267,27 +274,32 @@ export function registerSchnittIpc(
     const payload: ClipsPayload = { daten, projekt: p.id, ffmpeg, encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', uv, pyDir: join(localRoot(), 'py', 'vorlage'), facecamSkript: join(resourceDir('blender'), 'facecam.py'), auswahl: liste }
     return neuerAuftrag(daten, p.id, 'schnitt-clips', `Schnitt: ${p.name} ${liste.length} Clip(s)`, payload)
   })
-  ipcMain.handle(IPC.schnittClipDateien, async (_e, id: unknown): Promise<{ name: string; url: string }[]> => {
+  biete(IPC.schnittClipDateien, async (id: unknown): Promise<{ name: string; url: string }[]> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     const ordner = join(projektOrdner(daten, String(id)), 'clips')
     const namen = (await readdir(ordner).catch(() => [] as string[])).filter((n) => n.endsWith('.mp4')).sort()
     return namen.map((n) => ({ name: n, url: `${medienUrl(join(ordner, n))}?v=${p?.clips ?? 0}` }))
   })
-  ipcMain.handle(IPC.schnittClipOrdner, async (_e, id: unknown): Promise<void> => {
+  biete(IPC.schnittClipOrdner, async (id: unknown): Promise<void> => {
     const daten = await datenOrdner(settings)
     await shell.openPath(join(projektOrdner(daten, String(id)), 'clips'))
   })
-  ipcMain.handle(IPC.schnittListe, async (_e, id: unknown): Promise<Schnittliste | null> => {
+  biete(IPC.schnittListe, async (id: unknown): Promise<Schnittliste | null> => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'schnitt.json'), 'utf8').catch(() => null)
     return text === null ? null : (JSON.parse(text) as Schnittliste)
   })
-  ipcMain.handle(IPC.schnittLoeschen, async (_e, id: unknown): Promise<void> => {
+  biete(IPC.schnittLoeschen, async (id: unknown): Promise<void> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
     for (const a of p?.auftraege ?? []) await queue.remove(a)
     await loescheProjekt(daten, String(id))
   })
-  return { starteImport, starteWunsch }
+  const aufruf = async (kanal: string, ...a: unknown[]): Promise<unknown> => {
+    const f = methoden.get(kanal)
+    if (!f) throw new Error(`Unbekannte Schnitt-Funktion: ${kanal}`)
+    return f(...a)
+  }
+  return { starteImport, starteWunsch, aufruf }
 }

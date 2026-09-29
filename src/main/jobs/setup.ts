@@ -23,12 +23,13 @@ export function setupJobs(
   hardware: HardwareController,
   settings: SettingsStore,
   getWindow: () => BrowserWindow | undefined
-): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion']; starteSpielvorlage: ReturnType<typeof registerThumbnailIpc>['starteSpielvorlage']; starteAenderung: ReturnType<typeof registerThumbnailIpc>['starteAenderung']; starteImport: ReturnType<typeof registerSchnittIpc>['starteImport']; starteWunsch: ReturnType<typeof registerSchnittIpc>['starteWunsch'] } {
+): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion']; starteSpielvorlage: ReturnType<typeof registerThumbnailIpc>['starteSpielvorlage']; starteAenderung: ReturnType<typeof registerThumbnailIpc>['starteAenderung']; starteImport: ReturnType<typeof registerSchnittIpc>['starteImport']; starteWunsch: ReturnType<typeof registerSchnittIpc>['starteWunsch']; schnitt: ReturnType<typeof registerSchnittIpc> } {
   const queue = new JobQueue(join(root, 'jobs'))
   queue.register('probe-render', probeRenderJob)
   registerJobsIpc(queue, getWindow)
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
-  const { starteImport, starteWunsch } = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
+  const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
+  const { starteImport, starteWunsch } = schnitt
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()
@@ -57,5 +58,5 @@ export function setupJobs(
       return null
     }
   })
-  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch }
+  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt }
 }

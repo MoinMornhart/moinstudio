@@ -176,6 +176,30 @@ export function createServer(version: string): McpServer {
     }
   )
 
+  server.registerTool(
+    'video_edit',
+    {
+      title: 'Videos schneiden',
+      description:
+        'Schnitt in MoinStudio (Rohvideo rein, fertiges Video raus). Aktionen: projekte (alle Schnitt-Projekte), importieren (pfad, kanal – startet Import, Transkript und Rohschnitt von selbst), schnitt (projekt – Rohschnitt mit Transkript und entfernten Stellen), aendern (projekt, wunsch – Änderung in Worten, z. B. „lass die Stelle mit dem Creeper drin“), vorschau, export (YouTube-Export mit Titel, Beschreibung, Kapiteln), export_info, highlights (Höhepunkte aus Streams suchen), highlights_liste, clips (projekt, auswahl: [{index, art: clip|short}]). Aufträge laufen im Hintergrund – mit job_get den Fortschritt abfragen.',
+      inputSchema: z.object({
+        aktion: z.enum(['projekte', 'importieren', 'schnitt', 'aendern', 'vorschau', 'export', 'export_info', 'highlights', 'highlights_liste', 'clips']),
+        projekt: z.string().optional().describe('Projekt-ID (aus projekte)'),
+        pfad: z.string().optional().describe('Rohvideo (nur importieren)'),
+        kanal: z.enum(['MoinMornhart', 'MoinMorni']).optional(),
+        wunsch: z.string().optional().describe('Änderungswunsch in Worten (nur aendern)'),
+        auswahl: z.array(z.object({ index: z.number().int(), art: z.enum(['clip', 'short']) })).optional().describe('nur clips')
+      })
+    },
+    async (args) => {
+      try {
+        return text(await call('schnitt', args))
+      } catch (err) {
+        return fail(err)
+      }
+    }
+  )
+
   return server
 }
 

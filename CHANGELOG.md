@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Schnitt aus Claude Desktop steuern: neues MCP-Werkzeug `video_edit` mit denselben Funktionen wie der Schnitt-Reiter (Projekte, Import, Rohschnitt mit Transkript, Änderungswunsch, Vorschau, YouTube-Export, Highlights, Clips und Shorts) (ROADMAP 6.9).
+
 ## [0.20.0] - 2026-09-29
 
 > Schnitt: Stream-Highlights und Shorts

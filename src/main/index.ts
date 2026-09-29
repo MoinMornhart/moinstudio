@@ -30,7 +30,7 @@ registerClaudeIpc()
 registerMcpIpc(localRoot())
 // Im Screenshot-Modus den Assistenten nur zeigen, wenn er ausdrücklich aufgenommen werden soll
 registerSetupIpc(settings, !!screenshotDir && !process.argv.includes(SETUP_FLAG))
-const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
+const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
 
 // Fester Name für den Autostart-Eintrag (HKCU\...\Run). Ohne ihn leitet Electron den Namen
 // aus der AppUserModelId ab, und Setzen und Abfragen könnten verschiedene Einträge meinen.
@@ -296,7 +296,7 @@ if (toolsArg === 'install') {
     if (!screenshotDir) {
       void jobs.start()
       // Verbindung für den MCP-Server (Claude Desktop / claude -p)
-      startAppRpc({ settings, hardware, jobs, enqueueProbe }).catch((err: unknown) => console.error('Pipe-Server:', err))
+      startAppRpc({ settings, hardware, jobs, enqueueProbe, schnitt }).catch((err: unknown) => console.error('Pipe-Server:', err))
     }
     if (!screenshotDir) setupUpdater(mainWindow)
     // Erster Start bzw. geändertes Gerät: Hardware-Test im Hintergrund (nur in der installierten App,
