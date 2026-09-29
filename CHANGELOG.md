@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Spiele-Vorlage als eigene Karte in der App: Spiele-Thumbnail wählen → Claude erkennt Pose, Gegenstand, Ansicht (auch von hinten) und Titel, rembg entfernt die Person, ein passendes CC0-Modell kommt automatisch von Poly Haven, Blender rendert Philip an der Stelle, der Titel kommt wieder obendrauf. Python-Umgebung wird beim ersten Gebrauch selbst eingerichtet.
+- Lebendiger Text bei Reactions (Philip: „random rumfliegen, wo Platz ist, farblich anpassen“): zufälliger freier Platz, leicht schräg, Farbe passend zum Bild; wird kleiner statt abgeschnitten; meidet Figur, Hände, wichtiges Detail und Logos/Titel im Original.
+
 ## [0.8.0] - 2026-09-29
 
 > Eigenes Bild: Hintergrund hochladen und Pose frei beschreiben; Serie „Minecraft durchspielen“ entfernt

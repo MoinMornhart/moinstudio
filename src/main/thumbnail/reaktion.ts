@@ -127,6 +127,7 @@ const SCHEMA = {
     wort: { type: 'string' },
     gefuehl: { type: 'string', enum: Object.keys(GEFUEHLE) },
     gaming: { type: 'boolean' },
+    sperren: { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4 } },
     pose: { type: 'string' },
     winkel: { type: 'object' },
     mimik: { type: 'string' }
@@ -154,6 +155,7 @@ Bestimme:
   den Punkt bringt (z. B. KRASS, FAKE?, WAS?!, 1000€) – nicht einfach den Titel des Originals wiederholen
 - gefuehl: ${vorgabe ? `„${vorgabe}“ (Philips Vorgabe)` : 'die passende Reaktion'} aus: ${Object.keys(GEFUEHLE).join(', ')}
 - gaming: true, wenn es um ein Videospiel geht
+- sperren: Kästen [x0, y0, x1, y1] um alles im Original, das kein Text überdecken darf: Titel, Logos, Schriftzüge, Gesichter
 ${p.wunsch ? wunschAbschnitt(p.wunsch, await posenNamen(p.blenderDir), await posenBeispiele(p.blenderDir, ['zeigen', 'panik', 'jubeln', 'nachdenken', 'siegesfaust'])) : ''}${p.ohneExtras ? 'Es kommt kein Wort und kein Pfeil aufs Bild (wort leer lassen); wichtig ist nur, was Philips Figur nicht verdecken darf.\n' : ''}${p.wort ? `Philip möchte das Wort „${p.wort}“ – übernimm es.` : ''}
 Antworte nur mit JSON nach dem Schema.`
   const res = await runClaudeInJob(
@@ -161,7 +163,7 @@ Antworte nur mit JSON nach dem Schema.`
     ctx
   )
   if (!res.ok) throw new Error(`Claude konnte das Original nicht auswerten: ${res.errors.join(' | ') || res.subtype}`)
-  const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { inhalt?: string; wichtig?: number[]; seite?: string; wort?: string; gefuehl?: string; pose?: string; winkel?: Record<string, unknown>; mimik?: string }
+  const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { inhalt?: string; wichtig?: number[]; seite?: string; wort?: string; gefuehl?: string; pose?: string; winkel?: Record<string, unknown>; mimik?: string; sperren?: number[][] }
   const gefuehl = vorgabe ?? (a.gefuehl && GEFUEHLE[a.gefuehl] ? a.gefuehl : 'schockiert')
   const g = GEFUEHLE[gefuehl]!
   const seite = seiteFuer(a.seite, a.wichtig)
@@ -196,6 +198,9 @@ Antworte nur mit JSON nach dem Schema.`
       mimik,
       pose: pl.pose,
       pose_fest: Boolean(wunschPose),
+      // Startwert für lebendigen Text (Platz, Neigung, Farbe) – jede Variante anders
+      sperren: (a.sperren ?? []).filter((b) => b.length === 4),
+      zufall: Math.floor(Math.random() * 1_000_000),
       kopf_drehung: pl.kopf,
       wort,
       schrift: 'C:/Windows/Fonts/ariblk.ttf',

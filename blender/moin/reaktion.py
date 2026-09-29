@@ -19,6 +19,7 @@ from . import figur as mfigur
 from . import look as mlook
 from . import mimik as mmimik
 from . import szene as mszene
+from . import textlook as mtext
 from .posen import POSEN
 
 BREITE, HOEHE = 1280, 720
@@ -226,6 +227,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     # Hintergrund weit hinten (Tiefenschärfe macht ihn weich, Stilbuch 14.9)
     hinten = abstand * 9
     _bildflaeche(spec["hintergrund"], cam, hinten, helligkeit=spec.get("hintergrund_hell", 0.85))
+    farben = mtext.BildFarben(spec["hintergrund"])
 
     # Licht: weiches Key-Licht vorn oben, Fülllicht, dünne Randkante (Stilbuch 14.8)
     for name, ort, energie, groesse in (("key", Vector((s * 0.9, -1.6, 1.0)), 90, 1.4), ("fuell", Vector((-s * 1.2, -1.2, 0.2)), 25, 2.0), ("rand", Vector((-s * 0.8, 1.2, 0.6)), 160, 0.6)):
@@ -252,16 +254,67 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         return cam.location + Vector(((u - 0.5) * b_e, ebene, (0.5 - v) * h_e))
 
     info = {"wort": None, "pfeil": None, "pose": pose_name, "gesicht_sichtbar": round(sicht, 2)}
+    rng = mtext.zufall(spec)
     if spec.get("wort"):
-        wort_h = h_e * spec.get("wort_anteil", 0.2)
-        t = _textobjekt(spec["wort"].upper(), spec.get("schrift"), wort_h, spec.get("wort_farbe", (1, 1, 1)))
-        t.location = punkt(inhalt_u, 0.16)
-        t.rotation_euler = (math.radians(90), 0, 0)
-        info["wort"] = [inhalt_u, 0.16]
+        wort = spec["wort"].upper()
+        ecken_k = [bild(c) for c in fig.kopf_ecken()]
+        f0, f1 = min(e[0] for e in ecken_k) - 0.03, max(e[0] for e in ecken_k) + 0.03
+        f_oben = min(e[1] for e in ecken_k) - 0.03
+        ziel = spec.get("pfeil_ziel")
+        haende = [bild(fig.hand(h)) for h in ("r", "l")]
+        sperren = spec.get("sperren") or []  # Titel, Logos, Gesichter im Original (von Claude)
+
+        def frei_fuer(anteil, halb_b, mit_sperren=True):
+            def frei(u, v):
+                if u - halb_b < 0.01 or u + halb_b > 0.99:
+                    return False
+                if u + halb_b > f0 and u - halb_b < f1 and v + anteil / 2 > f_oben:
+                    return False  # über der Figur
+                if ziel and abs(ziel[0] - u) < halb_b + 0.04 and abs(ziel[1] - v) < anteil / 2 + 0.06:
+                    return False  # über dem wichtigen Detail
+                if any(abs(hu - u) < halb_b + 0.07 and abs(hv - v) < anteil / 2 + 0.07 for hu, hv in haende):
+                    return False  # über Philips Hand
+                if mit_sperren and any(u + halb_b > b[0] and u - halb_b < b[2] and v + anteil / 2 > b[1] and v - anteil / 2 < b[3] for b in sperren):
+                    return False  # über Titel, Logo oder Gesicht im Original
+                return True
+            return frei
+
+        # Oben zuerst (unten sitzen in Originalen oft Logos), dann unten; passt nichts, wird das Wort kleiner
+        wahl = None
+        stufen = [(spec.get("wort_anteil", 0.2) * f, True) for f in (1.0, 0.85, 0.72, 0.6)]
+        stufen += [(spec.get("wort_anteil", 0.2) * f, False) for f in (0.85, 0.6)]  # zur Not über Hintergrund-Deko
+        for anteil, mit_sperren in stufen:
+            halb_b = min(0.46, len(wort) * anteil * 0.8 * HOEHE / BREITE / 2)  # Arial Black: Zeichen ≈ 0,8 × Höhe
+            frei = frei_fuer(anteil, halb_b, mit_sperren)
+            for vs in ((0.12, 0.17, 0.22), (0.8, 0.86)):
+                plaetze = [[u, v] for v in vs for u in (inhalt_u - 0.12, inhalt_u - 0.06, inhalt_u, inhalt_u + 0.06, inhalt_u + 0.12)]
+                if any(frei(*k) for k in plaetze):
+                    wahl = (mtext.waehle_platz(plaetze, frei, rng), anteil, halb_b)
+                    break
+            if wahl:
+                break
+        if not wahl:  # Notfall: kleinste Größe, oben auf der Inhaltsseite, am Rand gehalten
+            halb_b = min(0.46, len(wort) * anteil * 0.8 * HOEHE / BREITE / 2)
+            wahl = ([min(max(inhalt_u, halb_b + 0.01), 0.99 - halb_b), 0.14], anteil, halb_b)
+        (u_t, v_t), anteil, halb_b = wahl
+        grund = farben.mittel(u_t - halb_b, v_t - anteil / 2, u_t + halb_b, v_t + anteil / 2)
+        farbname = spec.get("wort_farbe") or mtext.waehle_farbe(grund, rng, ohne=("rot",) if ziel else ())
+        t = _textobjekt(wort, spec.get("schrift"), h_e * anteil, mtext.linear(mtext.PALETTE.get(farbname, (1, 1, 1))))
+        t.location = punkt(u_t, v_t)
+        kipp = mtext.neigung(rng)
+        t.rotation_euler = (math.radians(90), math.radians(kipp), 0)
+        info["wort"] = {"platz": [round(u_t, 3), round(v_t, 3)], "neigung": round(kipp, 1), "farbe": farbname}
+    else:
+        u_t, v_t, halb_b = inhalt_u, 0.16, 0.0
     if spec.get("pfeil_ziel"):
         zu, zv = spec["pfeil_ziel"]
-        start = punkt(inhalt_u + (0.0 if abs(zu - inhalt_u) > 0.1 else -0.08), 0.3)
-        ende = punkt(zu, max(0.35, zv - 0.06))
+        # Pfeil beginnt am Rand des Worts, auf der Seite zum Ziel
+        v_start = v_t + (0.14 if zv > v_t else -0.14)
+        if not 0.06 < v_start < 0.94:  # Ziel auf Höhe des Worts: seitlich am Wort starten
+            v_start = v_t
+            u_t = u_t + (halb_b + 0.03 if zu > u_t else -halb_b - 0.03) if spec.get("wort") else u_t
+        start = punkt(u_t + (0.0 if abs(zu - u_t) > 0.1 else -0.08), v_start)
+        ende = punkt(zu, zv - 0.06 if zv > v_start else zv + 0.06)
         _pfeil(start, ende, h_e * 0.03)
         info["pfeil"] = [zu, zv]
     if spec.get("spiel"):

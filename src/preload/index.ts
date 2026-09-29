@@ -85,6 +85,7 @@ const api: MoinApi = {
   thumbSpeichern: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbSpeichern, jobId, index),
   thumbVideo: (kanal: string, titel?: string) => ipcRenderer.invoke(IPC.thumbVideo, kanal, titel),
   thumbVideoErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbVideoErgebnis, jobId),
+  thumbSpielvorlage: (wunsch?: string) => ipcRenderer.invoke(IPC.thumbSpielvorlage, wunsch),
   thumbReaktion: (o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }) => ipcRenderer.invoke(IPC.thumbReaktion, o)
 }
 

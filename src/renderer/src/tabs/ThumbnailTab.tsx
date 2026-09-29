@@ -247,6 +247,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const [wunsch, setWunsch] = useState('')
   const [wunschGefuehl, setWunschGefuehl] = useState('')
   const [mitWort, setMitWort] = useState('')
+  const [vorlageWunsch, setVorlageWunsch] = useState('')
   useEffect(() => {
     void window.moin.thumbSkins().then(setSkins, (err: unknown) => setFehler(fehlerText(err)))
   }, [])
@@ -292,6 +293,18 @@ export function ThumbnailTab(): React.JSX.Element {
     setFehler(null)
     try {
       const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', wunsch: wunsch.trim() || 'neutral, schaut in die Kamera', ohneExtras: !mitWort.trim() })
+      if (id) {
+        setOffen(id)
+        ladeAuftraege()
+      }
+    } catch (err) {
+      setFehler(fehlerText(err))
+    }
+  }
+  const spielvorlage = async (): Promise<void> => {
+    setFehler(null)
+    try {
+      const id = await window.moin.thumbSpielvorlage(vorlageWunsch)
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -398,6 +411,18 @@ export function ThumbnailTab(): React.JSX.Element {
             <input className="input" placeholder="Wort (optional)" value={mitWort} onChange={(e) => setMitWort(e.target.value)} />
             <button className="btn primary" onClick={() => void eigenesBild()}>
               Hintergrund wählen …
+            </button>
+          </div>
+        </Card>
+        <Card title="Spiele-Vorlage: du statt der Person" badge="Gaming">
+          <p className="muted small">
+            Wähle ein Spiele-Thumbnail eines anderen Creators. Die Person darin wird entfernt, dein Skin steht an ihrer Stelle in passender Pose – mit echtem 3D-Gegenstand, falls sie
+            etwas hält. Der Titel bleibt obendrauf. Das Ergebnis ist nur für dich (fremde Vorlage).
+          </p>
+          <div className="row wrap">
+            <input className="input" placeholder="Wunsch (optional, z. B. schau wütender)" value={vorlageWunsch} onChange={(e) => setVorlageWunsch(e.target.value)} />
+            <button className="btn primary" onClick={() => void spielvorlage()}>
+              Spiele-Thumbnail wählen …
             </button>
           </div>
         </Card>

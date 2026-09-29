@@ -16,6 +16,7 @@ from mathutils import Matrix, Vector
 from . import figur as mfigur
 from . import look as mlook
 from . import mimik as mmimik
+from . import szene as mszene
 from .posen import POSEN
 from .reaktion import _bildflaeche
 
@@ -70,10 +71,17 @@ def baue_vorlage(spec, ausgabe, bericht=None):
     s = 1 if spec.get("licht_seite", "rechts") == "rechts" else -1
 
     fig = mfigur.baue_figur("ich", spec["skin"], slim=spec.get("slim"))
-    p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in POSEN.get(spec.get("pose", "neutral"), POSEN["neutral"]).items()}
+    roh = spec.get("pose", "neutral")
+    roh = roh if isinstance(roh, dict) else POSEN.get(roh, POSEN["neutral"])  # Posen-Name oder eigene Winkel
+    p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in roh.items()}
     p["blick"] = spec.get("blick", p.get("blick", 0))
     if "kopf_drehung" in spec:
         p.setdefault("kopf", {})["drehen"] = spec["kopf_drehung"]
+    if spec.get("ansicht") == "hinten":
+        # Person von hinten (Third-Person-Spiele): Figur um 180° drehen; Winkel sind in Bildrichtung angegeben,
+        # deshalb seitenverkehrt, damit „drehen positiv“ weiter zur rechten Bildseite zeigt
+        p = mszene._spiegeln(p)
+        p["blick"] = 180 - p.get("blick", 0)
     mfigur.pose(fig, p)
     if spec.get("mimik"):
         mmimik.setze_mimik(fig, spec["mimik"])

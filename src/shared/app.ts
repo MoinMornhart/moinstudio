@@ -58,7 +58,8 @@ export const IPC = {
   thumbSpeichern: 'thumb:speichern',
   thumbVideo: 'thumb:video',
   thumbVideoErgebnis: 'thumb:video-ergebnis',
-  thumbReaktion: 'thumb:reaktion'
+  thumbReaktion: 'thumb:reaktion',
+  thumbSpielvorlage: 'thumb:spielvorlage'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -249,5 +250,7 @@ export interface MoinApi {
   thumbVideo(kanal: string, titel?: string): Promise<string | null>
   thumbVideoErgebnis(jobId: string): Promise<ThumbVideoErgebnis | null>
   /** Reaction-Thumbnail: Dateidialog fürs Original, dann Job; liefert die Job-ID oder null */
+  /** Spiele-Vorlage: Dateidialog, dann Auftrag; null bei Abbruch */
+  thumbSpielvorlage(wunsch?: string): Promise<string | null>
   thumbReaktion(o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }): Promise<string | null>
 }

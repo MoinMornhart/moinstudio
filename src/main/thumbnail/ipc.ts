@@ -11,7 +11,9 @@ import type { HardwareController } from '../hardware/controller'
 import type { JobQueue } from '../jobs/queue'
 import { resourceDir } from '../resources'
 import type { ToolManager } from '../tools/manager'
-import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG } from '../tools/specs'
+import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG, UV } from '../tools/specs'
+import { localRoot } from '../tools/ipc'
+import { spielvorlageJob, type SpielvorlagePayload } from './spielvorlage'
 import { z } from 'zod'
 import { thumbnailJob, type ThumbnailPayload, type ThumbnailVariante } from './job'
 import { ladeVorbilder } from './planung'
@@ -66,10 +68,50 @@ export function registerThumbnailIpc(
   starteThumbnail: (start: ThumbStart) => Promise<string>
   starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
   starteReaktion: (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }) => Promise<string>
+  starteSpielvorlage: (vorlage: string, wunsch?: string) => Promise<string>
 } {
   queue.register('thumbnail', thumbnailJob)
   queue.register('video-vorschlaege', videoVorschlaegeJob)
   queue.register('reaktion', reaktionJob)
+  queue.register('spielvorlage', spielvorlageJob)
+
+  // Spiele-Vorlage (Philip, 27.09.): fremdes Spiele-Thumbnail wählen → Philip steht an der Stelle der Person
+  const starteSpielvorlage = async (vorlage: string, wunsch?: string): Promise<string> => {
+    const dir = await datenOrdner(settings)
+    const ich = (await ladeSkins(dir)).find((x) => x.rolle === 'ich')
+    if (!ich) throw new Error('Bitte zuerst deinen eigenen Skin hochladen (Skins → „Mein Skin“).')
+    const profile = await hardware.profiles.load()
+    if (!profile) throw new Error('Bitte zuerst den Hardware-Test ausführen (Einstellungen).')
+    const config = ProfileStore.effective(profile)
+    const spec = [BLENDER_PRIMARY, BLENDER_FALLBACK].find((x) => x.version === config.blenderVersion)
+    const exe = spec ? await tools.exePath(spec) : null
+    if (!exe) throw new Error('Blender ist auf diesem Gerät nicht lauffähig oder nicht installiert.')
+    const uv = await tools.exePath(UV)
+    if (!uv) throw new Error('uv (Python-Verwaltung) ist nicht installiert (Einstellungen → Werkzeuge).')
+    const cli = await findClaudeCli()
+    if (!cli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
+    const payload: SpielvorlagePayload = {
+      vorlage,
+      skin: join(dir, 'skins', ich.datei),
+      slim: ich.slim,
+      wunsch: wunsch?.trim() || undefined,
+      claudeCli: cli,
+      blender: { exe, mesa: config.blenderMesa, geraet: config.final.engine === 'CYCLES' ? config.final.device : 'CPU', samples: Math.max(32, Math.min(96, config.final.samples)) },
+      uv,
+      pyDir: join(localRoot(), 'py', 'vorlage'),
+      blenderDir: resourceDir('blender'),
+      datenOrdner: dir,
+      ausgabe: join(dir, 'thumbnails', `spielvorlage-${randomUUID()}`)
+    }
+    return queue.enqueue('spielvorlage', `Spiele-Vorlage: ${basename(vorlage)}`, payload)
+  }
+  ipcMain.handle(IPC.thumbSpielvorlage, async (_e, raw: unknown) => {
+    const win = getWindow()
+    const opts = { title: 'Spiele-Thumbnail mit Person wählen', filters: [{ name: 'Bild', extensions: ['jpg', 'jpeg', 'png', 'webp'] }], properties: ['openFile' as const] }
+    const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    if (wahl.canceled || !wahl.filePaths[0]) return null
+    return starteSpielvorlage(wahl.filePaths[0], typeof raw === 'string' ? raw : undefined)
+  })
 
   // Reaction-Thumbnail (Stilbuch 14): Original wählen, Claude wertet aus, Blender baut mit Philips Skin
   const starteReaktion = async (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }): Promise<string> => {
@@ -287,5 +329,5 @@ export function registerThumbnailIpc(
     shell.showItemInFolder(ziel.filePath)
     return ziel.filePath
   })
-  return { starteThumbnail, starteVideo, starteReaktion }
+  return { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage }
 }
