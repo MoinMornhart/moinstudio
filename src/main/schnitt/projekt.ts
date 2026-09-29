@@ -38,6 +38,8 @@ export interface Projekt {
   einstellungen?: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean }
   /** Zeitpunkt der letzten geschnittenen Vorschau */
   vorschau?: number
+  /** Zeitpunkt des letzten Exports (ROADMAP 6.7) */
+  export?: number
   /** Aufträge am Projekt (Import, Transkript …) in Reihenfolge; die Oberfläche zeigt den ersten, der noch läuft */
   auftraege?: string[]
   fehler?: string | null

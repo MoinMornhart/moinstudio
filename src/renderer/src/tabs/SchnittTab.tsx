@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SchnittAbschnitt, SchnittListe, SchnittProjekt } from '@shared/app'
+import type { SchnittAbschnitt, SchnittExport, SchnittListe, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 
 /**
@@ -187,6 +187,72 @@ function Transkript({
   )
 }
 
+/** Export für YouTube: Datei, Prüfung, Titel, Beschreibung, Kapitel, Speichern, Thumbnail-Vorschläge. */
+function Export({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): React.JSX.Element {
+  const [info, setInfo] = useState<SchnittExport | null>(null)
+  const [meldung, setMeldung] = useState<string | null>(null)
+  useEffect(() => {
+    if (p.exportiert && !p.auftrag) void window.moin.schnittExportInfo(p.id).then(setInfo)
+  }, [p.id, p.exportiert, p.auftrag])
+  const kopieren = (t: string): void => void navigator.clipboard.writeText(t).then(() => setMeldung('Kopiert.'))
+  return (
+    <div className="schnitt-fertig">
+      <div className="card-head">
+        <h2>Export für YouTube</h2>
+      </div>
+      <p className="muted small">Volle Qualität aus dem Original, nach YouTubes Upload-Empfehlung, mit Kapiteln, Titel- und Beschreibungsvorschlag.</p>
+      <div className="row wrap">
+        <button className="btn primary" disabled={!!p.auftrag} onClick={() => void window.moin.schnittExport(p.id).then(neuLaden)}>
+          {p.exportiert ? 'Neu exportieren' : 'Exportieren'}
+        </button>
+        {info && (
+          <>
+            <button className="btn" onClick={() => void window.moin.schnittExportSpeichern(p.id).then((f) => f && setMeldung(`Gespeichert: ${f}`))}>
+              Speichern unter …
+            </button>
+            <button className="btn" onClick={() => void window.moin.schnittThumbnail(p.id).then(() => setMeldung('Thumbnail-Vorschläge laufen – siehe Reiter Thumbnail.'))}>
+              Thumbnail-Vorschläge
+            </button>
+          </>
+        )}
+      </div>
+      {meldung && <p className="ok-note small">{meldung}</p>}
+      {info && (
+        <>
+          <video className="schnitt-player" src={info.url} controls preload="metadata" style={{ marginTop: 10 }} />
+          <ul className="pruefliste">
+            {info.pruefung.map((x) => (
+              <li key={x.punkt} className={x.ok ? 'own-ok' : 'own-bad'}>
+                {x.ok ? '✓' : '✗'} {x.punkt} <span className="muted small">({x.wert})</span>
+              </li>
+            ))}
+          </ul>
+          <dl className="facts">
+            <dt>Titel</dt>
+            <dd>
+              {info.titel.map((t) => (
+                <button key={t} className="chip" onClick={() => kopieren(t)} title="Kopieren">
+                  {t}
+                </button>
+              ))}
+            </dd>
+            <dt>Beschreibung</dt>
+            <dd>
+              <button className="satz" onClick={() => kopieren(`${info.beschreibung}${info.kapitelText ? `\n\n${info.kapitelText}` : ''}`)} title="Mit Kapiteln kopieren">
+                <span />
+                <span style={{ whiteSpace: 'pre-wrap' }}>
+                  {info.beschreibung}
+                  {info.kapitelText ? `\n\n${info.kapitelText}` : ''}
+                </span>
+              </button>
+            </dd>
+          </dl>
+        </>
+      )}
+    </div>
+  )
+}
+
 function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void; neuLaden: () => void }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
@@ -267,6 +333,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
           {p.vorschauUrl && <video className="schnitt-player" src={p.vorschauUrl} controls preload="metadata" style={{ marginTop: 10 }} />}
         </div>
       )}
+      {liste && <Export p={p} neuLaden={neuLaden} />}
       <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} liste={liste} setListe={setListe} />
       {p.quelle && (
         <dl className="facts" style={{ marginTop: 12 }}>

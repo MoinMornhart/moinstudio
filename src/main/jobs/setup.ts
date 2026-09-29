@@ -28,7 +28,7 @@ export function setupJobs(
   queue.register('probe-render', probeRenderJob)
   registerJobsIpc(queue, getWindow)
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
-  const { starteImport, starteWunsch } = registerSchnittIpc(queue, settings, tools, hardware, getWindow)
+  const { starteImport, starteWunsch } = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()

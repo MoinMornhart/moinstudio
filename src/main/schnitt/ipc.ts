@@ -17,6 +17,8 @@ import { findClaudeCli } from '../claude/cli'
 import { writeFile } from 'node:fs/promises'
 import { bereichSetzen, umschalten, wunschJob, type WunschPayload } from './bearbeiten'
 import { einstellungen, vorschauJob, type VorschauPayload } from './vorschau'
+import { exportJob, kapitelText, type ExportErgebnis, type ExportPayload } from './export'
+import { copyFile } from 'node:fs/promises'
 import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
@@ -37,13 +39,15 @@ export function registerSchnittIpc(
   settings: SettingsStore,
   tools: ToolManager,
   hardware: HardwareController,
-  getWindow: () => BrowserWindow | undefined
+  getWindow: () => BrowserWindow | undefined,
+  starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
 ): { starteImport: (video: string, kanal?: string) => Promise<string>; starteWunsch: (id: string, wunsch: string) => Promise<string> } {
   queue.register('schnitt-import', importJob)
   queue.register('schnitt-transkript', transkriptJob)
   queue.register('schnitt-rohschnitt', rohschnittJob)
   queue.register('schnitt-wunsch', wunschJob)
   queue.register('schnitt-vorschau', vorschauJob)
+  queue.register('schnitt-export', exportJob)
 
   const alsAnsicht = (daten: string, p: Projekt): SchnittProjekt => {
     const ordner = projektOrdner(daten, p.id)
@@ -60,6 +64,7 @@ export function registerSchnittIpc(
       transkript: !!p.transkript,
       rohschnitt: !!p.rohschnitt,
       einstellungen: einstellungen(p),
+      exportiert: !!p.export,
       vorschauUrl: p.vorschau ? `${medienUrl(join(ordner, 'vorschau.mp4'))}?v=${p.vorschau}` : null,
       auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null } : null
     }
@@ -185,6 +190,46 @@ export function registerSchnittIpc(
     const auftrag = await queue.enqueue('schnitt-vorschau', `Schnitt: ${p.name} Vorschau`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
+  })
+  // Export für YouTube (ROADMAP 6.7)
+  ipcMain.handle(IPC.schnittExport, async (_e, id: unknown): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const ffmpeg = await tools.exePath(FFMPEG)
+    if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
+    const p = await ladeProjekt(daten, String(id))
+    if (!p) throw new Error('Projekt nicht gefunden.')
+    const profile = await hardware.profiles.load()
+    const payload: ExportPayload = { daten, projekt: p.id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe'), encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', claudeCli: await findClaudeCli() }
+    const auftrag = await queue.enqueue('schnitt-export', `Schnitt: ${p.name} exportieren`, payload)
+    await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
+    return auftrag
+  })
+  ipcMain.handle(IPC.schnittExportInfo, async (_e, id: unknown) => {
+    const daten = await datenOrdner(settings)
+    const text = await readFile(join(projektOrdner(daten, String(id)), 'export.json'), 'utf8').catch(() => null)
+    if (!text) return null
+    const e = JSON.parse(text) as ExportErgebnis
+    const p = await ladeProjekt(daten, String(id))
+    return { ...e, url: `${medienUrl(e.datei)}?v=${p?.export ?? 0}`, kapitelText: kapitelText(e.kapitel) }
+  })
+  ipcMain.handle(IPC.schnittExportSpeichern, async (_e, id: unknown): Promise<string | null> => {
+    const daten = await datenOrdner(settings)
+    const p = await ladeProjekt(daten, String(id))
+    if (!p?.export) return null
+    const win = getWindow()
+    const opts = { title: 'Fertiges Video speichern', defaultPath: `${p.name}.mp4`, filters: [{ name: 'Video', extensions: ['mp4'] }] }
+    const wahl = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)
+    if (wahl.canceled || !wahl.filePath) return null
+    await copyFile(join(projektOrdner(daten, p.id), 'export.mp4'), wahl.filePath)
+    return wahl.filePath
+  })
+  // Übergabe ans Thumbnail: Claude sieht sich das fertige Video an und schlägt Thumbnails vor
+  ipcMain.handle(IPC.schnittThumbnail, async (_e, id: unknown): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const p = await ladeProjekt(daten, String(id))
+    if (!p?.quelle) throw new Error('Projekt nicht gefunden.')
+    const titel = p.export ? ((JSON.parse(await readFile(join(projektOrdner(daten, p.id), 'export.json'), 'utf8')) as ExportErgebnis).titel[0] ?? p.name) : p.name
+    return starteVideo(p.export ? join(projektOrdner(daten, p.id), 'export.mp4') : p.quelle.pfad, p.kanal, titel)
   })
   ipcMain.handle(IPC.schnittListe, async (_e, id: unknown): Promise<Schnittliste | null> => {
     const daten = await datenOrdner(settings)
