@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GEFUEHLE, gefuehlAus, naechstePose, seiteFuer } from '../../src/main/thumbnail/reaktion'
+import { GEFUEHLE, gefuehlAus, naechstePose, posenBeispiele, posenNamen, seiteFuer, wunschAbschnitt } from '../../src/main/thumbnail/reaktion'
 
 describe('Reaction-Thumbnails (Stilbuch 14)', () => {
   it('versteht Philips Gefühl in eigenen Worten', () => {
@@ -28,5 +28,17 @@ describe('Reaction-Thumbnails (Stilbuch 14)', () => {
     expect(seiteFuer('links', [0.3, 0.4])).toBe('rechts')
     expect(seiteFuer('rechts', [0.5, 0.4])).toBe('rechts')
     expect(seiteFuer(undefined, undefined)).toBe('links')
+  })
+
+  it('liest die Posen aus Blender und baut den Wunsch-Abschnitt (Eigenes Bild)', async () => {
+    const posen = await posenNamen('blender')
+    expect(posen).toEqual(expect.arrayContaining(['neutral', 'muede', 'pistole', 'zeigen']))
+    const text = wunschAbschnitt('ich winke in die Kamera', posen)
+    expect(text).toContain('ich winke in die Kamera')
+    expect(text).toContain('pistole')
+    expect(text).toContain('beugen')
+    const bsp = await posenBeispiele('blender', ['zeigen', 'panik'])
+    expect(bsp).toMatch(/^zeigen: {.*arm_l.*heben/m)
+    expect(bsp).toMatch(/^panik: {/m)
   })
 })

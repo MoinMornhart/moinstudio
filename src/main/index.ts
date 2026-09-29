@@ -143,7 +143,7 @@ if (toolsArg === 'install') {
   void app.whenReady().then(async () => {
     await jobs.start()
     try {
-      const id = await starteReaktion(original, { gefuehl: arg('gefuehl'), wort: arg('wort'), spiel: arg('spiel') })
+      const id = await starteReaktion(original, { gefuehl: arg('gefuehl'), wort: arg('wort'), spiel: arg('spiel'), wunsch: arg('wunsch'), ohneExtras: process.argv.includes('--moin-ohne-extras') })
       const info = await jobs.waitFor(id)
       console.log(`Ende: ${info.state} ${info.error ?? ''}`)
       console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))

@@ -50,7 +50,7 @@ export interface ThumbnailPayload {
   configDir: string
   promptDatei: string
   ausgabe: string
-  /** Serien-Merkmal (Folgennummer, Schlagwort) – kommt auf jede Variante, Claudes eigener Text entfällt dann */
+  /** Fester Text (z. B. Folgennummer) – kommt auf jede Variante, Claudes eigener Text entfällt dann */
   merkmal?: { text: string; farbe?: string; platz?: string }[]
 }
 

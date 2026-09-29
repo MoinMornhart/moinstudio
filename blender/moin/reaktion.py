@@ -150,7 +150,8 @@ def baue_reaktion(spec, ausgabe, bericht=None):
 
     def stelle(posen_name, anteil=None):
         """Pose setzen und Kamera rahmen: Kopf ~42 % der Bildhöhe, Figur in ihrer Bildhälfte (Stilbuch 14.1–14.4)."""
-        p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in POSEN.get(posen_name, POSEN["neutral"]).items()}
+        roh = posen_name if isinstance(posen_name, dict) else POSEN.get(posen_name, POSEN["neutral"])
+        p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in roh.items()}
         if s > 0:  # Inhalt links: Pose seitenverkehrt, damit Zeigen und Gesten zum Inhalt gehen
             p = mszene._spiegeln(p)
         # Kopf 15–35° zum Inhalt (Stilbuch 14.2); Blick der Figur leicht zum Inhalt
@@ -192,7 +193,9 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     kopf, abstand = stelle(pose_name)
     # Gesicht muss ganz frei bleiben und keine Hand darf in Wort oder Pfeil ragen, sonst gilt die Pose ohne Hände
     sicht = mszene._gesicht_sichtbar(scene, cam, fig)
-    if pose_name != "neutral" and (sicht < 0.96 or hand_im_text()):
+    # Wunsch-Pose (Philip beschreibt sie selbst) bleibt, solange das Gesicht noch gut zu sehen ist
+    grenze = 0.5 if spec.get("pose_fest") else 0.96
+    if pose_name != "neutral" and (sicht < grenze or (not spec.get("pose_fest") and spec.get("wort") and hand_im_text())):
         pose_name = "neutral"
         kopf, abstand = stelle(pose_name)
         sicht = mszene._gesicht_sichtbar(scene, cam, fig)

@@ -6,6 +6,16 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Eigenes Bild mit deinem Skin: Hintergrund hochladen, Pose frei beschreiben (z. B. „ich zeige erschrocken nach links“), Claude setzt sie in Winkel um, Blender rendert deinen echten Skin genau so; ohne Pfeil, Wort nur auf Wunsch.
+
+### Entfernt
+- Serien-Vorlagen „Minecraft durchspielen“ (Philip: „mach das raus“).
+
+### Geändert
+- Requisiten aus Poly Haven: nur das Hauptobjekt wird benutzt, Patronen, Magazine und Varianten fallen weg.
+- Kommandozeilen-Tests können mit MOIN_TEST_DATEN einen eigenen Datenordner nutzen.
+
 ## [0.7.0] - 2026-09-29
 
 > Spiele-Vorlagen: du an der Stelle der Person im Spiele-Thumbnail; neue Gesten; Reactions mit kleinerer Figur, freiem Gesicht und Pfeil

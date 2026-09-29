@@ -2,7 +2,7 @@ import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
-import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSerie, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
+import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
 import { findClaudeCli } from '../claude/cli'
 import { readJson, writeJsonAtomic } from '../data/jsonfile'
 import type { SettingsStore } from '../data/settings'
@@ -26,6 +26,8 @@ import { videoVorschlaegeJob, type VideoPayload, type VideoVorschlag } from './v
 const SkinListe = z.array(z.object({ id: z.string(), name: z.string(), datei: z.string(), rolle: z.enum(['ich', 'freund']), slim: z.boolean().nullable().default(null) }))
 
 async function datenOrdner(settings: SettingsStore): Promise<string> {
+  // Integrationstests von der Kommandozeile schreiben in einen eigenen Ordner, nie in Philips echte Bibliothek
+  if (process.env.MOIN_TEST_DATEN) return process.env.MOIN_TEST_DATEN
   const dir = (await settings.load()).dataDir
   if (!dir) throw new Error('Bitte zuerst in den Einstellungen einen Datenordner wählen.')
   return dir
@@ -63,17 +65,14 @@ export function registerThumbnailIpc(
 ): {
   starteThumbnail: (start: ThumbStart) => Promise<string>
   starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
-  starteReaktion: (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string }) => Promise<string>
+  starteReaktion: (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }) => Promise<string>
 } {
   queue.register('thumbnail', thumbnailJob)
-  const vorlagen = async (): Promise<ThumbSerie[]> =>
-    ((JSON.parse(await readFile(join(resourceDir('config'), 'vorlagen.json'), 'utf8')) as { serien?: ThumbSerie[] }).serien ?? [])
-  ipcMain.handle(IPC.thumbVorlagen, () => vorlagen())
   queue.register('video-vorschlaege', videoVorschlaegeJob)
   queue.register('reaktion', reaktionJob)
 
   // Reaction-Thumbnail (Stilbuch 14): Original wählen, Claude wertet aus, Blender baut mit Philips Skin
-  const starteReaktion = async (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string }): Promise<string> => {
+  const starteReaktion = async (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }): Promise<string> => {
     const dir = await datenOrdner(settings)
     const ich = (await ladeSkins(dir)).find((x) => x.rolle === 'ich')
     if (!ich) throw new Error('Bitte zuerst deinen eigenen Skin hochladen (Skins → „Mein Skin“).')
@@ -93,20 +92,22 @@ export function registerThumbnailIpc(
       gefuehl: o.gefuehl?.trim() || undefined,
       wort: o.wort?.trim() || undefined,
       spiel: o.spiel?.trim() || undefined,
+      wunsch: o.wunsch?.trim() || undefined,
+      ohneExtras: o.ohneExtras || undefined,
       claudeCli: cli,
       blender: { exe, mesa: config.blenderMesa, geraet: config.final.engine === 'CYCLES' ? config.final.device : 'CPU', samples: Math.max(24, Math.min(64, config.final.samples)) },
       blenderDir: resourceDir('blender'),
       datenOrdner: dir,
       ausgabe: join(dir, 'thumbnails', `reaktion-${randomUUID()}`)
     }
-    return queue.enqueue('reaktion', `${payload.spiel ? `Gaming: ${payload.spiel}` : 'Reaction'}: ${basename(original)}`, payload)
+    return queue.enqueue('reaktion', `${payload.wunsch ? 'Eigenes Bild' : payload.spiel ? `Gaming: ${payload.spiel}` : 'Reaction'}: ${basename(original)}`, payload)
   }
   ipcMain.handle(IPC.thumbReaktion, async (_e, raw: unknown) => {
     const win = getWindow()
     const opts = { title: 'Original-Thumbnail oder Spielbild wählen', filters: [{ name: 'Bild', extensions: ['jpg', 'jpeg', 'png', 'webp'] }], properties: ['openFile' as const] }
     const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
     if (wahl.canceled || !wahl.filePaths[0]) return null
-    return starteReaktion(wahl.filePaths[0], (raw ?? {}) as { gefuehl?: string; wort?: string; kanal?: string; spiel?: string })
+    return starteReaktion(wahl.filePaths[0], (raw ?? {}) as { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean })
   })
 
   // Video hochladen → Vorschläge (ROADMAP 5.5)
@@ -237,13 +238,6 @@ export function registerThumbnailIpc(
       minecraftDir: resourceDir('minecraft'),
       configDir: resourceDir('config'),
       promptDatei: join(resourceDir('prompts'), 'thumbnail-planung.md'),
-      merkmal: await (async () => {
-        if (!start.serie) return undefined
-        const serie = (await vorlagen()).find((x) => x.id === start.serie!.id)
-        const texte = [{ text: `#${start.serie.nr}`, farbe: serie?.merkmal.farbe ?? 'gelb', platz: serie?.merkmal.platz ?? 'unten_rechts' }]
-        if (start.serie.wort) texte.push({ text: start.serie.wort, farbe: 'weiss', platz: 'auto' })
-        return texte
-      })(),
       ausgabe: join(dir, 'thumbnails', id)
     }
     return queue.enqueue('thumbnail', `Thumbnail: ${beschreibung.slice(0, 50)}`, payload)

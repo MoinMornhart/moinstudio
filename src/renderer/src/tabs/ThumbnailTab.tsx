@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ThumbAuftrag, ThumbErgebnis, ThumbSerie, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
+import type { ThumbAuftrag, ThumbErgebnis, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 import { useJobs } from '../components/JobsWidget'
 
@@ -244,12 +244,9 @@ export function ThumbnailTab(): React.JSX.Element {
   const [gefuehl, setGefuehl] = useState('')
   const [reaktionWort, setReaktionWort] = useState('')
   const [spiel, setSpiel] = useState('')
-  const [serien, setSerien] = useState<ThumbSerie[]>([])
-  const [folge, setFolge] = useState<{ id: string; nr: number; wort?: string } | null>(null)
-  useEffect(() => {
-    void window.moin.thumbVorlagen().then(setSerien, () => setSerien([]))
-  }, [])
-
+  const [wunsch, setWunsch] = useState('')
+  const [wunschGefuehl, setWunschGefuehl] = useState('')
+  const [mitWort, setMitWort] = useState('')
   useEffect(() => {
     void window.moin.thumbSkins().then(setSkins, (err: unknown) => setFehler(fehlerText(err)))
   }, [])
@@ -259,10 +256,9 @@ export function ThumbnailTab(): React.JSX.Element {
   const start = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbStart({ beschreibung, kanal, freunde, anzahl, serie: folge ?? undefined })
+      const id = await window.moin.thumbStart({ beschreibung, kanal, freunde, anzahl })
       setOffen(id)
       setBeschreibung('')
-      setFolge(null)
       ladeAuftraege()
     } catch (err) {
       setFehler(fehlerText(err))
@@ -292,6 +288,18 @@ export function ThumbnailTab(): React.JSX.Element {
       setFehler(fehlerText(err))
     }
   }
+  const eigenesBild = async (): Promise<void> => {
+    setFehler(null)
+    try {
+      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', wunsch: wunsch.trim() || 'neutral, schaut in die Kamera', ohneExtras: !mitWort.trim() })
+      if (id) {
+        setOffen(id)
+        ladeAuftraege()
+      }
+    } catch (err) {
+      setFehler(fehlerText(err))
+    }
+  }
   const freundSkins = skins.filter((s) => s.rolle === 'freund')
 
   return (
@@ -300,32 +308,6 @@ export function ThumbnailTab(): React.JSX.Element {
       <div className="grid">
         <Card title="Neues Thumbnail">
           {fehler && <p className="warn">{fehler}</p>}
-          {serien.length > 0 && (
-            <div className="row wrap" style={{ marginTop: 0, marginBottom: 10 }}>
-              <select
-                className="input"
-                value={folge ? `${folge.id}:${folge.nr}` : ''}
-                onChange={(e) => {
-                  const [id, nr] = e.target.value.split(':')
-                  const f = serien.find((s) => s.id === id)?.folgen.find((x) => String(x.nr) === nr)
-                  if (!f || !id) return setFolge(null)
-                  setFolge({ id, nr: f.nr, wort: f.wort })
-                  setBeschreibung(f.beschreibung)
-                }}
-              >
-                <option value="">Ohne Vorlage – eigene Beschreibung</option>
-                {serien.map((s) => (
-                  <optgroup key={s.id} label={`Serie: ${s.name}`}>
-                    {s.folgen.map((f) => (
-                      <option key={f.nr} value={`${s.id}:${f.nr}`}>
-                        #{f.nr} {f.titel}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-          )}
           <textarea
             className="input"
             rows={3}
@@ -390,6 +372,32 @@ export function ThumbnailTab(): React.JSX.Element {
             <input className="input" placeholder="Spielname bei Gaming-Videos (optional)" value={spiel} onChange={(e) => setSpiel(e.target.value)} />
             <button className="btn primary" onClick={() => void reaktion()}>
               {spiel.trim() ? 'Spielbild wählen …' : 'Original-Thumbnail wählen …'}
+            </button>
+          </div>
+        </Card>
+        <Card title="Eigenes Bild mit deinem Skin" badge="Zweitkanal">
+          <p className="muted small">
+            Lade nur einen Hintergrund hoch (Spielszene, Screenshot, eigenes Bild) und beschreibe, wie du posieren willst. Dein echter Skin wird genau so gerendert und
+            eingesetzt – ohne Pfeil, und nur mit Wort, wenn du eins einträgst.
+          </p>
+          <textarea
+            className="input"
+            rows={2}
+            placeholder="z. B. Ich halte mir die Hände vors Gesicht und gucke durch die Finger"
+            value={wunsch}
+            onChange={(e) => setWunsch(e.target.value)}
+          />
+          <div className="row wrap">
+            <select className="input" value={wunschGefuehl} onChange={(e) => setWunschGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
+              {GEFUEHLE.map((g) => (
+                <option key={g} value={g}>
+                  {g ? g[0]!.toUpperCase() + g.slice(1) : 'Gefühl: passend zur Pose'}
+                </option>
+              ))}
+            </select>
+            <input className="input" placeholder="Wort (optional)" value={mitWort} onChange={(e) => setMitWort(e.target.value)} />
+            <button className="btn primary" onClick={() => void eigenesBild()}>
+              Hintergrund wählen …
             </button>
           </div>
         </Card>

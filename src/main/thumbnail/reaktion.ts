@@ -22,6 +22,10 @@ export interface ReaktionPayload {
   wort?: string
   /** Gaming-Video (Bastian-Stil): Bild ist ein Spielmotiv, Spielname kommt als Logo in die Ecke */
   spiel?: string
+  /** Eigenes Bild (Philip, 29.09.): freie Beschreibung, wie er posieren möchte – Claude setzt sie in Winkel um */
+  wunsch?: string
+  /** Nur Skin + Hintergrund: kein Wort, kein Pfeil */
+  ohneExtras?: boolean
   claudeCli: string
   blender: { exe: string; mesa: boolean; geraet: string; samples: number }
   blenderDir: string
@@ -40,6 +44,44 @@ export const GEFUEHLE: Record<string, { mimik: string; posen: string[] }> = {
   skeptisch: { mimik: 'skeptisch', posen: ['neutral', 'nachdenken', 'genervt', 'kopfkratzen'] },
   muede: { mimik: 'muede', posen: ['neutral', 'muede', 'kopfkratzen'] },
   neugierig: { mimik: 'neutral', posen: ['neutral', 'nachdenken', 'blick_zum_ding', 'zeigen', 'winken'] }
+}
+
+/** Gesichtsausdrücke aus blender/moin/mimik.py (AUSDRUECKE) */
+export const MIMIKEN = ['neutral', 'wuetend', 'traurig', 'erschrocken', 'muede', 'skeptisch', 'froh', 'schreiend']
+
+/** Namen aller fertigen Posen aus blender/moin/posen.py */
+export async function posenNamen(blenderDir: string): Promise<string[]> {
+  const text = await readFile(join(blenderDir, 'moin', 'posen.py'), 'utf8').catch(() => '')
+  return [...text.matchAll(/^ {4}"(\w+)": \{/gm)].map((m) => m[1]!)
+}
+
+/** Winkel einiger fertiger Posen als Beispiele für Claude (Text direkt aus posen.py). */
+export async function posenBeispiele(blenderDir: string, namen: string[]): Promise<string> {
+  const text = await readFile(join(blenderDir, 'moin', 'posen.py'), 'utf8').catch(() => '')
+  return namen
+    .map((n) => new RegExp(String.raw`^ {4}"${n}": (\{[\s\S]*?\n {4}\}),`, 'm').exec(text)?.[1])
+    .map((b, i) => (b ? `${namen[i]}: ${b.replace(/\s+/g, ' ')}` : ''))
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** Prompt-Abschnitt für eine frei beschriebene Pose (Eigenes Bild). */
+export function wunschAbschnitt(wunsch: string, posen: string[], beispiele = ''): string {
+  return `
+Philip beschreibt selbst, wie seine Figur posieren soll: „${wunsch}“
+Setze das genau um:
+- pose: der passende Name aus dieser Liste, falls einer genau passt: ${posen.join(', ')}
+- winkel: sonst eigene Winkel in Grad (dann hat winkel Vorrang), Schlüssel alle optional:
+  koerper {drehen, vor, neigen}, kopf {drehen, nicken, neigen},
+  arm_r / arm_l {heben (0 = hängt, 90 = nach vorn, 180 = nach oben), seitlich (vom Körper weg), drehen, beugen (Ellbogen 0–140)}
+  drehen/neigen positiv = zum Inhalt hin (die Seite ohne Philip); nicken positiv = nach unten.
+  Die Kamera sieht Philip von vorn auf Hüfthöhe: Gesten müssen im Bild sein und dürfen das Gesicht nicht verdecken.
+  Wichtig: heben 90 mit drehen 0 zeigt genau in die Kamera (sieht wie ein Klotz aus). Zeigen oder Greifen zur Seite
+  braucht drehen 40–70 (positiv = zum Inhalt); ein Arm zur anderen Seite (weg vom Inhalt) seitlich 40–80.
+  Gebeugte Arme (beugen 40–110) wirken lebendiger als gestreckte.
+${beispiele ? `  So sehen fertige Posen aus (gute Vorlagen für eigene Winkel):\n${beispiele}\n` : ''}
+- mimik: ${MIMIKEN.join(', ')}
+`
 }
 
 /** Freie Worte („bin schockiert“, „lach mich tot“) auf ein Gefühl abbilden. */
@@ -84,7 +126,10 @@ const SCHEMA = {
     seite: { type: 'string', enum: ['links', 'rechts'] },
     wort: { type: 'string' },
     gefuehl: { type: 'string', enum: Object.keys(GEFUEHLE) },
-    gaming: { type: 'boolean' }
+    gaming: { type: 'boolean' },
+    pose: { type: 'string' },
+    winkel: { type: 'object' },
+    mimik: { type: 'string' }
   }
 } as const
 
@@ -109,32 +154,36 @@ Bestimme:
   den Punkt bringt (z. B. KRASS, FAKE?, WAS?!, 1000€) – nicht einfach den Titel des Originals wiederholen
 - gefuehl: ${vorgabe ? `„${vorgabe}“ (Philips Vorgabe)` : 'die passende Reaktion'} aus: ${Object.keys(GEFUEHLE).join(', ')}
 - gaming: true, wenn es um ein Videospiel geht
-${p.wort ? `Philip möchte das Wort „${p.wort}“ – übernimm es.` : ''}
+${p.wunsch ? wunschAbschnitt(p.wunsch, await posenNamen(p.blenderDir), await posenBeispiele(p.blenderDir, ['zeigen', 'panik', 'jubeln', 'nachdenken', 'siegesfaust'])) : ''}${p.ohneExtras ? 'Es kommt kein Wort und kein Pfeil aufs Bild (wort leer lassen); wichtig ist nur, was Philips Figur nicht verdecken darf.\n' : ''}${p.wort ? `Philip möchte das Wort „${p.wort}“ – übernimm es.` : ''}
 Antworte nur mit JSON nach dem Schema.`
   const res = await runClaudeInJob(
     { cli: p.claudeCli, prompt, workDir: join(p.datenOrdner, 'claude-work', 'reaktion'), tools: ['Read'], allowedTools: ['Read'], addDirs: [p.ausgabe], maxTurns: 6, jsonSchema: SCHEMA },
     ctx
   )
   if (!res.ok) throw new Error(`Claude konnte das Original nicht auswerten: ${res.errors.join(' | ') || res.subtype}`)
-  const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { inhalt?: string; wichtig?: number[]; seite?: string; wort?: string; gefuehl?: string }
+  const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { inhalt?: string; wichtig?: number[]; seite?: string; wort?: string; gefuehl?: string; pose?: string; winkel?: Record<string, unknown>; mimik?: string }
   const gefuehl = vorgabe ?? (a.gefuehl && GEFUEHLE[a.gefuehl] ? a.gefuehl : 'schockiert')
   const g = GEFUEHLE[gefuehl]!
   const seite = seiteFuer(a.seite, a.wichtig)
-  const wort = (p.wort ?? a.wort ?? '').toUpperCase().slice(0, 12)
+  const wort = p.ohneExtras ? '' : (p.wort ?? a.wort ?? '').toUpperCase().slice(0, 12)
+  const mimik = p.wunsch && a.mimik && MIMIKEN.includes(a.mimik) ? a.mimik : g.mimik
+  // Wunsch-Pose: Claudes Winkel (oder ein Posen-Name) gilt für beide Varianten und wird nicht durch „ohne Hände“ ersetzt
+  const wunschPose: string | Record<string, unknown> | undefined = p.wunsch ? (a.winkel && Object.keys(a.winkel).length ? a.winkel : a.pose) : undefined
 
   // Posen-Gedächtnis: jedes Mal eine neue Pose
   const gedaechtnis = join(p.datenOrdner, 'reaktionen', 'posen.json')
   const zuletzt = JSON.parse(await readFile(gedaechtnis, 'utf8').catch(() => '[]')) as string[]
   const pose1 = naechstePose(g.posen, zuletzt)
   const pose2 = naechstePose(g.posen.filter((x) => x !== pose1), [...zuletzt, pose1])
+  const posenName = (x: unknown): string => (typeof x === 'string' ? x : 'nach Wunsch')
   await mkdir(join(p.datenOrdner, 'reaktionen'), { recursive: true })
   await writeFile(gedaechtnis, JSON.stringify([...zuletzt, pose1].slice(-20)))
 
   const varianten: ThumbnailVariante[] = []
   const plaene = [
-    { titel: `${wort || 'Reaction'} – ${gefuehl}, Pose ${pose1}`, pose: pose1, seite, pfeil: true, kopf: 14 },
+    { titel: `${wort || (p.wunsch ? 'Eigenes Bild' : 'Reaction')} – ${gefuehl}, Pose ${posenName(wunschPose ?? pose1)}`, pose: wunschPose ?? pose1, seite, pfeil: !p.ohneExtras, kopf: 14 },
     // Zweite Variante: gleiche Seite (Claudes Wahl hält den Inhalt frei), andere Pose, Blick direkt in die Kamera
-    { titel: `Variante: Blick in die Kamera, Pose ${pose2}`, pose: pose2, seite, pfeil: true, kopf: 0 }
+    { titel: `Variante: Blick in die Kamera, Pose ${posenName(wunschPose ?? pose2)}`, pose: wunschPose ?? pose2, seite, pfeil: !p.ohneExtras, kopf: 0 }
   ]
   for (const [i, pl] of plaene.entries()) {
     await ctx.yield()
@@ -144,8 +193,9 @@ Antworte nur mit JSON nach dem Schema.`
       skin: p.skin,
       slim: p.slim ?? null,
       seite: pl.seite,
-      mimik: g.mimik,
+      mimik,
       pose: pl.pose,
+      pose_fest: Boolean(wunschPose),
       kopf_drehung: pl.kopf,
       wort,
       schrift: 'C:/Windows/Fonts/ariblk.ttf',

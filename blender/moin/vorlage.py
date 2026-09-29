@@ -7,6 +7,7 @@ glTF-Modell (z. B. Pistole) in die Hand. Licht: warmes Key-Licht von der Seite, 
 Den Titel der Vorlage legt vorlage_titel.py danach wieder oben drauf.
 """
 import math
+import re
 import os
 
 import bpy
@@ -27,7 +28,20 @@ def _requisit(pfad, knoten, laenge_m):
     vorher = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=pfad)
     neu = [o for o in bpy.data.objects if o not in vorher]
-    behalten = [o for o in neu if o.type == "MESH" and (not knoten or o.name in knoten)]
+    netze = [o for o in neu if o.type == "MESH"]
+    bpy.context.view_layer.update()
+    if knoten:
+        behalten = [o for o in netze if o.name in knoten]
+    else:
+        # Poly-Haven-Modelle enthalten oft Varianten und Einzelteile nebeneinander (zweite Waffe, Magazin, Patrone):
+        # behalten wird das größte Teil und alles, dessen Mitte innerhalb seiner Box liegt (Schlitten, Abzug …)
+        def box(o):
+            e = [o.matrix_world @ Vector(c) for c in o.bound_box]
+            return Vector((min(p.x for p in e), min(p.y for p in e), min(p.z for p in e))), Vector((max(p.x for p in e), max(p.y for p in e), max(p.z for p in e)))
+
+        haupt = max(netze, key=lambda o: (box(o)[1] - box(o)[0]).length)
+        h0, h1 = box(haupt)
+        behalten = [o for o in netze if not re.search(r"bullet|magazin|ammo|cartridge|casing|shell", o.name.lower()) and all(h0[i] - 1e-4 <= (box(o)[0][i] + box(o)[1][i]) / 2 <= h1[i] + 1e-4 for i in range(3))]
     for o in neu:
         if o not in behalten and o.type == "MESH":
             bpy.data.objects.remove(o, do_unlink=True)
