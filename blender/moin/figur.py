@@ -240,7 +240,7 @@ def pose(figur, p):
     """
     g = figur.gelenke
     # kippen: ganze Figur um die Füße nach hinten (positiv) bzw. vorn – für Taumeln/Sturz (Stilbuch Pose 21)
-    figur.wurzel.rotation_euler = Euler((math.radians(p.get("kippen", 0)), math.radians(p.get("kippen_seite", 0)), math.radians(p.get("blick", 0))), "XYZ")
+    figur.wurzel.rotation_euler = Euler((math.radians(-p.get("kippen", 0)), math.radians(p.get("kippen_seite", 0)), math.radians(p.get("blick", 0))), "XYZ")
     k = p.get("koerper", {})
     g["koerper"].rotation_euler = Euler((math.radians(-k.get("vor", 0)), math.radians(k.get("neigen", 0)), math.radians(k.get("drehen", 0))), "ZXY")
     h = p.get("kopf", {})

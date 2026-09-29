@@ -120,6 +120,21 @@ def _boden_hoehe(scene, x, y, von=60.0, platz=2.0, nah_an=0.0):
     return min(boeden, key=lambda b: abs(b - nah_an))
 
 
+def _auf_den_boden(scene, fig, hoehe=None):
+    """Füße auf den Boden (Ausfallschritt und Kippen heben sie sonst an); `hoehe` in Blöcken = in der Luft."""
+    bpy.context.view_layer.update()
+    tief = min((o.matrix_world @ Vector(c)).z for o in fig.teile.values() for c in o.bound_box)
+    w = fig.wurzel.location
+    for o in fig.teile.values():  # die eigene Figur nicht als Boden treffen
+        o.hide_viewport = True
+    boden = _boden_hoehe(scene, w.x, w.y, nah_an=w.z)
+    for o in fig.teile.values():
+        o.hide_viewport = False
+    ziel = boden + (hoehe or 0) * BLOCK
+    fig.wurzel.location.z += ziel - tief
+    bpy.context.view_layer.update()
+
+
 def _im_bild(box):
     """Anteil einer Bildbox (x0, y0, x1, y1), der im Bild liegt."""
     x0, y0, x1, y1 = box
@@ -152,6 +167,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         blick = f.get("blick", p.get("blick", 0))
         p["blick"] = 0 if blick == "auto" else blick
         mfigur.pose(fig, p)
+        _auf_den_boden(scene, fig, f.get("hoehe"))
         figuren.append((f, fig))
     haupt = figuren[0][1]
 
@@ -181,9 +197,17 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     scene.camera = cam
     cam_data.clip_end = 5000
     oben, unten = haupt.kopf_punkte()
-    thema = Vector([c * BLOCK for c in k.get("thema", (8, 6, 0))])
+    t = k.get("thema", (8, 6, 0))
+    if isinstance(t, str):  # Thema ist eine Figur (Gegner): ihr Kopf
+        thema = next(fig for f, fig in figuren if f["id"] == t).kopf_mitte()
+    else:
+        thema = Vector([c * BLOCK for c in t])
     kante = szene.get("welt", {}).get("kante", 0)
     erlaubt = (lambda pos: pos.x > (kante + 2.5) * BLOCK) if k.get("ueber_abgrund") else None
+    if k.get("modus") == "kampf":
+        # Kampf: Kamera vor beiden Gegnern (Seite −Y), nie hinter einem von ihnen
+        vorn = min(fig.kopf_mitte().y for f, fig in figuren) - 0.8
+        erlaubt = lambda pos: pos.y < vorn
 
     def rahmen(still=False):
         o, u = haupt.kopf_punkte()
@@ -250,7 +274,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         elif _im_bild(f["kopf_box"]) < 0.6:
             warnungen.append(f"Kopf von {fid} kaum sichtbar")
     for fid, it in info["items"].items():
-        if _im_bild(it["box"]) < 0.7:
+        if _im_bild(it["box"]) < 0.9:
             warnungen.append(f"Item von {fid} kaum sichtbar ({int(_im_bild(it['box']) * 100)} % im Bild)")
     for m in info["mobs"]:
         if _im_bild(m["box"]) < 0.5:
