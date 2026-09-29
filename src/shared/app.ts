@@ -66,10 +66,20 @@ export const IPC = {
   schnittProjekte: 'schnitt:projekte',
   schnittImport: 'schnitt:import',
   schnittWellenform: 'schnitt:wellenform',
-  schnittLoeschen: 'schnitt:loeschen'
+  schnittLoeschen: 'schnitt:loeschen',
+  schnittTranskript: 'schnitt:transkript',
+  schnittTranskriptStart: 'schnitt:transkript-start'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
+/** Transkript-Abschnitt mit Wortzeiten (ROADMAP 6.3) */
+export interface SchnittAbschnitt {
+  start: number
+  ende: number
+  text: string
+  woerter: { start: number; ende: number; wort: string; p: number }[]
+}
+
 /** Schnitt-Projekt für die Oberfläche (ROADMAP 6.2) */
 export interface SchnittProjekt {
   id: string
@@ -81,6 +91,7 @@ export interface SchnittProjekt {
   proxyUrl: string | null
   leisteUrl: string | null
   wellenform: boolean
+  transkript: boolean
   /** laufender Auftrag (Import, Transkript …) */
   auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
 }
@@ -278,6 +289,9 @@ export interface MoinApi {
   schnittImport(kanal?: string): Promise<string | null>
   schnittWellenform(id: string): Promise<{ aufloesung: number; werte: number[] } | null>
   schnittLoeschen(id: string): Promise<void>
+  /** Transkript (Abschnitte mit Wortzeiten) oder null, falls noch keins da ist; Neustart des Transkripts */
+  schnittTranskript(id: string): Promise<SchnittAbschnitt[] | null>
+  schnittTranskriptStart(id: string): Promise<string>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */

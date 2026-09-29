@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SchnittProjekt } from '@shared/app'
+import type { SchnittAbschnitt, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 
 /**
@@ -61,6 +61,32 @@ function Wellenform({ id, dauer, zeit, springe }: { id: string; dauer: number; z
   )
 }
 
+/** Transkript: jeder Satz mit Zeit, Klick springt hin, der gerade laufende Satz ist hervorgehoben. */
+function Transkript({ id, bereit, zeit, springe }: { id: string; bereit: boolean; zeit: number; springe: (s: number) => void }): React.JSX.Element | null {
+  const [abschnitte, setAbschnitte] = useState<SchnittAbschnitt[] | null>(null)
+  useEffect(() => {
+    if (bereit) void window.moin.schnittTranskript(id).then(setAbschnitte)
+  }, [id, bereit])
+  if (!abschnitte) return null
+  return (
+    <div className="transkript">
+      <div className="card-head">
+        <h2>Transkript</h2>
+        <button className="btn small" onClick={() => void window.moin.schnittTranskriptStart(id)}>
+          Neu erstellen
+        </button>
+      </div>
+      {abschnitte.length === 0 && <p className="muted">Im Video wurde nichts gesprochen.</p>}
+      {abschnitte.map((a) => (
+        <button key={a.start} className={zeit >= a.start && zeit < a.ende ? 'satz aktiv' : 'satz'} onClick={() => springe(a.start)}>
+          <span className="muted small">{zeitText(a.start)}</span>
+          <span>{a.text}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
@@ -101,6 +127,7 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
           }}
         />
       )}
+      <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} />
       {p.quelle && (
         <dl className="facts" style={{ marginTop: 12 }}>
           <dt>Länge</dt>

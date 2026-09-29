@@ -6,6 +6,12 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Transkript im Schnitt-Reiter (ROADMAP 6.3): startet nach dem Import von selbst, läuft lokal mit faster-whisper (Grafikkarte, wenn möglich, sonst Prozessor), wortgenaue Zeiten, fortsetzbar nach Pause oder Neustart; beim ersten Einsatz wird die Geschwindigkeit gemessen und bei Bedarf ein kleineres Modell gewählt. Jeder Satz mit Zeit, Klick springt im Video hin.
+
+### Geändert
+- Gemeinsame Python-Einrichtung für Bild- und Tonwerkzeuge: Pakete kommen erst beim ersten Gebrauch dazu, ohne Paket-Cache.
+
 ## [0.14.0] - 2026-09-29
 
 > Schnitt-Reiter: Projekte, Import, Vorschau, Wellenform

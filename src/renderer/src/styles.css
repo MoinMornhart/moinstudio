@@ -324,3 +324,7 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .schnitt-projekt:first-of-type { border-top: 0; }
 .schnitt-projekt img, .schnitt-projekt .thumb-placeholder { width: 160px; height: 40px; object-fit: cover; border-radius: 4px; }
 .schnitt-projekt span { display: grid; gap: 2px; }
+.transkript { margin-top: 14px; display: grid; gap: 2px; max-height: 320px; overflow-y: auto; }
+.satz { display: grid; grid-template-columns: 52px 1fr; gap: 10px; text-align: left; background: none; border: 0; border-radius: 6px; padding: 5px 8px; color: var(--text); font: inherit; cursor: pointer; }
+.satz:hover { background: var(--bg-2); }
+.satz.aktiv { background: #33301f; }

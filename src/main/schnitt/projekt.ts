@@ -31,8 +31,10 @@ export interface Projekt {
   proxy: boolean
   wellenform: boolean
   leiste: boolean
-  /** Auftrag, der gerade am Projekt arbeitet */
-  auftrag?: string | null
+  transkript?: boolean
+  transkriptModell?: string
+  /** Aufträge am Projekt (Import, Transkript …) in Reihenfolge; die Oberfläche zeigt den ersten, der noch läuft */
+  auftraege?: string[]
   fehler?: string | null
 }
 

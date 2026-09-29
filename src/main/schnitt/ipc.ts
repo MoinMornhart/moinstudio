@@ -6,7 +6,12 @@ import { IPC, type SchnittProjekt } from '@shared/app'
 import type { SettingsStore } from '../data/settings'
 import type { JobQueue } from '../jobs/queue'
 import type { ToolManager } from '../tools/manager'
-import { FFMPEG } from '../tools/specs'
+import { FFMPEG, UV } from '../tools/specs'
+import type { HardwareController } from '../hardware/controller'
+import { ProfileStore } from '../hardware/profile'
+import { localRoot } from '../tools/ipc'
+import { resourceDir } from '../resources'
+import { liesAbschnitte, transkriptJob, type Abschnitt, type TranskriptPayload } from './transkript'
 import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
 import { ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
@@ -26,13 +31,15 @@ export function registerSchnittIpc(
   queue: JobQueue,
   settings: SettingsStore,
   tools: ToolManager,
+  hardware: HardwareController,
   getWindow: () => BrowserWindow | undefined
 ): { starteImport: (video: string, kanal?: string) => Promise<string> } {
   queue.register('schnitt-import', importJob)
+  queue.register('schnitt-transkript', transkriptJob)
 
   const alsAnsicht = (daten: string, p: Projekt): SchnittProjekt => {
     const ordner = projektOrdner(daten, p.id)
-    const job = p.auftrag ? queue.get(p.auftrag) : undefined
+    const job = (p.auftraege ?? []).map((a) => queue.get(a)).find((j) => j && j.state !== 'done' && j.state !== 'cancelled')
     return {
       id: p.id,
       name: p.name,
@@ -42,6 +49,7 @@ export function registerSchnittIpc(
       proxyUrl: p.proxy ? medienUrl(join(ordner, 'proxy.mp4')) : null,
       leisteUrl: p.leiste ? medienUrl(join(ordner, 'leiste.jpg')) : null,
       wellenform: p.wellenform,
+      transkript: !!p.transkript,
       auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null } : null
     }
   }
@@ -63,9 +71,27 @@ export function registerSchnittIpc(
     }
     await speichereProjekt(daten, projekt)
     const payload: ImportPayload = { daten, projekt: id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe') }
-    const auftrag = await queue.enqueue('schnitt-import', `Schnitt: ${projekt.name} importieren`, payload)
-    await speichereProjekt(daten, { ...projekt, auftrag })
+    const importAuftrag = await queue.enqueue('schnitt-import', `Schnitt: ${projekt.name} importieren`, payload)
+    await speichereProjekt(daten, { ...projekt, auftraege: [importAuftrag] })
+    // Rohvideo rein, fertiges Video raus: das Transkript startet direkt danach von selbst
+    await starteTranskript(id)
     return id
+  }
+
+  const starteTranskript = async (id: string): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const projekt = await ladeProjekt(daten, id)
+    if (!projekt) throw new Error('Projekt nicht gefunden.')
+    const ffmpeg = await tools.exePath(FFMPEG)
+    const uv = await tools.exePath(UV)
+    if (!ffmpeg || !uv) throw new Error('FFmpeg oder uv fehlt (Einstellungen → Werkzeuge).')
+    const profile = await hardware.profiles.load()
+    const whisper = profile ? ProfileStore.effective(profile).whisper : { model: 'small' as const, device: 'cpu' as const, compute: 'int8' as const }
+    const payload: TranskriptPayload = { daten, projekt: id, ffmpeg, uv, pyDir: join(localRoot(), 'py', 'vorlage'), skript: join(resourceDir('blender'), 'transkript.py'), whisper, lokal: localRoot() }
+    const auftrag = await queue.enqueue('schnitt-transkript', `Schnitt: ${projekt.name} Transkript`, payload)
+    const neu = (await ladeProjekt(daten, id)) ?? projekt
+    await speichereProjekt(daten, { ...neu, auftraege: [...(neu.auftraege ?? []), auftrag] })
+    return auftrag
   }
 
   ipcMain.handle(IPC.schnittProjekte, async (): Promise<SchnittProjekt[]> => {
@@ -85,10 +111,16 @@ export function registerSchnittIpc(
     if (!p?.wellenform) return null
     return JSON.parse(await readFile(join(projektOrdner(daten, p.id), 'wellenform.json'), 'utf8')) as { aufloesung: number; werte: number[] }
   })
+  ipcMain.handle(IPC.schnittTranskript, async (_e, id: unknown): Promise<Abschnitt[] | null> => {
+    const daten = await datenOrdner(settings)
+    const text = await readFile(join(projektOrdner(daten, String(id)), 'transkript.jsonl'), 'utf8').catch(() => null)
+    return text === null ? null : liesAbschnitte(text)
+  })
+  ipcMain.handle(IPC.schnittTranskriptStart, async (_e, id: unknown) => starteTranskript(String(id)))
   ipcMain.handle(IPC.schnittLoeschen, async (_e, id: unknown): Promise<void> => {
     const daten = await datenOrdner(settings)
     const p = await ladeProjekt(daten, String(id))
-    if (p?.auftrag) await queue.remove(p.auftrag)
+    for (const a of p?.auftraege ?? []) await queue.remove(a)
     await loescheProjekt(daten, String(id))
   })
   return { starteImport }

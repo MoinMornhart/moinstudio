@@ -6,6 +6,7 @@ import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import type { ThumbnailVariante } from './job'
 import { MIMIKEN, posenBeispiele, posenNamen } from './reaktion'
+import { sicherePakete, sichereUmgebung } from '../python'
 
 /**
  * Spiele-Vorlage (Philip, 27.09.): Philip in ein vorhandenes Spiele-Thumbnail anderer Creator setzen, genau an die
@@ -109,12 +110,9 @@ const existiert = (p: string): Promise<boolean> => stat(p).then(() => true, () =
 
 /** Python-Umgebung für Freistellen und Titel (rembg, OpenCV) beim ersten Gebrauch einrichten – läuft auf der CPU. */
 export async function sicherePython(uv: string, pyDir: string, ctx: JobContext<unknown>): Promise<string> {
-  const python = join(pyDir, 'Scripts', 'python.exe')
   await sichereLama(pyDir, ctx)
-  if (await existiert(python)) return python
-  ctx.progress(null, 'Richte die Bildwerkzeuge ein (einmalig, ca. 700 MB) …')
-  await lauf(uv, ['venv', pyDir, '--python', '3.12'], ctx)
-  await lauf(uv, ['pip', 'install', '--python', python, 'rembg==2.0.*', 'onnxruntime', 'opencv-python-headless', 'pillow'], ctx)
+  const python = await sichereUmgebung(uv, pyDir, ctx)
+  await sicherePakete(uv, python, 'rembg, cv2, PIL', ['rembg==2.0.*', 'onnxruntime', 'opencv-python-headless', 'pillow'], ctx, 'Richte die Bildwerkzeuge ein (einmalig, ca. 700 MB) …')
   return python
 }
 

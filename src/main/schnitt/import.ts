@@ -136,7 +136,6 @@ export async function importJob(p: ImportPayload, ctx: JobContext<unknown>): Pro
     )
     await merke({ proxy: true })
   }
-  await merke({ auftrag: null, fehler: null })
   ctx.progress(100, 'Fertig')
   return { projekt: p.projekt }
 }
