@@ -1,5 +1,8 @@
 import { ipcMain, type BrowserWindow } from 'electron'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { rhythmusAus, type Rhythmus } from '@shared/kalender'
+import { writeJsonAtomic } from '../data/jsonfile'
 import { IPC, type PlanungKarte } from '@shared/app'
 import type { SettingsStore } from '../data/settings'
 import { aendereKarte, beobachteKarten, kartenOrdner, ladeKarten, loescheKarte, neueKarte, verschiebeKarte, type KartenAenderung, type Kanal, type Spalte } from './karten'
@@ -41,6 +44,21 @@ export function registerPlanungIpc(settings: SettingsStore, getWindow: () => Bro
   })
   biete(IPC.planungAendern, async (id: string, aenderung: KartenAenderung): Promise<PlanungKarte> => aendereKarte(await daten(), String(id), aenderung))
   biete(IPC.planungVerschieben, async (id: string, ziel: { spalte: Spalte; index: number; kanal?: Kanal }): Promise<PlanungKarte> => verschiebeKarte(await daten(), String(id), ziel))
+  // Upload-Rhythmus: eine kleine Datei für beide Kanäle, wird selten geändert
+  const rhythmusDatei = (d: string): string => join(d, 'planning', 'rhythmus.json')
+  biete(IPC.planungRhythmus, async (): Promise<Rhythmus> => {
+    const text = await readFile(rhythmusDatei(await daten()), 'utf8').catch(() => null)
+    try {
+      return rhythmusAus(text ? JSON.parse(text) : {})
+    } catch {
+      return {}
+    }
+  })
+  biete(IPC.planungRhythmusSetzen, async (roh: unknown): Promise<Rhythmus> => {
+    const r = rhythmusAus(roh)
+    await writeJsonAtomic(rhythmusDatei(await daten()), r)
+    return r
+  })
   biete(IPC.planungLoeschen, async (id: string): Promise<void> => loescheKarte(await daten(), String(id)))
 
   const aufruf = async (kanal: string, ...a: unknown[]): Promise<unknown> => {

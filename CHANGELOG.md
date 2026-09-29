@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Planung: Kalender mit Monats- und Wochenansicht für beide Kanäle. Karten per Maus auf einen Tag ziehen, um sie einzuplanen oder zu verschieben. Upload-Rhythmus je Kanal (Wochentage und Uhrzeit); freie Upload-Termine erscheinen im Kalender (ROADMAP 7.4).
+
 ## [0.23.0] - 2026-09-29
 
 > Planung: Board

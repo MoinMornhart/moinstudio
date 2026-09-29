@@ -114,6 +114,8 @@ const api: MoinApi = {
   planungAendern: (id: string, aenderung: PlanungAenderung) => ipcRenderer.invoke(IPC.planungAendern, id, aenderung),
   planungVerschieben: (id: string, ziel: Parameters<MoinApi['planungVerschieben']>[1]) => ipcRenderer.invoke(IPC.planungVerschieben, id, ziel),
   planungLoeschen: (id: string) => ipcRenderer.invoke(IPC.planungLoeschen, id),
+  planungRhythmus: () => ipcRenderer.invoke(IPC.planungRhythmus),
+  planungRhythmusSetzen: (rhythmus: Parameters<MoinApi['planungRhythmusSetzen']>[0]) => ipcRenderer.invoke(IPC.planungRhythmusSetzen, rhythmus),
   onPlanungGeaendert(handler: () => void) {
     const listener = (): void => handler()
     ipcRenderer.on(IPC.planungGeaendert, listener)

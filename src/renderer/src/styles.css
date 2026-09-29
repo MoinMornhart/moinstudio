@@ -384,3 +384,50 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .punkt .erledigt { text-decoration: line-through; color: var(--muted); }
 .details-fuss { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .btn.gefahr { background: #7a2530; }
+
+/* Planung: Kalender (ROADMAP 7.4) */
+.k-mornhart { --kanal: #ffc23d; }
+.k-morni { --kanal: #7aa2ff; }
+.segment { display: inline-flex; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.segment button { background: none; border: 0; color: var(--muted); font: inherit; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.segment button.on { background: var(--panel); color: var(--text); }
+.kalender-flaeche { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .kalender-flaeche { grid-template-columns: 1fr; } }
+.kalender-leiste { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.kalender-titel { margin: 0 0 0 6px; font-size: 18px; }
+.chip.legende { padding: 4px 10px; opacity: 0.5; }
+.chip.legende.on { opacity: 1; background: var(--bg-2); border-color: var(--kanal); }
+.punkt-farbe { width: 9px; height: 9px; border-radius: 50%; background: var(--kanal); display: inline-block; flex: none; }
+.kalender-raster { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.kalender-kopf { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 6px 2px; }
+.kalender-tag { background: var(--bg-2); border: 1px solid transparent; border-radius: 6px; min-height: 92px; padding: 5px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.kalender-raster.woche .kalender-tag { min-height: 360px; }
+.kalender-tag.fremd { opacity: 0.65; }
+.kalender-tag.fremd .kalender-nr { opacity: 0.6; }
+.kalender-tag.vorbei { background: #121217; }
+.kalender-tag.heute { border-color: var(--accent); }
+.kalender-tag.ziel { border-color: var(--accent); background: #26241a; }
+.kalender-nr { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 0 2px; }
+.kalender-tag.heute .kalender-nr { color: var(--accent); font-weight: 700; }
+.termin-pille { display: block; width: 100%; text-align: left; background: var(--panel); color: var(--text); border: 0; border-left: 3px solid var(--kanal); border-radius: 4px; padding: 3px 5px; font: inherit; font-size: 11.5px; line-height: 1.3; cursor: grab; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.termin-pille { white-space: normal; }
+.pille-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.kalender-raster.woche .pille-text, .ohne-termin .pille-text { -webkit-line-clamp: 4; }
+.luecke { white-space: normal !important; }
+.termin-pille:hover { background: #262631; }
+.termin-pille .zeit { color: var(--kanal); font-variant-numeric: tabular-nums; font-weight: 600; }
+.termin-pille.fertig { opacity: 0.55; }
+.termin-pille.spaet .zeit { color: #ff6b6b; }
+.luecke { display: block; border: 1px dashed var(--kanal); color: var(--kanal); border-radius: 4px; padding: 2px 5px; font-size: 11px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kalender-seite { display: flex; flex-direction: column; gap: 18px; background: var(--bg-2); border-radius: 10px; padding: 14px; }
+.kalender-seite h3 { margin: 0 0 4px; font-size: 13px; }
+.ohne-termin { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; max-height: 260px; overflow-y: auto; }
+.rhythmus { display: grid; gap: 6px; margin-top: 10px; }
+.rhythmus-kanal { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; }
+.rhythmus-tage { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.tag-knopf { background: var(--panel); border: 1px solid var(--border); color: var(--muted); border-radius: 5px; padding: 3px 0; width: 28px; font: inherit; font-size: 11px; cursor: pointer; }
+.tag-knopf.on { border-color: var(--kanal); color: var(--text); background: #2a2a1f; }
+.k-morni .tag-knopf.on { background: #1f2436; }
+.zeit-feld { width: 86px; flex: none; }
+.ok-text { color: #5fd38d; margin: 0; }
+.warn-text { color: #ffb347; }

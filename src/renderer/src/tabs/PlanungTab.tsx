@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PLANUNG_SPALTEN, type PlanungAenderung, type PlanungKanal, type PlanungKarte, type PlanungSpalte } from '@shared/app'
+import type { Rhythmus } from '@shared/kalender'
 import { PageHeader } from '../components/Panel'
+import { PlanungKalender } from '../components/PlanungKalender'
 
 const KANAELE: { id: PlanungKanal; info: string }[] = [
   { id: 'MoinMornhart', info: 'Minecraft' },
@@ -33,6 +35,8 @@ export function PlanungTab(): React.JSX.Element {
   const [fehler, setFehler] = useState<string | null>(null)
   const [kanal, setKanal] = useState<PlanungKanal>('MoinMornhart')
   const [offen, setOffen] = useState<string | null>(null)
+  const [ansicht, setAnsicht] = useState<'board' | 'kalender'>('board')
+  const [rhythmus, setRhythmus] = useState<Rhythmus>({})
 
   const laden = useCallback((): void => {
     window.moin
@@ -42,6 +46,7 @@ export function PlanungTab(): React.JSX.Element {
         setFehler(null)
       })
       .catch((e: Error) => setFehler(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))
+    void window.moin.planungRhythmus().then(setRhythmus).catch(() => undefined)
   }, [])
   useEffect(() => {
     laden()
@@ -60,6 +65,10 @@ export function PlanungTab(): React.JSX.Element {
   const neu = (spalte: PlanungSpalte, titel: string): void => {
     void window.moin.planungNeu({ kanal, titel, spalte }).then((k) => setKarten((alt) => [...(alt ?? []), k]))
   }
+  const setzeRhythmus = (r: Rhythmus): void => {
+    setRhythmus(r)
+    void window.moin.planungRhythmusSetzen(r).then(setRhythmus)
+  }
   const loeschen = (id: string): void => {
     setOffen(null)
     setKarten((alt) => (alt ?? []).filter((x) => x.id !== id))
@@ -73,6 +82,9 @@ export function PlanungTab(): React.JSX.Element {
     <>
       <PageHeader title="Planung" subtitle="Jedes Video von der Idee bis zum Upload – für MoinMornhart und MoinMorni." />
       <div className="planung-kopf">
+        {ansicht === 'kalender' ? (
+          <p className="muted">Upload-Termine beider Kanäle. Karten auf einen Tag ziehen, um sie einzuplanen oder zu verschieben.</p>
+        ) : (
         <div className="kanal-wahl" role="tablist">
           {KANAELE.map((k) => (
             <button key={k.id} role="tab" aria-selected={kanal === k.id} className={`kanal-knopf${kanal === k.id ? ' on' : ''}`} onClick={() => setKanal(k.id)}>
@@ -83,9 +95,19 @@ export function PlanungTab(): React.JSX.Element {
             </button>
           ))}
         </div>
+        )}
+        <span className="segment">
+          <button className={ansicht === 'board' ? 'on' : ''} onClick={() => setAnsicht('board')}>
+            Board
+          </button>
+          <button className={ansicht === 'kalender' ? 'on' : ''} onClick={() => setAnsicht('kalender')}>
+            Kalender
+          </button>
+        </span>
       </div>
       {fehler && <p className="warn">{fehler}</p>}
-      {karten && <Board karten={imKanal} oeffne={setOffen} verschieben={verschieben} neu={neu} />}
+      {karten && ansicht === 'board' && <Board karten={imKanal} oeffne={setOffen} verschieben={verschieben} neu={neu} />}
+      {karten && ansicht === 'kalender' && <PlanungKalender karten={karten} rhythmus={rhythmus} setzeRhythmus={setzeRhythmus} oeffne={setOffen} aendern={aendern} />}
       {offeneKarte && <KartenDetails key={offeneKarte.id} karte={offeneKarte} aendern={(a) => aendern(offeneKarte.id, a)} loeschen={() => loeschen(offeneKarte.id)} schliessen={() => setOffen(null)} />}
     </>
   )

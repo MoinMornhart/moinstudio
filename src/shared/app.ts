@@ -1,3 +1,4 @@
+import type { Rhythmus } from './kalender'
 import type { HardwareState } from './hardware'
 import type { QueueState } from './jobs'
 
@@ -90,6 +91,8 @@ export const IPC = {
   planungAendern: 'planung:aendern',
   planungVerschieben: 'planung:verschieben',
   planungLoeschen: 'planung:loeschen',
+  planungRhythmus: 'planung:rhythmus',
+  planungRhythmusSetzen: 'planung:rhythmus-setzen',
   /** Ereignis: Karten im Datenordner haben sich geändert */
   planungGeaendert: 'planung:geaendert'
 } as const
@@ -411,6 +414,9 @@ export interface MoinApi {
   planungAendern(id: string, aenderung: PlanungAenderung): Promise<PlanungKarte>
   planungVerschieben(id: string, ziel: { spalte: PlanungSpalte; index: number; kanal?: PlanungKanal }): Promise<PlanungKarte>
   planungLoeschen(id: string): Promise<void>
+  /** Upload-Rhythmus je Kanal (ROADMAP 7.4) */
+  planungRhythmus(): Promise<Rhythmus>
+  planungRhythmusSetzen(rhythmus: Rhythmus): Promise<Rhythmus>
   onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
