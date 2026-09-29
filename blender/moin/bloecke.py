@@ -70,6 +70,46 @@ def _rgba(node, name):
     raise KeyError(name)
 
 
+# Luftperspektive (Stilbuch 6/7): Oberflächen mischen sich mit der Entfernung zur Kamera in Dunstfarbe.
+# Ohne Volumen – so bleibt das Sonnenlicht voll und die Renderzeit gleich.
+DUNST = {"farbe": (0.62, 0.80, 1.0), "halbwert": 160.0}
+
+
+def dunst_einbauen(mat):
+    """Hängt den Entfernungsdunst vor den Material-Ausgang (Cycles und Eevee, Blender 4 und 5)."""
+    nt = mat.node_tree
+    out = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")
+    link = next((lk for lk in nt.links if lk.to_socket == out.inputs["Surface"]), None)
+    if link is None:
+        return
+    shader = link.from_socket
+    cam = nt.nodes.new("ShaderNodeCameraData")
+    teil = nt.nodes.new("ShaderNodeMath")
+    teil.operation = "DIVIDE"
+    teil.inputs[1].default_value = DUNST["halbwert"] / 0.693
+    nt.links.new(cam.outputs["View Distance"], teil.inputs[0])
+    expo = nt.nodes.new("ShaderNodeMath")
+    expo.operation = "EXPONENT"
+    neg = nt.nodes.new("ShaderNodeMath")
+    neg.operation = "MULTIPLY"
+    neg.inputs[1].default_value = -1.0
+    nt.links.new(teil.outputs[0], neg.inputs[0])
+    nt.links.new(neg.outputs[0], expo.inputs[0])
+    faktor = nt.nodes.new("ShaderNodeMath")
+    faktor.operation = "SUBTRACT"
+    faktor.inputs[0].default_value = 1.0
+    nt.links.new(expo.outputs[0], faktor.inputs[1])
+    em = nt.nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = (*DUNST["farbe"], 1)
+    em.inputs["Strength"].default_value = 1.0
+    mix = nt.nodes.new("ShaderNodeMixShader")
+    nt.links.new(faktor.outputs[0], mix.inputs[0])
+    nt.links.new(shader, mix.inputs[1])
+    nt.links.new(em.outputs["Emission"], mix.inputs[2])
+    nt.links.remove(link)
+    nt.links.new(mix.outputs[0], out.inputs["Surface"])
+
+
 class Texturen:
     """Lädt Blocktexturen aus der entpackten Spieldatei und baut Materialien (einmal je Textur/Einfärbung)."""
 
@@ -139,6 +179,7 @@ class Texturen:
             nt.links.new(farbe_out, bsdf.inputs[key_e])
             if "Emission Strength" in bsdf.inputs:
                 bsdf.inputs["Emission Strength"].default_value = leuchtet
+        dunst_einbauen(mat)
         self.cache[key] = mat
         return mat
 

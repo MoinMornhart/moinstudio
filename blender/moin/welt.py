@@ -88,7 +88,8 @@ def klippe(seed=7, kante=2, tiefe=20, grund="water", gegenseite=True, breite=(-2
                     _saeule(welt, x, y, oben, tief=3, stein_bis=min(oben - 4, grund_z))
                 else:
                     welt[(x, y, grund_z)] = "gravel" if huegel(x * 2, y * 2) > 0.5 else "sand"
-                    if grund in ("water", "lava"):
+                    # offenes Meer: eine durchgehende Wasserfläche (meer), keine Wasserblöcke – sonst sichtbare Naht
+                    if grund in ("water", "lava") and (gegenseite or grund == "lava"):
                         for z in range(grund_z + 1, grund_z + 3):
                             welt[(x, y, z)] = grund
     # Bäume hinten auf dem Plateau und gegenüber
@@ -175,7 +176,7 @@ def meer(texturen, tiefe, von_x, collection=None):
     bloecke._rgba(mul, "B").default_value = (*bloecke.WASSER, 1)
     nt.links.new(bloecke._rgba(mul, "Result"), bsdf.inputs["Base Color"])
     me = bpy.data.meshes.new("meer")
-    z = (-tiefe + 3 - 0.125) * BLOCK
+    z = (-tiefe + 1.875) * BLOCK  # gleiche Höhe wie die Wasserblöcke im Abgrund (oberster bei grund + 2, 7/8 hoch)
     s = 1200.0
     x0 = von_x * BLOCK
     me.from_pydata([(x0, -s, z), (s, -s, z), (s, s, z), (x0, s, z)], [], [(0, 1, 2, 3)])
@@ -183,6 +184,7 @@ def meer(texturen, tiefe, von_x, collection=None):
     kachel = [(0, 0), ((s - x0) / BLOCK, 0), ((s - x0) / BLOCK, 2 * s / BLOCK), (0, 2 * s / BLOCK)]
     for li, (u, v) in enumerate(kachel):
         uv.data[li].uv = (u, v)
+    bloecke.dunst_einbauen(mat)
     me.materials.append(mat)
     ob = bpy.data.objects.new("meer", me)
     col.objects.link(ob)
@@ -220,7 +222,5 @@ def baue_klippe(texturen_ordner, **kw):
     ob = bloecke.baue(klippe(**kw), tex, "klippe")
     kante, tiefe = kw.get("kante", 2), kw.get("tiefe", 20)
     if not kw.get("gegenseite", True):
-        meer(tex, tiefe, von_x=kw.get("breite", (-26, 44))[1])
-    # Dunst im Abgrund: wird nach unten dichter wahrgenommen, weil der Weg durch das Volumen länger ist
-    dunst((kante + 1, -14, -tiefe + 1), (kante + 60, 70, -3), dichte=0.009)
+        meer(tex, tiefe, von_x=kante + 1)
     return ob

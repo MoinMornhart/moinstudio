@@ -39,6 +39,13 @@ POSEN = {
         "bein_r": {"seitlich": 6},
         "bein_l": {"seitlich": 6},
     },
+    # 20 (Variante stehend) Blick in den Abgrund: Kopf 30–40° nach unten, Rumpf leicht vorgebeugt, Arme zur Balance
+    "blick_runter": {
+        "koerper": {"drehen": 20, "vor": 12},
+        "kopf": {"drehen": 12, "nicken": 36, "neigen": 6},
+        "arm_r": {"heben": 22, "seitlich": 24},
+        "arm_l": {"heben": 12, "seitlich": 30},
+    },
     # 14 Schreck: Hand vor dem Mund (Arm 110–130° hoch, nach innen)
     "schreck": {
         "kopf": {"nicken": 7},

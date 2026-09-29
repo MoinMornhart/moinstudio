@@ -15,6 +15,10 @@ from mathutils import Matrix, Vector
 MODI = {
     "nah": {"linse": 24, "kopf_anteil": 0.45, "kopf_uv": (0.27, 0.58), "thema_uv": (0.72, 0.45), "hoehe": 6},
     "gefahr": {"linse": 24, "kopf_anteil": 0.32, "kopf_uv": (0.24, 0.62), "thema_uv": (0.70, 0.30), "hoehe": 18},
+    "tiefe": {"linse": 22, "kopf_anteil": 0.13, "kopf_uv": (0.32, 0.72), "thema_uv": (0.60, 0.20), "hoehe": 42},
+    "klippe": {"linse": 24, "kopf_anteil": 0.30, "kopf_uv": (0.26, 0.66), "thema_uv": (0.72, 0.30), "hoehe": 4},
+    "klippe_wand": {"linse": 22, "kopf_anteil": 0.18, "kopf_uv": (0.30, 0.74), "thema_uv": (0.58, 0.28), "hoehe": 12},
+    "abgrund": {"linse": 20, "kopf_anteil": 0.13, "kopf_uv": (0.40, 0.78), "thema_uv": (0.52, 0.16), "hoehe": 26},
     "held": {"linse": 22, "kopf_anteil": 0.34, "kopf_uv": (0.30, 0.66), "thema_uv": (0.72, 0.50), "hoehe": -8},
     "brust": {"linse": 35, "kopf_anteil": 0.26, "kopf_uv": (0.30, 0.68), "thema_uv": (0.70, 0.45), "hoehe": 5},
 }
@@ -49,10 +53,11 @@ def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_
     return fehler, (round(pk.x, 2), round(pk.y, 2)), (round(pt.x, 2), round(pt.y, 2)), round(po.y - pu.y, 2)
 
 
-def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None):
+def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None):
     """Sucht Brennweite, Position und Blickrichtung. `seite`: wo die Figur im Bild steht (das Thema gegenüber).
     `gesicht`: Blickrichtung des Kopfes (Weltvektor); die Kamera sieht das Gesicht im Dreiviertelprofil, nie von
-    hinten. Gibt die Abweichung (0 = perfekt) zurück."""
+    hinten. `erlaubt(pos)`: optionale Vorgabe, wo die Kamera stehen darf (z. B. über dem Abgrund).
+    Gibt die Abweichung (0 = perfekt) zurück."""
     m = MODI[modus]
     kopf_uv = m["kopf_uv"] if seite == "links" else (1 - m["kopf_uv"][0], m["kopf_uv"][1])
     thema_uv = m["thema_uv"] if seite == "links" else (1 - m["thema_uv"][0], m["thema_uv"][1])
@@ -71,6 +76,8 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
             for dh in (-6, -3, 0, 3, 6):
                 el = math.radians(m["hoehe"] + dh)
                 pos = kopf + Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el))) * abstand
+                if erlaubt and not erlaubt(pos):
+                    continue
                 for i in range(16):  # Blickziel: 0–3 m vom Kopf Richtung Thema
                     ziel = kopf + richtung * (i * 0.2)
                     r = _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht)

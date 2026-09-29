@@ -41,7 +41,7 @@ mapping = nt.nodes.new("ShaderNodeMapping")
 mapping.inputs["Rotation"].default_value = (0, math.radians(-90), 0)
 ramp = nt.nodes.new("ShaderNodeValToRGB")
 ramp.color_ramp.elements[0].position = 0.5
-ramp.color_ramp.elements[0].color = (0.55, 0.78, 1.0, 1)
+ramp.color_ramp.elements[0].color = (0.62, 0.80, 1.0, 1)  # Horizont = Dunstfarbe (nahtloser Übergang)
 ramp.color_ramp.elements[1].position = 0.75
 ramp.color_ramp.elements[1].color = (0.08, 0.38, 1.0, 1)
 nt.links.new(coord.outputs["Generated"], mapping.inputs["Vector"])
@@ -78,10 +78,11 @@ kante, tiefe = int(env("MOIN_KANTE", "2")), int(env("MOIN_TIEFE", "20"))
 # Thema: ein Punkt unten im Abgrund, knapp hinter der Kante
 thema = Vector(((kante + float(env("MOIN_TX", "10"))) * BLOCK, float(env("MOIN_TY", "9")) * BLOCK, -tiefe * float(env("MOIN_TZ", "0.7")) * BLOCK))
 oben, unten = fig.kopf_punkte()
-fehler = mkamera.rahme(scene, cam, oben, unten, thema, env("MOIN_MODUS", "gefahr"), gesicht=fig.gesicht_richtung())
+fehler = mkamera.rahme(scene, cam, oben, unten, thema, env("MOIN_MODUS", "gefahr"), seite=env("MOIN_SEITE", "links"), gesicht=fig.gesicht_richtung(),
+                       erlaubt=(lambda p: p.x > (kante + 2.5) * BLOCK) if env("MOIN_MODUS") == "abgrund" else None)
 print("MOIN_KAMERA", round(fehler, 4))
 cam_data.dof.aperture_fstop = float(env("MOIN_BLENDE", "4"))
-cam_data.clip_end = 400
+cam_data.clip_end = 5000
 
 scene.render.engine = "CYCLES"
 scene.cycles.device = "CPU"
