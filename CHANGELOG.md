@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-09-29
+
+> Planung: Verbindung zu Schnitt und Thumbnail, Ideen mit Claude, Claude Desktop
+
 ### Hinzugefügt
 
 - Planung mit Schnitt und Thumbnail verbunden: aus einer Karte das Rohvideo schneiden oder ein Thumbnail erstellen, Variante direkt in der Karte wählen. Die Karte rückt nach Import, Export und Thumbnail-Wahl von selbst weiter und übernimmt Titel, Beschreibung und Kapitel aus dem Export (ROADMAP 7.5).

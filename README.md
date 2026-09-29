@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.25.0** (2026-09-29): Planung: Verbindung zu Schnitt und Thumbnail, Ideen mit Claude, Claude Desktop
 - **0.24.0** (2026-09-29): Planung: Kalender
 - **0.23.0** (2026-09-29): Planung: Board
 - **0.22.0** (2026-09-29): Planung: Karten-Speicher
 - **0.21.1** (2026-09-29): Plan für die Planung
-- **0.21.0** (2026-09-29): Schnitt aus Claude Desktop steuern
 <!-- CHANGELOG:END -->
 
 ## Installation
