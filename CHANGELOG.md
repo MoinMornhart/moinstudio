@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-29
+
+> Schnitt: Export für YouTube
+
 ### Hinzugefügt
 - Export für YouTube (ROADMAP 6.7): fertiges Video in voller Qualität aus dem Original nach YouTubes Upload-Empfehlung (H.264 High, 2 B-Frames, Closed GOP, BT.709, AAC 48 kHz, Fast Start, Bitrate nach Auflösung), Encoder aus dem Hardware-Profil (NVENC/AMF/QSV oder CPU). Claude schlägt 3 Titel, eine Beschreibung und Kapitel vor (nach YouTube-Regeln geprüft); die fertige Datei wird geprüft. Speichern unter und „Thumbnail-Vorschläge“ aus dem fertigen Video.
 

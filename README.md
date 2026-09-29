@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.19.0** (2026-09-29): Schnitt: Export für YouTube
 - **0.18.0** (2026-09-29): Schnitt: Untertitel, Zooms, geschnittene Vorschau
 - **0.17.0** (2026-09-29): Schnitt prüfen und ändern
 - **0.16.0** (2026-09-29): Schnitt: automatischer Rohschnitt
 - **0.15.0** (2026-09-29): Schnitt: Transkript lokal mit Whisper
-- **0.14.0** (2026-09-29): Schnitt-Reiter: Projekte, Import, Vorschau, Wellenform
 <!-- CHANGELOG:END -->
 
 ## Installation
