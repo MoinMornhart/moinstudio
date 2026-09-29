@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-29
+
+> Adobe-Selbsttest
+
 ### Hinzugefügt
 
 - Adobe-Selbsttest (Einstellungen → Adobe → „Selbsttest“, für Entwickler `npm run test:adobe`): erzeugt neutrale Proben, prüft Photoshop automatisch und öffnet eine Checkliste für Premiere. Ohne Adobe endet er mit „übersprungen“ (ROADMAP 8.5).
