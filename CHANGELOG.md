@@ -6,7 +6,17 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Geändert
+- Reaction und Gaming sind getrennte Karten (beide MoinMorni); Gaming vereint Spielbild/eigenen Hintergrund, Spielname und frei beschriebene Pose.
+- Ohne Vorbild steht unter jedem Bild die Grundlage, auf der es entstanden ist.
+- Spiele-Vorlagen und Änderungen erscheinen in der Auftragsliste.
+
+### Behoben
+- „Kein Bild“ bei Aufträgen im iCloud-Ordner: Bilder werden mehrfach gelesen und automatisch nachgeladen.
+
 ### Hinzugefügt
+- Änderungswunsch unter jedem fertigen Thumbnail (z. B. „Text gelb, Kopf kleiner“): Claude passt die Szene an, Blender rendert eine neue Version als eigenen Auftrag – für Minecraft-Szenen, Reactions, Gaming und Spiele-Vorlagen.
+- Aufträge löschen (samt ihren Bildern im Datenordner).
 - Spiele-Vorlage als eigene Karte in der App: Spiele-Thumbnail wählen → Claude erkennt Pose, Gegenstand, Ansicht (auch von hinten) und Titel, rembg entfernt die Person, ein passendes CC0-Modell kommt automatisch von Poly Haven, Blender rendert Philip an der Stelle, der Titel kommt wieder obendrauf. Python-Umgebung wird beim ersten Gebrauch selbst eingerichtet.
 - Lebendiger Text bei Reactions (Philip: „random rumfliegen, wo Platz ist, farblich anpassen“): zufälliger freier Platz, leicht schräg, Farbe passend zum Bild; wird kleiner statt abgeschnitten; meidet Figur, Hände, wichtiges Detail und Logos/Titel im Original.
 

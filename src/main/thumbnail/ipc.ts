@@ -14,6 +14,7 @@ import type { ToolManager } from '../tools/manager'
 import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG, UV } from '../tools/specs'
 import { localRoot } from '../tools/ipc'
 import { spielvorlageJob, type SpielvorlagePayload } from './spielvorlage'
+import { aenderungJob, type AenderungPayload, type AenderungsArt } from './aenderung'
 import { z } from 'zod'
 import { thumbnailJob, type ThumbnailPayload, type ThumbnailVariante } from './job'
 import { ladeVorbilder } from './planung'
@@ -50,12 +51,16 @@ function imOrdner(dir: string, pfad: string): boolean {
   return r.startsWith(resolve(dir) + sep)
 }
 
+/** Bild als data:-URL. iCloud sperrt frisch geschriebene Dateien kurz zum Hochladen – deshalb mehrere Versuche. */
 async function alsDataUrl(pfad: string): Promise<string | null> {
-  try {
-    return `data:image/png;base64,${(await readFile(pfad)).toString('base64')}`
-  } catch {
-    return null
+  for (let versuch = 0; versuch < 6; versuch++) {
+    try {
+      return `data:image/png;base64,${(await readFile(pfad)).toString('base64')}`
+    } catch {
+      await new Promise((r) => setTimeout(r, 500))
+    }
   }
+  return null
 }
 
 export function registerThumbnailIpc(
@@ -69,11 +74,56 @@ export function registerThumbnailIpc(
   starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
   starteReaktion: (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }) => Promise<string>
   starteSpielvorlage: (vorlage: string, wunsch?: string) => Promise<string>
+  starteAenderung: (jobId: unknown, index: unknown, wunsch: unknown) => Promise<string>
 } {
   queue.register('thumbnail', thumbnailJob)
   queue.register('video-vorschlaege', videoVorschlaegeJob)
   queue.register('reaktion', reaktionJob)
   queue.register('spielvorlage', spielvorlageJob)
+  queue.register('aenderung', aenderungJob)
+
+  // Änderungswunsch zu einer fertigen Variante (Philip, 29.09.): neuer Auftrag mit geänderter Szene
+  const starteAenderung = async (jobId: unknown, index: unknown, wunsch: unknown): Promise<string> => {
+    const text = typeof wunsch === 'string' ? wunsch.trim() : ''
+    if (!text) throw new Error('Bitte schreib, was geändert werden soll.')
+    const job = queue.get(String(jobId))
+    const res = queue.result<{ varianten: ThumbnailVariante[] }>(String(jobId))
+    const v = res?.varianten[Number(index)]
+    if (!job || !v?.bild || !v.szene) throw new Error('Diese Variante gibt es nicht mehr.')
+    const art: AenderungsArt =
+      job.kind === 'aenderung' ? (queue.payload<AenderungPayload>(job.id)?.art ?? 'thumbnail') : job.kind === 'reaktion' ? 'reaktion' : job.kind === 'spielvorlage' ? 'spielvorlage' : 'thumbnail'
+    const dir = await datenOrdner(settings)
+    const profile = await hardware.profiles.load()
+    if (!profile) throw new Error('Bitte zuerst den Hardware-Test ausführen (Einstellungen).')
+    const config = ProfileStore.effective(profile)
+    const spec = [BLENDER_PRIMARY, BLENDER_FALLBACK].find((x) => x.version === config.blenderVersion)
+    const exe = spec ? await tools.exePath(spec) : null
+    if (!exe) throw new Error('Blender ist auf diesem Gerät nicht lauffähig oder nicht installiert.')
+    const cli = await findClaudeCli()
+    if (!cli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
+    const payload: AenderungPayload = {
+      art,
+      wunsch: text,
+      bild: v.bild,
+      szene: v.szene,
+      claudeCli: cli,
+      blender: { exe, mesa: config.blenderMesa },
+      blenderDir: resourceDir('blender'),
+      datenOrdner: dir,
+      formatHilfe: art === 'thumbnail' ? await readFile(join(resourceDir('prompts'), 'thumbnail-planung.md'), 'utf8').catch(() => '') : undefined,
+      python: art === 'spielvorlage' ? join(localRoot(), 'py', 'vorlage', 'Scripts', 'python.exe') : undefined,
+      ausgabe: join(dir, 'thumbnails', `aenderung-${randomUUID()}`)
+    }
+    return queue.enqueue('aenderung', `Änderung: ${text.slice(0, 50)}`, payload)
+  }
+  ipcMain.handle(IPC.thumbAendern, (_e, jobId: unknown, index: unknown, wunsch: unknown) => starteAenderung(jobId, index, wunsch))
+
+  // Auftrag löschen (Philip, 29.09.): Eintrag und seine Bilder im Datenordner
+  ipcMain.handle(IPC.thumbLoeschen, async (_e, jobId: unknown): Promise<void> => {
+    const dir = await datenOrdner(settings)
+    const payload = (await queue.remove(String(jobId))) as { ausgabe?: string } | undefined
+    if (payload?.ausgabe && imOrdner(dir, payload.ausgabe) && resolve(payload.ausgabe) !== resolve(dir)) await rm(payload.ausgabe, { recursive: true, force: true })
+  })
 
   // Spiele-Vorlage (Philip, 27.09.): fremdes Spiele-Thumbnail wählen → Philip steht an der Stelle der Person
   const starteSpielvorlage = async (vorlage: string, wunsch?: string): Promise<string> => {
@@ -142,7 +192,7 @@ export function registerThumbnailIpc(
       datenOrdner: dir,
       ausgabe: join(dir, 'thumbnails', `reaktion-${randomUUID()}`)
     }
-    return queue.enqueue('reaktion', `${payload.wunsch ? 'Eigenes Bild' : payload.spiel ? `Gaming: ${payload.spiel}` : 'Reaction'}: ${basename(original)}`, payload)
+    return queue.enqueue('reaktion', `${payload.wunsch ? `Gaming${payload.spiel ? `: ${payload.spiel}` : ''} (eigene Pose)` : payload.spiel ? `Gaming: ${payload.spiel}` : 'Reaction'}: ${basename(original)}`, payload)
   }
   ipcMain.handle(IPC.thumbReaktion, async (_e, raw: unknown) => {
     const win = getWindow()
@@ -289,7 +339,7 @@ export function registerThumbnailIpc(
   ipcMain.handle(IPC.thumbAuftraege, (): ThumbAuftrag[] =>
     queue
       .state()
-      .jobs.filter((j) => j.kind === 'thumbnail' || j.kind === 'reaktion' || j.kind === 'video-vorschlaege')
+      .jobs.filter((j) => ['thumbnail', 'reaktion', 'spielvorlage', 'aenderung', 'video-vorschlaege'].includes(j.kind))
       .map((j) => ({ id: j.id, art: j.kind === 'video-vorschlaege' ? ('video' as const) : ('thumbnail' as const), titel: j.title, state: j.state, progress: j.progress, step: j.step, error: j.error ?? null, createdAt: j.createdAt }))
       .reverse()
   )
@@ -329,5 +379,5 @@ export function registerThumbnailIpc(
     shell.showItemInFolder(ziel.filePath)
     return ziel.filePath
   })
-  return { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage }
+  return { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung }
 }

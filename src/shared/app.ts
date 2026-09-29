@@ -59,7 +59,9 @@ export const IPC = {
   thumbVideo: 'thumb:video',
   thumbVideoErgebnis: 'thumb:video-ergebnis',
   thumbReaktion: 'thumb:reaktion',
-  thumbSpielvorlage: 'thumb:spielvorlage'
+  thumbSpielvorlage: 'thumb:spielvorlage',
+  thumbAendern: 'thumb:aendern',
+  thumbLoeschen: 'thumb:loeschen'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -244,6 +246,10 @@ export interface MoinApi {
   thumbAuftraege(): Promise<ThumbAuftrag[]>
   /** Fertige Varianten eines Auftrags mit Bild und Vorbild */
   thumbErgebnis(jobId: string): Promise<ThumbErgebnis | null>
+  /** Änderungswunsch zu einer Variante → neuer Auftrag (ID) */
+  thumbAendern(jobId: string, index: number, wunsch: string): Promise<string>
+  /** Auftrag samt Bildern löschen */
+  thumbLoeschen(jobId: string): Promise<void>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */

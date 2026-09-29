@@ -124,6 +124,10 @@ export class JobQueue extends EventEmitter {
     return j ? toInfo(j) : undefined
   }
 
+  payload<P>(id: string): P | undefined {
+    return this.jobs.get(id)?.payload as P | undefined
+  }
+
   result<R>(id: string): R | undefined {
     return this.jobs.get(id)?.result as R | undefined
   }
@@ -196,6 +200,18 @@ export class JobQueue extends EventEmitter {
       for (const wake of r.resumeWaiters.splice(0)) wake()
     }
     await this.update(job, { state: 'cancelled', step: 'Abgebrochen' })
+  }
+
+  /** Job ganz entfernen (Philip: „Aufträge löschen“): läuft er noch, wird er vorher abgebrochen. Gibt die Nutzlast zurück. */
+  async remove(id: string): Promise<unknown> {
+    const job = this.jobs.get(id)
+    if (!job) return undefined
+    if (!FINISHED.has(job.state)) await this.cancel(id)
+    this.clearTimer(id)
+    this.jobs.delete(id)
+    await rm(join(this.dir, `${id}.job.json`), { force: true })
+    this.emitChange()
+    return job.payload
   }
 
   /** Knopf „Rechenlast pausieren“: hält den laufenden Job an und startet keine neuen. */

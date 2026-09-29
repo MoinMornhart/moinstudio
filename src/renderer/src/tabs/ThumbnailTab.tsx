@@ -90,13 +90,32 @@ function Skins({ skins, setSkins }: { skins: ThumbSkin[]; setSkins: (s: ThumbSki
   )
 }
 
-function Ergebnis({ auftrag }: { auftrag: ThumbAuftrag }): React.JSX.Element {
+function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: string) => void }): React.JSX.Element {
   const [ergebnis, setErgebnis] = useState<ThumbErgebnis | null>(null)
   const [gross, setGross] = useState<number | null>(null)
   const [gespeichert, setGespeichert] = useState<string | null>(null)
+  const [aenderung, setAenderung] = useState<Record<number, string>>({})
+  const [aenderFehler, setAenderFehler] = useState<string | null>(null)
+  const [versuch, setVersuch] = useState(0)
   useEffect(() => {
     if (auftrag.state === 'done') void window.moin.thumbErgebnis(auftrag.id).then(setErgebnis)
-  }, [auftrag.id, auftrag.state])
+  }, [auftrag.id, auftrag.state, versuch])
+  // Fehlt ein Bild ohne Fehlermeldung (z. B. iCloud lädt es gerade hoch), kurz danach noch einmal laden
+  useEffect(() => {
+    if (!ergebnis || versuch >= 5 || !ergebnis.varianten.some((x) => !x.bild && !x.fehler)) return
+    const t = setTimeout(() => setVersuch((n) => n + 1), 3000)
+    return () => clearTimeout(t)
+  }, [ergebnis, versuch])
+  const aendern = async (i: number): Promise<void> => {
+    setAenderFehler(null)
+    try {
+      const id = await window.moin.thumbAendern(auftrag.id, i, aenderung[i] ?? '')
+      setAenderung((a) => ({ ...a, [i]: '' }))
+      onNeu(id)
+    } catch (err) {
+      setAenderFehler(err instanceof Error ? err.message : String(err))
+    }
+  }
   if (auftrag.state === 'failed') return <p className="warn">Fehlgeschlagen: {auftrag.error}</p>
   if (auftrag.state !== 'done')
     return (
@@ -127,6 +146,7 @@ function Ergebnis({ auftrag }: { auftrag: ThumbAuftrag }): React.JSX.Element {
                   </a>
                 </span>
               )}
+              {!x.vorbild && x.warum && <span className="muted small">Grundlage: {x.warum}</span>}
               {x.fehler && <span className="own-bad small">{x.fehler}</span>}
               {x.warnungen.length > 0 && <span className="own-bad small">Hinweise: {x.warnungen.join(' · ')}</span>}
               {x.bild && (
@@ -136,11 +156,26 @@ function Ergebnis({ auftrag }: { auftrag: ThumbAuftrag }): React.JSX.Element {
                   </button>
                 </div>
               )}
+              {x.bild && (
+                <div className="row wrap">
+                  <input
+                    className="input"
+                    placeholder="Änderung, z. B. Text gelb, Kopf größer, schau wütender"
+                    value={aenderung[i] ?? ''}
+                    onChange={(e) => setAenderung((a) => ({ ...a, [i]: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && (aenderung[i] ?? '').trim() && void aendern(i)}
+                  />
+                  <button className="btn small" disabled={!(aenderung[i] ?? '').trim()} onClick={() => void aendern(i)}>
+                    Ändern
+                  </button>
+                </div>
+              )}
             </figcaption>
           </figure>
         ))}
       </div>
       {gespeichert && <p className="ok-note small">Gespeichert: {gespeichert}</p>}
+      {aenderFehler && <p className="warn small">{aenderFehler}</p>}
       {v && (
         <div className="lightbox" onClick={() => setGross(null)}>
           <div className="lightbox-panel" onClick={(e) => e.stopPropagation()}>
@@ -248,6 +283,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const [wunschGefuehl, setWunschGefuehl] = useState('')
   const [mitWort, setMitWort] = useState('')
   const [vorlageWunsch, setVorlageWunsch] = useState('')
+  const [loeschen, setLoeschen] = useState<string | null>(null)
   useEffect(() => {
     void window.moin.thumbSkins().then(setSkins, (err: unknown) => setFehler(fehlerText(err)))
   }, [])
@@ -280,7 +316,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const reaktion = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni', spiel })
+      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni' })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -292,7 +328,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const eigenesBild = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', wunsch: wunsch.trim() || 'neutral, schaut in die Kamera', ohneExtras: !mitWort.trim() })
+      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', spiel, wunsch: wunsch.trim() || undefined, ohneExtras: Boolean(wunsch.trim()) && !mitWort.trim() })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -369,9 +405,9 @@ export function ThumbnailTab(): React.JSX.Element {
             </button>
           </div>
         </Card>
-        <Card title="Reaction- und Gaming-Thumbnail" badge="MoinMorni">
+        <Card title="Reaction-Thumbnail" badge="MoinMorni">
           <p className="muted small">
-            Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt groß dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose.
+            Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose, mit Wort und Pfeil.
           </p>
           <div className="row wrap">
             <select className="input" value={gefuehl} onChange={(e) => setGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
@@ -382,21 +418,20 @@ export function ThumbnailTab(): React.JSX.Element {
               ))}
             </select>
             <input className="input" placeholder="Wort (optional, z. B. KRASS)" value={reaktionWort} onChange={(e) => setReaktionWort(e.target.value)} />
-            <input className="input" placeholder="Spielname bei Gaming-Videos (optional)" value={spiel} onChange={(e) => setSpiel(e.target.value)} />
             <button className="btn primary" onClick={() => void reaktion()}>
-              {spiel.trim() ? 'Spielbild wählen …' : 'Original-Thumbnail wählen …'}
+              Original-Thumbnail wählen …
             </button>
           </div>
         </Card>
-        <Card title="Eigenes Bild mit deinem Skin" badge="Zweitkanal">
+        <Card title="Gaming-Thumbnail" badge="MoinMorni">
           <p className="muted small">
-            Lade nur einen Hintergrund hoch (Spielszene, Screenshot, eigenes Bild) und beschreibe, wie du posieren willst. Dein echter Skin wird genau so gerendert und
-            eingesetzt – ohne Pfeil, und nur mit Wort, wenn du eins einträgst.
+            Lade ein Spielbild, einen Screenshot oder einen eigenen Hintergrund hoch. Beschreibe, wie du posieren willst – oder lass das Feld leer, dann wählt Claude Pose, Wort und
+            Pfeil. Mit Spielname kommt das Spiel unten in die Ecke.
           </p>
           <textarea
             className="input"
             rows={2}
-            placeholder="z. B. Ich halte mir die Hände vors Gesicht und gucke durch die Finger"
+            placeholder="Pose (optional), z. B. Ich halte mir die Hände vors Gesicht und gucke durch die Finger"
             value={wunsch}
             onChange={(e) => setWunsch(e.target.value)}
           />
@@ -404,17 +439,18 @@ export function ThumbnailTab(): React.JSX.Element {
             <select className="input" value={wunschGefuehl} onChange={(e) => setWunschGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
               {GEFUEHLE.map((g) => (
                 <option key={g} value={g}>
-                  {g ? g[0]!.toUpperCase() + g.slice(1) : 'Gefühl: passend zur Pose'}
+                  {g ? g[0]!.toUpperCase() + g.slice(1) : 'Gefühl: passend'}
                 </option>
               ))}
             </select>
+            <input className="input" placeholder="Spielname (optional)" value={spiel} onChange={(e) => setSpiel(e.target.value)} />
             <input className="input" placeholder="Wort (optional)" value={mitWort} onChange={(e) => setMitWort(e.target.value)} />
             <button className="btn primary" onClick={() => void eigenesBild()}>
-              Hintergrund wählen …
+              Spielbild / Hintergrund wählen …
             </button>
           </div>
         </Card>
-        <Card title="Spiele-Vorlage: du statt der Person" badge="Gaming">
+        <Card title="Spiele-Vorlage: du statt der Person" badge="MoinMorni">
           <p className="muted small">
             Wähle ein Spiele-Thumbnail eines anderen Creators. Die Person darin wird entfernt, dein Skin steht an ihrer Stelle in passender Pose – mit echtem 3D-Gegenstand, falls sie
             etwas hält. Der Titel bleibt obendrauf. Das Ergebnis ist nur für dich (fremde Vorlage).
@@ -436,6 +472,17 @@ export function ThumbnailTab(): React.JSX.Element {
                 <span className={`status ${a.state === 'done' ? 'fertig' : a.state === 'failed' ? 'fehler' : 'rendert'}`}>
                   {a.state === 'done' ? 'fertig' : a.state === 'failed' ? 'Fehler' : a.state === 'paused' ? 'pausiert' : a.state === 'waiting-limit' ? 'wartet auf Claude-Limit' : 'läuft'}
                 </span>
+                <button
+                  className="icon-btn"
+                  title="Auftrag löschen"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (loeschen === a.id) void window.moin.thumbLoeschen(a.id).then(() => (setLoeschen(null), ladeAuftraege()))
+                    else setLoeschen(a.id)
+                  }}
+                >
+                  {loeschen === a.id ? 'Wirklich löschen?' : '🗑'}
+                </button>
               </div>
               {(offen === a.id || a.state !== 'done') &&
                 (a.art === 'video' ? (
@@ -448,7 +495,13 @@ export function ThumbnailTab(): React.JSX.Element {
                     }}
                   />
                 ) : (
-                  <Ergebnis auftrag={a} />
+                  <Ergebnis
+                    auftrag={a}
+                    onNeu={(id) => {
+                      setOffen(id)
+                      ladeAuftraege()
+                    }}
+                  />
                 ))}
             </div>
           ))}
