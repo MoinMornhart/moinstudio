@@ -44,3 +44,26 @@ describe('Schnitt: Import (ROADMAP 6.2)', () => {
     expect(3 * 3600 / wellenAufloesung(3 * 3600)).toBeCloseTo(20000)
   })
 })
+
+describe('Schnitt: Projektdatei unter gleichzeitigen Änderungen', () => {
+  it('verliert keine Änderung, wenn Import und Oberfläche gleichzeitig schreiben', async () => {
+    const { mkdtemp, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { aendereProjekt, ladeProjekt, speichereProjekt } = await import('../../src/main/schnitt/projekt')
+    const daten = await mkdtemp(join(tmpdir(), 'moin-schnitt-'))
+    try {
+      await speichereProjekt(daten, { id: 'p1', name: 'Test', kanal: 'MoinMornhart', erstellt: '', quelle: null, proxy: false, wellenform: false, leiste: false, auftraege: [] })
+      await Promise.all([
+        aendereProjekt(daten, 'p1', () => ({ proxy: true })),
+        aendereProjekt(daten, 'p1', (p) => ({ auftraege: [...(p.auftraege ?? []), 'a'] })),
+        aendereProjekt(daten, 'p1', () => ({ leiste: true })),
+        aendereProjekt(daten, 'p1', (p) => ({ auftraege: [...(p.auftraege ?? []), 'b'] }))
+      ])
+      const p = await ladeProjekt(daten, 'p1')
+      expect(p).toMatchObject({ proxy: true, leiste: true, auftraege: ['a', 'b'] })
+    } finally {
+      await rm(daten, { recursive: true, force: true })
+    }
+  })
+})

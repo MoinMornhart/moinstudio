@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SchnittAbschnitt, SchnittProjekt } from '@shared/app'
+import type { SchnittAbschnitt, SchnittListe, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 
 /**
@@ -61,6 +61,47 @@ function Wellenform({ id, dauer, zeit, springe }: { id: string; dauer: number; z
   )
 }
 
+const GRUND: Record<SchnittListe['entfernt'][number]['grund'], string> = {
+  pause: 'Pause',
+  aehm: '„ähm“',
+  wiederholung: 'Wiederholung',
+  versprecher: 'Versprecher',
+  leerlauf: 'Leerlauf',
+  manuell: 'von dir'
+}
+
+/** Rohschnitt: vorher/nachher, was rausfliegt (Klick springt hin). */
+function Rohschnitt({ liste, springe }: { liste: SchnittListe; springe: (s: number) => void }): React.JSX.Element {
+  const nachher = liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
+  return (
+    <div className="rohschnitt">
+      <p>
+        <strong>Rohschnitt:</strong> {zeitText(liste.dauer)} → {zeitText(nachher)} ({Math.round((1 - nachher / liste.dauer) * 100)} % kürzer)
+      </p>
+      <div className="schnitt-streifen">
+        {liste.entfernt.map((e, i) => (
+          <span key={i} className={`weg ${e.grund}`} style={{ left: `${(e.start / liste.dauer) * 100}%`, width: `${((e.ende - e.start) / liste.dauer) * 100}%` }} title={`${GRUND[e.grund]} ${zeitText(e.start)}`} />
+        ))}
+      </div>
+      <div className="transkript">
+        {liste.entfernt
+          .filter((e) => e.grund !== 'pause')
+          .map((e, i) => (
+            <button key={i} className="satz" onClick={() => springe(e.start)}>
+              <span className="muted small">{zeitText(e.start)}</span>
+              <span>
+                <span className="badge">{GRUND[e.grund]}</span> {e.text ?? ''}
+              </span>
+            </button>
+          ))}
+        <p className="muted small">
+          Dazu {liste.entfernt.filter((e) => e.grund === 'pause').length} lange Pausen gekürzt (laute Action-Stellen bleiben drin).
+        </p>
+      </div>
+    </div>
+  )
+}
+
 /** Transkript: jeder Satz mit Zeit, Klick springt hin, der gerade laufende Satz ist hervorgehoben. */
 function Transkript({ id, bereit, zeit, springe }: { id: string; bereit: boolean; zeit: number; springe: (s: number) => void }): React.JSX.Element | null {
   const [abschnitte, setAbschnitte] = useState<SchnittAbschnitt[] | null>(null)
@@ -91,7 +132,19 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
   const [sicher, setSicher] = useState(false)
+  const [liste, setListe] = useState<SchnittListe | null>(null)
+  const [geschnitten, setGeschnitten] = useState(true)
+  useEffect(() => {
+    if (p.rohschnitt) void window.moin.schnittListe(p.id).then(setListe)
+  }, [p.id, p.rohschnitt])
   const dauer = p.quelle?.dauer ?? 0
+  // Vorschau des Schnitts: entfernte Stellen werden beim Abspielen übersprungen
+  const zeitUpdate = (t: number): void => {
+    setZeit(t)
+    if (!geschnitten || !liste || !video.current || video.current.paused) return
+    const weg = liste.entfernt.find((e) => t >= e.start && t < e.ende - 0.05)
+    if (weg) video.current.currentTime = Math.max(...liste.entfernt.filter((e) => e.start <= weg.ende + 0.05 && e.ende >= weg.start).map((e) => e.ende))
+  }
   const springe = (s: number): void => {
     if (video.current) video.current.currentTime = Math.max(0, Math.min(dauer, s))
   }
@@ -111,7 +164,7 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
         </p>
       )}
       {p.proxyUrl ? (
-        <video ref={video} className="schnitt-player" src={p.proxyUrl} controls preload="metadata" onTimeUpdate={(e) => setZeit(e.currentTarget.currentTime)} />
+        <video ref={video} className="schnitt-player" src={p.proxyUrl} controls preload="metadata" onTimeUpdate={(e) => zeitUpdate(e.currentTarget.currentTime)} />
       ) : (
         <div className="thumb-placeholder schnitt-player">Vorschau wird erstellt …</div>
       )}
@@ -127,6 +180,12 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
           }}
         />
       )}
+      {liste && (
+        <label className="row" style={{ alignItems: 'center' }}>
+          <input type="checkbox" checked={geschnitten} onChange={(e) => setGeschnitten(e.target.checked)} /> Geschnitten abspielen (entfernte Stellen überspringen)
+        </label>
+      )}
+      {liste && <Rohschnitt liste={liste} springe={springe} />}
       <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} />
       {p.quelle && (
         <dl className="facts" style={{ marginTop: 12 }}>

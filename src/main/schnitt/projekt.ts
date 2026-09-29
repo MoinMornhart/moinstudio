@@ -33,6 +33,7 @@ export interface Projekt {
   leiste: boolean
   transkript?: boolean
   transkriptModell?: string
+  rohschnitt?: boolean
   /** Aufträge am Projekt (Import, Transkript …) in Reihenfolge; die Oberfläche zeigt den ersten, der noch läuft */
   auftraege?: string[]
   fehler?: string | null
@@ -51,6 +52,25 @@ export async function ladeProjekt(daten: string, id: string): Promise<Projekt | 
 export async function speichereProjekt(daten: string, p: Projekt): Promise<void> {
   await mkdir(projektOrdner(daten, p.id), { recursive: true })
   await writeJsonAtomic(join(projektOrdner(daten, p.id), 'projekt.json'), p)
+}
+
+const sperren = new Map<string, Promise<unknown>>()
+
+/**
+ * Projekt ändern – nacheinander je Projekt und immer auf dem aktuellen Stand der Datei. Import, Transkript und die
+ * Oberfläche schreiben gleichzeitig; ohne Sperre überschreibt ein alter Stand frische Daten (z. B. die Videolänge).
+ */
+export function aendereProjekt(daten: string, id: string, aenderung: (p: Projekt) => Partial<Projekt>): Promise<Projekt | null> {
+  const vorher = sperren.get(id) ?? Promise.resolve()
+  const jetzt = vorher.then(async () => {
+    const p = await ladeProjekt(daten, id)
+    if (!p) return null
+    const neu = { ...p, ...aenderung(p) }
+    await speichereProjekt(daten, neu)
+    return neu
+  })
+  sperren.set(id, jetzt.catch(() => undefined))
+  return jetzt
 }
 
 export async function ladeProjekte(daten: string): Promise<Projekt[]> {

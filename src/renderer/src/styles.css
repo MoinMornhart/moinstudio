@@ -328,3 +328,8 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .satz { display: grid; grid-template-columns: 52px 1fr; gap: 10px; text-align: left; background: none; border: 0; border-radius: 6px; padding: 5px 8px; color: var(--text); font: inherit; cursor: pointer; }
 .satz:hover { background: var(--bg-2); }
 .satz.aktiv { background: #33301f; }
+.rohschnitt { margin-top: 12px; display: grid; gap: 8px; }
+.rohschnitt p { margin: 0; }
+.schnitt-streifen { position: relative; height: 10px; background: #2d6b3f; border-radius: 4px; overflow: hidden; }
+.schnitt-streifen .weg { position: absolute; top: 0; bottom: 0; background: #7a2626; }
+.schnitt-streifen .weg.aehm, .schnitt-streifen .weg.wiederholung, .schnitt-streifen .weg.versprecher, .schnitt-streifen .weg.leerlauf { background: #d6452f; }

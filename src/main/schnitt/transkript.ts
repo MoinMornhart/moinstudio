@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { WhisperChoice } from '@shared/hardware'
 import type { JobContext } from '../jobs/queue'
 import { sicherePakete, sichereUmgebung } from '../python'
-import { ladeProjekt, projektOrdner, speichereProjekt } from './projekt'
+import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
 
 /**
  * Transkript lokal (ROADMAP 6.3) mit faster-whisper: kostenlos, ohne Cloud, auf jeder Hardware (CUDA wenn möglich,
@@ -104,8 +104,7 @@ export async function transkriptJob(p: TranskriptPayload, ctx: JobContext<unknow
     await writeFile(messDatei, JSON.stringify({ modell: wahl.model, geraet: wahl.device, faktor: Math.round(((rechenzeit || (Date.now() - beginn) / 1000) / dauer) * 100) / 100 } satisfies Messung))
   }
   const abschnitte = liesAbschnitte(await readFile(ziel, 'utf8'))
-  const neu = await ladeProjekt(p.daten, p.projekt)
-  if (neu) await speichereProjekt(p.daten, { ...neu, transkript: true, transkriptModell: wahl.model })
+  await aendereProjekt(p.daten, p.projekt, () => ({ transkript: true, transkriptModell: wahl.model }))
   ctx.progress(100, 'Fertig')
   return { projekt: p.projekt, abschnitte: abschnitte.length }
 }

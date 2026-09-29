@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { JobContext } from '../jobs/queue'
-import { ladeProjekt, projektOrdner, quellInfoAus, schnellePruefsumme, speichereProjekt, type Projekt } from './projekt'
+import { aendereProjekt, ladeProjekt, projektOrdner, quellInfoAus, schnellePruefsumme, type Projekt } from './projekt'
 
 /**
  * Import eines Rohvideos (ROADMAP 6.2): Videodaten (ffprobe), Vorschau-Proxy in 540p zum flüssigen Abspielen und
@@ -86,8 +86,7 @@ export async function importJob(p: ImportPayload, ctx: JobContext<unknown>): Pro
   let pr = await laden()
   const quelle = pr.quelle!
   const merke = async (patch: Partial<Projekt>): Promise<void> => {
-    pr = { ...(await laden()), ...patch }
-    await speichereProjekt(p.daten, pr)
+    pr = (await aendereProjekt(p.daten, p.projekt, () => patch)) ?? pr
   }
 
   if (!quelle.dauer) {

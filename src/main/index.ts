@@ -196,8 +196,8 @@ if (toolsArg === 'install') {
     await jobs.start()
     try {
       await starteImport(video)
-      // Import und Transkript laufen nacheinander; gewartet wird auf den letzten
-      const info = jobs.state().jobs.filter((j) => j.kind === 'schnitt-transkript').pop()
+      // Import, Transkript und Rohschnitt laufen nacheinander; gewartet wird auf den letzten
+      const info = jobs.state().jobs.filter((j) => j.kind === 'schnitt-rohschnitt').pop()
       const ende = info ? await jobs.waitFor(info.id) : null
       console.log(`Ende: ${ende?.state} ${ende?.error ?? ''}`)
       console.log(JSON.stringify(ende ? jobs.result(ende.id) : {}, null, 1))

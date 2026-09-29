@@ -68,7 +68,9 @@ export const IPC = {
   schnittWellenform: 'schnitt:wellenform',
   schnittLoeschen: 'schnitt:loeschen',
   schnittTranskript: 'schnitt:transkript',
-  schnittTranskriptStart: 'schnitt:transkript-start'
+  schnittTranskriptStart: 'schnitt:transkript-start',
+  schnittRohschnittStart: 'schnitt:rohschnitt-start',
+  schnittListe: 'schnitt:liste'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -78,6 +80,14 @@ export interface SchnittAbschnitt {
   ende: number
   text: string
   woerter: { start: number; ende: number; wort: string; p: number }[]
+}
+
+/** Schnittliste (ROADMAP 6.4): was vom Original bleibt und was mit welchem Grund rausfliegt */
+export interface SchnittListe {
+  version: 1
+  dauer: number
+  behalten: { start: number; ende: number }[]
+  entfernt: { start: number; ende: number; grund: 'pause' | 'aehm' | 'wiederholung' | 'versprecher' | 'leerlauf' | 'manuell'; text?: string }[]
 }
 
 /** Schnitt-Projekt für die Oberfläche (ROADMAP 6.2) */
@@ -92,6 +102,7 @@ export interface SchnittProjekt {
   leisteUrl: string | null
   wellenform: boolean
   transkript: boolean
+  rohschnitt: boolean
   /** laufender Auftrag (Import, Transkript …) */
   auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
 }
@@ -292,6 +303,9 @@ export interface MoinApi {
   /** Transkript (Abschnitte mit Wortzeiten) oder null, falls noch keins da ist; Neustart des Transkripts */
   schnittTranskript(id: string): Promise<SchnittAbschnitt[] | null>
   schnittTranskriptStart(id: string): Promise<string>
+  /** Rohschnitt neu berechnen; Schnittliste (behalten/entfernt) lesen */
+  schnittRohschnittStart(id: string): Promise<string>
+  schnittListe(id: string): Promise<SchnittListe | null>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */
