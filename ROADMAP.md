@@ -222,4 +222,5 @@ Grundlage: [Adobe-Recherche](docs/research/adobe.md).
 
 ## M9 – Stabil → 1.0.0
 
-- [ ] **9.1 Politur, README mit Screenshots, Release.**
+- [x] **9.1 Politur und README mit Screenshots.** ✅ README beschreibt den Stand aller drei Reiter — erledigt: README mit Planung/Kalender-Aufnahmen und aktuellem Stand; veraltete Renders der alten Pipeline aus `docs/assets` entfernt (sie enthielten Minecraft-Texturen und die abgelehnte Optik); Adobe-Abschnitt mit Selbsttest.
+- [ ] **9.2 Release 1.0.0** nach den Abnahmen 5.6, 6.9, 7.7 (und 8.6, falls Adobe genutzt wird). ✅ Philip gibt frei.

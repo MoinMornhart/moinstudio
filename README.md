@@ -12,7 +12,12 @@
 
 **MoinStudio** ist eine lokale Windows-Desktop-App für die YouTube-Kanäle **MoinMornhart** und **MoinMorni**. Sie erstellt Thumbnails mit dem eigenen Minecraft-Skin aus beliebigen Beschreibungen in normaler Sprache, schneidet Videos und plant Uploads. Die KI-Logik läuft ausschließlich über das eigene **Claude-Abo** (Claude Desktop per MCP und Claude Code per Abo-Login), ohne API-Key und ohne Cloud-Server.
 
-> **Status – Neustart (28.09.2026):** Übrig ist nur das App-Fundament: Installer, Selbst-Update, Einrichtungsassistent, Hardware-Test, Aufgaben mit Pause, Claude-Anbindung über das Abo, MCP-Server und die Verbindung zu Blender. Thumbnail-Erstellung und Schnitt werden von Grund auf neu gebaut, Maßstab sind die Thumbnails sehr großer Minecraft-Kanäle. Fortschritt: [ROADMAP](ROADMAP.md).
+> **Status (29.09.2026):** Alle drei Reiter sind gebaut und mit Testdaten geprüft: Thumbnail, Schnitt und Planung. Es fehlen noch Philips Abnahmen mit echten Aufträgen und Videos. Danach folgt Version 1.0.0. Fortschritt: [ROADMAP](ROADMAP.md).
+
+<p align="center">
+  <img src="docs/assets/screenshots/planung.png" alt="Planung: Board je Kanal" width="49%">
+  <img src="docs/assets/screenshots/kalender.png" alt="Planung: Kalender mit Upload-Rhythmus" width="49%">
+</p>
 
 <p align="center">
   <img src="docs/assets/screenshots/einrichtung.png" alt="Einrichtungsassistent" width="49%">
@@ -34,9 +39,11 @@
 
 | Reiter | Was er kann | Status |
 |--------|-------------|--------|
-| 🎨 **Thumbnail** | Beschreibung oder Video → Szene in Blender im Stil großer Minecraft-Kanäle → Varianten, jede mit ihrem Vorbild | Neuaufbau (ROADMAP M3–M5) |
-| ✂️ **Schnitt** | Rohvideo rein, fertiges Video raus | Neuaufbau nach den Thumbnails |
-| 🗂️ **Planung** | Board pro Kanal, Vorlagen je Videotyp, Kalender, Jobs direkt aus der Karte starten | geplant |
+| 🎨 **Thumbnail** | Beschreibung oder Video → Szene in Blender im Stil großer Minecraft-Kanäle → Varianten, jede mit ihrem Vorbild; Reaction- und Gaming-Thumbnails, eigenes Bild, Spiele-Vorlagen, Freunde im Bild, Änderungswünsche in Worten | gebaut, Abnahme offen |
+| ✂️ **Schnitt** | Rohvideo rein, fertiges Video raus: Transkript (lokal), Rohschnitt ohne Pausen und Versprecher, Änderungen in Worten, Untertitel, Zooms, YouTube-Export mit Titel, Beschreibung und Kapiteln, Stream-Highlights und Shorts | gebaut, Abnahme offen |
+| 🗂️ **Planung** | Board je Kanal, Kalender mit Upload-Rhythmus und freien Terminen, Karte startet Schnitt und Thumbnail und rückt selbst weiter, Ideen, Titel und Wochenplan mit Claude | gebaut, Abnahme offen |
+
+Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` für den Schnitt und `planning` für die Planung. Die Planung funktioniert dort sogar, wenn MoinStudio geschlossen ist.
 
 ## Neueste Änderungen
 
@@ -64,7 +71,12 @@ MoinStudio entfernt API-Key-Variablen aus der Umgebung von Claude Code und nutzt
 
 ## Adobe-Anbindung
 
-Alle Adobe-Funktionen (Premiere Pro, After Effects, Photoshop) sind **ungetestet**. Sie stützen sich nur auf Recherche ([docs/research/adobe.md](docs/research/adobe.md)), bis die automatische Testsuite `tests/adobe/` auf einem Rechner mit Adobe erfolgreich gelaufen ist. Ohne Adobe ist MoinStudio vollständig nutzbar.
+Wer in Adobe weiterarbeiten will, bekommt die Ergebnisse fertig zum Nachbessern:
+
+- **Schnitt → „Für Premiere“:** die Sequenz als FCP7-XML (alle Schnitte aus dem Original, Zooms als Keyframes, Kapitel als Marker) plus Untertitel als SRT.
+- **Thumbnail → „Für Photoshop“:** eine PSD mit den Ebenen Hintergrund, Figuren (freigestellt) und Text.
+
+Beides ist **ungetestet**, bis der Adobe-Selbsttest (Einstellungen → Adobe → „Selbsttest“, Anleitung in [tests/adobe/](tests/adobe/README.md)) auf einem Rechner mit Adobe bestanden ist. Ohne Adobe ist MoinStudio vollständig nutzbar. Grundlage: [docs/research/adobe.md](docs/research/adobe.md).
 
 ## Ordnerstruktur
 

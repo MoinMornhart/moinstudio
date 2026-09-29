@@ -6,6 +6,14 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Geändert
+
+- README mit dem aktuellen Stand aller drei Reiter, neuen Aufnahmen von Planung und Kalender und dem Adobe-Selbsttest (ROADMAP 9.1).
+
+### Entfernt
+
+- Veraltete Renders der alten Thumbnail-Pipeline aus `docs/assets/screenshots`. Sie zeigten die abgelehnte Optik und enthielten Minecraft-Texturen.
+
 ## [0.29.0] - 2026-09-29
 
 > Adobe-Selbsttest
