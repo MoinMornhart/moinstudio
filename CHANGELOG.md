@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-09-29
+
+> Plan für die Planung
+
 ### Dokumentation
 
 - Plan für den Reiter Planung (ROADMAP M7): Board je Kanal, Kalender mit Upload-Rhythmus, Verbindung zu Thumbnail und Schnitt, Ideen und Titel mit Claude, MCP-Werkzeug.
