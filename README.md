@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.29.3** (2026-09-29): Thumbnail: auf etwas stehen, Kürbiskopf
 - **0.29.2** (2026-09-29): Thumbnail: ungewöhnliche Beschreibungen besser
 - **0.29.1** (2026-09-29): README und Aufräumen
 - **0.29.0** (2026-09-29): Adobe-Selbsttest
 - **0.28.0** (2026-09-29): Thumbnail für Photoshop (ungetestet)
-- **0.27.0** (2026-09-29): Schnitt für Premiere (ungetestet)
 <!-- CHANGELOG:END -->
 
 ## Installation

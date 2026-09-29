@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.3] - 2026-09-29
+
+> Thumbnail: auf etwas stehen, Kürbiskopf
+
 ### Behoben
 
 - Thumbnail: Figuren können jetzt auf Mobs und Objekten stehen (`auf`, z. B. Handstand auf dem Creeper, Yoga auf dem Heuballen); MoinStudio rechnet die Höhe selbst aus. Ein Block auf dem Kopf (`kopf`, z. B. geschnitzter Kürbis) dreht mit dem Kopf. Blöcke mit eigenem Gesicht (Kürbis, Ofen) zeigen ihre Vorderseite. Tropfsteine, Entities ohne Geometrie und leere Modellvorlagen führen nicht mehr zum Absturz.
