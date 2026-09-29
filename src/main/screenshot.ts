@@ -35,8 +35,24 @@ export async function runScreenshotMode(win: BrowserWindow, dir: string): Promis
   }
   for (const tab of TABS) {
     win.webContents.send(IPC.selectTab, tab.id)
-    await wait(400)
-    const image = await win.webContents.capturePage()
-    await writeFile(join(dir, `${tab.id}.png`), image.toPNG())
+    await wait(1200)
+    await writeFile(join(dir, `${tab.id}.png`), (await aufnahme(win)).toPNG())
   }
+}
+
+/** Auf langsamen Rechnern liefert die Aufnahme manchmal ein leeres, einfarbiges Bild – dann warten und neu aufnehmen. */
+async function aufnahme(win: BrowserWindow): Promise<Electron.NativeImage> {
+  let bild = await win.webContents.capturePage()
+  for (let versuch = 0; versuch < 5 && einfarbig(bild); versuch++) {
+    await wait(1000)
+    win.webContents.invalidate()
+    bild = await win.webContents.capturePage()
+  }
+  return bild
+}
+
+function einfarbig(bild: Electron.NativeImage): boolean {
+  const px = bild.toBitmap()
+  for (let i = 4; i < px.length; i += 4 * 997) if (px[i] !== px[0] || px[i + 1] !== px[1] || px[i + 2] !== px[2]) return false
+  return true
 }

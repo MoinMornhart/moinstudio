@@ -1,0 +1,94 @@
+import { createReadStream } from 'node:fs'
+import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { join } from 'node:path'
+import { writeJsonAtomic } from '../data/jsonfile'
+
+/**
+ * Schnitt-Projekte (ROADMAP 6.2). Ablage: <Datenordner>/schnitt/<id>/projekt.json plus Proxy, Wellenform und
+ * Standbild-Leiste. Das Rohvideo bleibt, wo es liegt – im Projekt stehen nur Pfad, Größe und Prüfsumme.
+ */
+
+export interface QuellInfo {
+  pfad: string
+  groesse: number
+  /** Schnelle Prüfsumme: SHA-256 über Größe, erste und letzte 4 MB (erkennt vertauschte oder geänderte Dateien) */
+  pruefsumme: string
+  dauer: number
+  breite: number
+  hoehe: number
+  fps: number
+  audio: boolean
+}
+
+export interface Projekt {
+  id: string
+  name: string
+  kanal: string
+  erstellt: string
+  quelle: QuellInfo | null
+  /** Arbeitsschritte, die schon fertig sind */
+  proxy: boolean
+  wellenform: boolean
+  leiste: boolean
+  /** Auftrag, der gerade am Projekt arbeitet */
+  auftrag?: string | null
+  fehler?: string | null
+}
+
+export const projektOrdner = (daten: string, id: string): string => join(daten, 'schnitt', id)
+
+export async function ladeProjekt(daten: string, id: string): Promise<Projekt | null> {
+  try {
+    return JSON.parse(await readFile(join(projektOrdner(daten, id), 'projekt.json'), 'utf8')) as Projekt
+  } catch {
+    return null
+  }
+}
+
+export async function speichereProjekt(daten: string, p: Projekt): Promise<void> {
+  await mkdir(projektOrdner(daten, p.id), { recursive: true })
+  await writeJsonAtomic(join(projektOrdner(daten, p.id), 'projekt.json'), p)
+}
+
+export async function ladeProjekte(daten: string): Promise<Projekt[]> {
+  const namen = await readdir(join(daten, 'schnitt')).catch(() => [] as string[])
+  const alle = await Promise.all(namen.map((n) => ladeProjekt(daten, n)))
+  return alle.filter((p): p is Projekt => !!p).sort((a, b) => b.erstellt.localeCompare(a.erstellt))
+}
+
+export async function loescheProjekt(daten: string, id: string): Promise<void> {
+  if (!/^[a-z0-9-]+$/i.test(id)) return
+  await rm(projektOrdner(daten, id), { recursive: true, force: true })
+}
+
+/** Schnelle Prüfsumme großer Videos (Stunden-Streams): Größe + erste und letzte 4 MB. */
+export async function schnellePruefsumme(pfad: string): Promise<{ groesse: number; pruefsumme: string }> {
+  const { size } = await stat(pfad)
+  const h = createHash('sha256').update(String(size))
+  const stueck = 4 * 1024 * 1024
+  const lies = (start: number, ende: number): Promise<void> =>
+    new Promise((res, rej) => {
+      createReadStream(pfad, { start, end: ende })
+        .on('data', (d) => h.update(d))
+        .on('end', () => res())
+        .on('error', rej)
+    })
+  await lies(0, Math.min(size, stueck) - 1)
+  if (size > stueck * 2) await lies(size - stueck, size - 1)
+  return { groesse: size, pruefsumme: h.digest('hex').slice(0, 32) }
+}
+
+/** ffprobe-JSON → Videodaten */
+export function quellInfoAus(probe: { format?: { duration?: string }; streams?: { codec_type?: string; width?: number; height?: number; avg_frame_rate?: string; r_frame_rate?: string }[] }): Pick<QuellInfo, 'dauer' | 'breite' | 'hoehe' | 'fps' | 'audio'> {
+  const video = probe.streams?.find((s) => s.codec_type === 'video')
+  const rate = (video?.avg_frame_rate && video.avg_frame_rate !== '0/0' ? video.avg_frame_rate : video?.r_frame_rate) ?? '0/1'
+  const [z, n] = rate.split('/').map(Number)
+  return {
+    dauer: Number(probe.format?.duration ?? 0),
+    breite: video?.width ?? 0,
+    hoehe: video?.height ?? 0,
+    fps: n ? Math.round(((z ?? 0) / n) * 100) / 100 : 0,
+    audio: !!probe.streams?.some((s) => s.codec_type === 'audio')
+  }
+}

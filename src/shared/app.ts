@@ -62,10 +62,29 @@ export const IPC = {
   thumbReaktion: 'thumb:reaktion',
   thumbSpielvorlage: 'thumb:spielvorlage',
   thumbAendern: 'thumb:aendern',
-  thumbLoeschen: 'thumb:loeschen'
+  thumbLoeschen: 'thumb:loeschen',
+  schnittProjekte: 'schnitt:projekte',
+  schnittImport: 'schnitt:import',
+  schnittWellenform: 'schnitt:wellenform',
+  schnittLoeschen: 'schnitt:loeschen'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
+/** Schnitt-Projekt für die Oberfläche (ROADMAP 6.2) */
+export interface SchnittProjekt {
+  id: string
+  name: string
+  kanal: string
+  erstellt: string
+  quelle: { pfad: string; dauer: number; breite: number; hoehe: number; fps: number; groesse: number; audio: boolean } | null
+  /** moin-media://…-Adressen, sobald die Datei fertig ist */
+  proxyUrl: string | null
+  leisteUrl: string | null
+  wellenform: boolean
+  /** laufender Auftrag (Import, Transkript …) */
+  auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
+}
+
 export interface ThumbSkin {
   id: string
   name: string
@@ -254,6 +273,11 @@ export interface MoinApi {
   thumbAendern(jobId: string, index: number, wunsch: string): Promise<string>
   /** Auftrag samt Bildern löschen */
   thumbLoeschen(jobId: string): Promise<void>
+  /** Schnitt: Projekte, Import per Dateidialog (null bei Abbruch), Wellenform, Löschen */
+  schnittProjekte(): Promise<SchnittProjekt[]>
+  schnittImport(kanal?: string): Promise<string | null>
+  schnittWellenform(id: string): Promise<{ aufloesung: number; werte: number[] } | null>
+  schnittLoeschen(id: string): Promise<void>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */

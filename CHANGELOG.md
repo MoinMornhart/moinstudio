@@ -6,6 +6,13 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Schnitt-Reiter neu (ROADMAP 6.2): Projekte anlegen, Rohvideo wählen (bleibt, wo es liegt; nur Pfad, Größe, Prüfsumme), Vorschau in 540p, Wellenform und Standbild-Leiste mit Fortschritt; Player im Reiter, Klick auf Wellenform oder Leiste springt an die Stelle; Projekte löschen.
+- Eigenes Medien-Protokoll für Videos im Reiter (Springen per Range-Anfrage, nur Dateien aus dem Datenordner).
+
+### Geändert
+- Bildschirmaufnahmen für README und Selbstprüfung warten länger und wiederholen leere Aufnahmen.
+
 ## [0.13.1] - 2026-09-29
 
 > Spiele-Vorlage: Hintergrund-Logos bleiben heil, sauberer Titel, kein Geist der alten Person

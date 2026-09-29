@@ -14,20 +14,23 @@ import { registerClaudeIpc, runClaudeCliTest } from './claude/ipc'
 import { registerMcpIpc } from './mcp/ipc'
 import { startAppRpc } from './rpc/app-rpc'
 import { registerSetupIpc } from './setup/ipc'
+import { medienBedienen, medienSchemaAnmelden } from './schnitt/medien'
 
 const screenshotDir = parseScreenshotArg(process.argv)
+medienSchemaAnmelden() // vor „app ready“
 const mainWindow = (): BrowserWindow | undefined => BrowserWindow.getAllWindows()[0]
 const settings = new SettingsStore(app.getPath('userData'))
 const tools = new ToolManager(localRoot())
 const hardware = new HardwareController(tools, localRoot(), mainWindow)
 registerDataIpc(settings, mainWindow)
+medienBedienen(settings)
 registerToolsIpc(tools, mainWindow)
 hardware.register()
 registerClaudeIpc()
 registerMcpIpc(localRoot())
 // Im Screenshot-Modus den Assistenten nur zeigen, wenn er ausdrücklich aufgenommen werden soll
 registerSetupIpc(settings, !!screenshotDir && !process.argv.includes(SETUP_FLAG))
-const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
+const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
 
 // Fester Name für den Autostart-Eintrag (HKCU\...\Run). Ohne ihn leitet Electron den Namen
 // aus der AppUserModelId ab, und Setzen und Abfragen könnten verschiedene Einträge meinen.
@@ -181,6 +184,23 @@ if (toolsArg === 'install') {
       console.log(`Ende: ${info.state} ${info.error ?? ''}`)
       console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))
       app.exit(info.state === 'done' ? 0 : 1)
+    } catch (err) {
+      console.error(err)
+      app.exit(1)
+    }
+  })
+} else if (process.argv.some((a) => a.startsWith('--moin-schnitt-import='))) {
+  // Integrationstest Schnitt-Import (ROADMAP 6.2) ohne Dateidialog
+  const video = process.argv.find((a) => a.startsWith('--moin-schnitt-import='))!.slice('--moin-schnitt-import='.length)
+  void app.whenReady().then(async () => {
+    await jobs.start()
+    try {
+      await starteImport(video)
+      const info = jobs.state().jobs.filter((j) => j.kind === 'schnitt-import').pop()
+      const ende = info ? await jobs.waitFor(info.id) : null
+      console.log(`Ende: ${ende?.state} ${ende?.error ?? ''}`)
+      console.log(JSON.stringify(ende ? jobs.result(ende.id) : {}, null, 1))
+      app.exit(ende?.state === 'done' ? 0 : 1)
     } catch (err) {
       console.error(err)
       app.exit(1)
