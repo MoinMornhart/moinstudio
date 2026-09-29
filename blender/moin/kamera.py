@@ -53,10 +53,20 @@ def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_
     return fehler, (round(pk.x, 2), round(pk.y, 2)), (round(pt.x, 2), round(pt.y, 2)), round(po.y - pu.y, 2)
 
 
-def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None):
+def _rand_strafe(scene, cam, ecken, rand=0.03):
+    """Wie weit Punkte (z. B. die Kopf-Ecken) aus dem Bild ragen: 0, wenn alle mit Abstand `rand` drin sind."""
+    strafe = 0.0
+    for p in ecken:
+        v = world_to_camera_view(scene, cam, p)
+        strafe += max(0.0, rand - v.x) + max(0.0, v.x - (1 - rand)) + max(0.0, rand - v.y) + max(0.0, v.y - (1 - rand))
+    return strafe
+
+
+def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None):
     """Sucht Brennweite, Position und Blickrichtung. `seite`: wo die Figur im Bild steht (das Thema gegenüber).
     `gesicht`: Blickrichtung des Kopfes (Weltvektor); die Kamera sieht das Gesicht im Dreiviertelprofil, nie von
     hinten. `erlaubt(pos)`: optionale Vorgabe, wo die Kamera stehen darf (z. B. über dem Abgrund).
+    `kopf_ecken`: Weltpunkte des Kopfes – der ganze Kopf muss im Bild bleiben (nie am Rand angeschnitten).
     Gibt die Abweichung (0 = perfekt) zurück."""
     m = MODI[modus]
     kopf_uv = m["kopf_uv"] if seite == "links" else (1 - m["kopf_uv"][0], m["kopf_uv"][1])
@@ -81,6 +91,8 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
                 for i in range(16):  # Blickziel: 0–3 m vom Kopf Richtung Thema
                     ziel = kopf + richtung * (i * 0.2)
                     r = _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht)
+                    if r and kopf_ecken:
+                        r = (r[0] + 4.0 * _rand_strafe(scene, cam, kopf_ecken),) + tuple(r[1:])
                     if r and (beste is None or r[0] < beste[0]):
                         beste = (r[0], cam.matrix_world.copy(), linse, r[1], r[2], r[3], az_deg, m["hoehe"] + dh)
     cam.data.lens = beste[2]

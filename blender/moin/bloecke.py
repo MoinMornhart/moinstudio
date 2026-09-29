@@ -49,6 +49,23 @@ ARTEN = {
     "obsidian": {"alle": ("obsidian", None)},
     "bedrock": {"alle": ("bedrock", None)},
     "tnt": {"oben": ("tnt_top", None), "unten": ("tnt_bottom", None), "seite": ("tnt_side", None)},
+    # Höhle
+    "coal_ore": {"alle": ("coal_ore", None)},
+    "iron_ore": {"alle": ("iron_ore", None)},
+    "gold_ore": {"alle": ("gold_ore", None)},
+    "redstone_ore": {"alle": ("redstone_ore", None)},
+    "diamond_ore": {"alle": ("diamond_ore", None)},
+    "deepslate_diamond_ore": {"alle": ("deepslate_diamond_ore", None)},
+    "deepslate_iron_ore": {"alle": ("deepslate_iron_ore", None)},
+    "tuff": {"alle": ("tuff", None)},
+    # Nether
+    "glowstone": {"alle": ("glowstone", None), "leuchtet": 2.5},
+    "magma_block": {"alle": ("magma", None), "leuchtet": 0.8},
+    "nether_quartz_ore": {"alle": ("nether_quartz_ore", None)},
+    "nether_gold_ore": {"alle": ("nether_gold_ore", None)},
+    "soul_sand": {"alle": ("soul_sand", None)},
+    "basalt": {"oben": ("basalt_top", None), "unten": ("basalt_top", None), "seite": ("basalt_side", None)},
+    "blackstone": {"alle": ("blackstone", None)},
 }
 
 SEITEN = {

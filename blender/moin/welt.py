@@ -235,6 +235,107 @@ def dunst(von, bis, dichte=0.035, farbe=(0.62, 0.78, 1.0), collection=None):
     return ob
 
 
+RAUM_ARTEN = {
+    # Boden/Wand, Tiefe (ab z −4), Erze mit Häufigkeit, Decken-Leuchtblock, Bodenflecken
+    "hoehle": {"stein": "stone", "tief": "deepslate", "erze": (("coal_ore", 0.035), ("iron_ore", 0.015), ("gold_ore", 0.004),
+                                                           ("redstone_ore", 0.005), ("diamond_ore", 0.004)),
+               "tief_erze": (("deepslate_diamond_ore", 0.01), ("deepslate_iron_ore", 0.012)),
+               "boden": (("gravel", 0.12), ("tuff", 0.06)), "decke_licht": None, "decke": 7, "decke_var": 6},
+    "nether": {"stein": "netherrack", "tief": "netherrack", "erze": (("nether_quartz_ore", 0.03), ("nether_gold_ore", 0.012)),
+               "tief_erze": (), "boden": (("soul_sand", 0.08), ("magma_block", 0.05), ("blackstone", 0.05)),
+               "decke_licht": "glowstone", "decke": 14, "decke_var": 10},
+}
+
+
+def raum(art="hoehle", seed=7, grund="lava", becken_ab=4, breite=(-12, 38), laenge=(-14, 48)):
+    """Geschlossener Raum aus Blöcken (Höhle, Nether): Boden bei z = 0 um die Figur, Decke darüber, Wände ringsum.
+    Auf der Themenseite (x ≥ becken_ab) senkt sich der Boden zu einem Becken mit `grund` (Lava/Wasser/None)."""
+    a = RAUM_ARTEN[art]
+    rnd = random.Random(seed)
+    boden_r = _rauschen(seed, 7.0)
+    decke_r = _rauschen(seed + 5, 6.0)
+    wand_r = _rauschen(seed + 9, 5.0)
+    welt = {}
+
+    def fels(x, y, z, oberflaeche=False):
+        basis = a["tief"] if z < -4 else a["stein"]
+        for name, p in (a["tief_erze"] if z < -4 else a["erze"]):
+            if rnd.random() < p:
+                return name
+        if oberflaeche:
+            for name, p in a["boden"]:
+                if rnd.random() < p:
+                    return name
+        return basis
+
+    for x in range(breite[0], breite[1]):
+        for y in range(laenge[0], laenge[1]):
+            # Wände: unregelmäßiger Rand des Raums
+            w = wand_r(x, y)
+            innen = (breite[0] + 3 + w * 4 < x < breite[1] - 3 - w * 4) and (y < laenge[1] - 3 - w * 5)
+            nah = abs(x) < 4 and -6 < y < 5  # Standfläche der Figur und Platz für die Kamera
+            if x >= becken_ab and not nah:
+                boden = -2 - int(boden_r(x, y) * 2)
+            else:
+                boden = 0 if nah else int(round((boden_r(x, y) - 0.5) * 2))
+            decke = a["decke"] + int(decke_r(x, y) * a["decke_var"]) + max(0, y - 10) // 4
+            unten = boden - 3
+            if not innen:
+                for z in range(unten, decke + 4):
+                    welt[(x, y, z)] = fels(x, y, z)
+                continue
+            for z in range(unten, boden + 1):
+                welt[(x, y, z)] = fels(x, y, z, oberflaeche=(z == boden))
+            if x >= becken_ab and not nah and grund:
+                for z in range(boden + 1, 0):
+                    welt[(x, y, z)] = grund
+            for z in range(decke, decke + 3):
+                welt[(x, y, z)] = fels(x, y, z)
+            # Tropfsteinartige Zapfen und Leuchtblöcke an der Decke
+            if a["decke_licht"] and rnd.random() < 0.025:
+                for dz in range(rnd.randint(1, 3)):
+                    welt[(x, y, decke - 1 - dz)] = a["decke_licht"]
+            elif rnd.random() < 0.02:
+                for dz in range(rnd.randint(1, 3)):
+                    welt[(x, y, decke - 1 - dz)] = fels(x, y, decke)
+    return welt
+
+
+def raumlicht(art, becken_ab=4, collection=None):
+    """Licht im geschlossenen Raum: warmes Leuchten aus dem Becken, schwaches kühles Füllicht von vorn."""
+    col = collection or bpy.context.scene.collection
+    lichter = []
+    farbe = (1.0, 0.45, 0.12) if art == "nether" else (1.0, 0.55, 0.2)
+    for i, (x, y) in enumerate(((becken_ab + 6, 6), (becken_ab + 12, 18), (becken_ab + 4, 28))):
+        l = bpy.data.lights.new(f"becken{i}", "POINT")
+        l.energy = 3500 if i == 0 else 2200
+        l.color = farbe
+        l.shadow_soft_size = 3.0
+        ob = bpy.data.objects.new(l.name, l)
+        ob.location = (x * BLOCK, y * BLOCK, 2.0 * BLOCK)
+        col.objects.link(ob)
+        lichter.append(ob)
+    fuell = bpy.data.lights.new("fuell", "AREA")
+    fuell.energy = 500
+    fuell.size = 6
+    fuell.color = (0.55, 0.65, 1.0) if art == "hoehle" else (1.0, 0.6, 0.45)
+    ob = bpy.data.objects.new("fuell", fuell)
+    ob.location = (-2 * BLOCK, -10 * BLOCK, 6 * BLOCK)
+    ob.rotation_euler = (math.radians(60), 0, math.radians(-10))
+    ob.visible_camera = False
+    col.objects.link(ob)
+    lichter.append(ob)
+    return lichter
+
+
+def baue_raum(texturen_ordner, art="hoehle", **kw):
+    tex = bloecke.Texturen(texturen_ordner)
+    raster = raum(art, **kw)
+    ob = bloecke.baue(raster, tex, art)
+    raumlicht(art, kw.get("becken_ab", 4))
+    return ob
+
+
 def baue_klippe(texturen_ordner, **kw):
     tex = bloecke.Texturen(texturen_ordner)
     raster = klippe(**kw)

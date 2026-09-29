@@ -131,6 +131,12 @@ class Figur:
         bpy.context.view_layer.update()
         return (self.teile["kopf"].matrix_world.to_3x3() @ Vector((0, -1, 0))).normalized()
 
+    def kopf_ecken(self):
+        """Die acht Ecken des Kopfwürfels (mit zweiter Ebene) in Weltkoordinaten."""
+        bpy.context.view_layer.update()
+        mw = self.teile["kopf"].matrix_world
+        return [mw @ Vector(c) for c in self.teile["kopf"].bound_box]
+
     def kopf_mitte(self):
         bpy.context.view_layer.update()
         return self.teile["kopf"].matrix_world.translation.copy()

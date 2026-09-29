@@ -2,7 +2,8 @@
 
 Beschreibung (alle Längen in Blöcken, Winkel in Grad):
 {
-  "welt": {"art": "wiese" | "klippe" | "meeresklippe" | "schlucht", "kante": 0, "tiefe": 20, "seed": 7},
+  "welt": {"art": "wiese" | "klippe" | "meeresklippe" | "schlucht" | "hoehle" | "nether", "kante": 0, "tiefe": 20, "seed": 7,
+           "grund": "lava" | "water" | null},
   "himmel": "tag" | "abend" | "nacht",
   "figuren": [{"id": "ich", "skin": "<pfad>", "slim": null, "pose": "zeigen", "posen_korrektur": {…},
                "position": [x, y], "blick": 0, "item": {"name": "diamond_sword", "hand": "l", "winkel": 40}}],
@@ -27,6 +28,7 @@ from . import kamera as mkamera
 from . import look as mlook
 from . import mobs as mmobs
 from . import welt as mwelt
+from . import bloecke
 from .bloecke import BLOCK
 from .posen import POSEN
 
@@ -43,6 +45,7 @@ def _mische(basis, korrektur):
 
 def _welt(w, texturen):
     art = w.get("art", "wiese")
+    bloecke.DUNST.update(farbe=(0.42, 0.66, 1.0), halbwert=160.0)  # Himmelsdunst als Standard
     seed = w.get("seed", 7)
     if art == "wiese":
         return mwelt.baue_klippe(texturen, seed=seed, kante=200, tiefe=6, gegenseite=True)
@@ -50,7 +53,12 @@ def _welt(w, texturen):
         return mwelt.baue_klippe(texturen, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=False)
     if art in ("klippe", "schlucht"):
         return mwelt.baue_klippe(texturen, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=True)
-    raise ValueError(f"Unbekannte Welt-Art „{art}“")
+    if art in mwelt.RAUM_ARTEN:
+        # geschlossener Raum: dunkler bzw. roter Dunst statt Himmelsblau
+        bloecke.DUNST.update({"hoehle": {"farbe": (0.015, 0.02, 0.03), "halbwert": 70.0},
+                              "nether": {"farbe": (0.30, 0.05, 0.02), "halbwert": 45.0}}[art])
+        return mwelt.baue_raum(texturen, art, seed=seed, grund=w.get("grund", "lava"))
+    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, {', '.join(mwelt.RAUM_ARTEN)})")
 
 
 def _randlicht(scene, figur, cam, seite="links", staerke=650):
@@ -88,6 +96,36 @@ def _pflanzen_vor_kamera_weg(cam, ziel, abstand=0.8):
     bm.free()
 
 
+def _boden_hoehe(scene, x, y, von=60.0, platz=2.0, nah_an=0.0):
+    """Bodenfläche unter (x, y) in Metern: nach oben zeigende Fläche mit mindestens `platz` Metern Luft darüber
+    (in Höhlen also der Boden, nicht das Dach). Bei mehreren die, die `nah_an` am nächsten liegt."""
+    bpy.context.view_layer.update()
+    tiefe = bpy.context.evaluated_depsgraph_get()
+    treffer_liste, z = [], von
+    for _ in range(40):
+        treffer, ort, normale, *_ = scene.ray_cast(tiefe, Vector((x, y, z)), Vector((0, 0, -1)))
+        if not treffer:
+            break
+        treffer_liste.append((ort.z, normale.z))
+        z = ort.z - 1e-3
+    boeden = []
+    for i, (hz, nz) in enumerate(treffer_liste):
+        oben_frei = hz + platz <= (treffer_liste[i - 1][0] if i > 0 else von) + 1e-6
+        if nz > 0.5 and oben_frei and (i == 0 or treffer_liste[i - 1][1] < -0.5):
+            boeden.append(hz)
+    if not boeden:
+        return nah_an
+    return min(boeden, key=lambda b: abs(b - nah_an))
+
+
+def _im_bild(box):
+    """Anteil einer Bildbox (x0, y0, x1, y1), der im Bild liegt."""
+    x0, y0, x1, y1 = box
+    flaeche = max(1e-6, (x1 - x0) * (y1 - y0))
+    sichtbar = max(0.0, min(1, x1) - max(0, x0)) * max(0.0, min(1, y1) - max(0, y0))
+    return sichtbar / flaeche
+
+
 def _bildpunkt(scene, cam, p):
     v = world_to_camera_view(scene, cam, p)
     return [round(v.x, 3), round(1 - v.y, 3)]  # Bildkoordinaten: 0,0 oben links
@@ -123,7 +161,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
                 raise ValueError(f"Unbekannter Mob „{art}“ (bekannt: {', '.join(k for k in tab if not k.startswith('_'))})")
             mob = mmobs.baue_mob(art, tab[art], texturen, groesse=m.get("groesse", 1.0), pose=m.get("pose", "stand"), name=f"{art}{i}")
             x, y = m.get("position", (4, 2))
-            mob.wurzel.location = (x * BLOCK, y * BLOCK, m.get("hoehe", 0) * BLOCK)
+            z = m["hoehe"] * BLOCK if "hoehe" in m else _boden_hoehe(scene, x * BLOCK, y * BLOCK)
+            mob.wurzel.location = (x * BLOCK, y * BLOCK, z)
             blick = m.get("blick", 0)
             if isinstance(blick, str):  # zu einer Figur schauen
                 ziel = next((fig for f, fig in figuren if f["id"] == blick), haupt).kopf_mitte()
@@ -143,7 +182,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     kante = szene.get("welt", {}).get("kante", 0)
     erlaubt = (lambda pos: pos.x > (kante + 2.5) * BLOCK) if k.get("ueber_abgrund") else None
     fehler = mkamera.rahme(scene, cam, oben, unten, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
-                           gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt)
+                           gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt,
+                           kopf_ecken=haupt.kopf_ecken())
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)
     _randlicht(scene, haupt, cam, k.get("seite", "links"), r.get("randlicht", 650))
@@ -173,7 +213,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     bpy.context.view_layer.update()
     for f, fig in figuren:
         o, u = fig.kopf_punkte()
-        info["figuren"][f["id"]] = {"kopf": _bildpunkt(scene, cam, (o + u) / 2), "kopf_oben": _bildpunkt(scene, cam, o), "kopf_unten": _bildpunkt(scene, cam, u)}
+        ecken = [_bildpunkt(scene, cam, p) for p in fig.kopf_ecken()]
+        info["figuren"][f["id"]] = {"kopf": _bildpunkt(scene, cam, (o + u) / 2), "kopf_oben": _bildpunkt(scene, cam, o), "kopf_unten": _bildpunkt(scene, cam, u),
+                                    "kopf_box": [min(e[0] for e in ecken), min(e[1] for e in ecken), max(e[0] for e in ecken), max(e[1] for e in ecken)]}
     info["mobs"] = []
     for m, mob in mobs:
         pts = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
@@ -183,6 +225,22 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         pts = [ob.matrix_world @ v.co for v in ob.data.vertices]
         xs = [_bildpunkt(scene, cam, p) for p in pts[:: max(1, len(pts) // 60)]]
         info["items"][fid] = {"box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]}
+    # Warnungen für die Selbstprüfung: Wichtiges muss im Bild sein
+    warnungen = []
+    for fid, f in info["figuren"].items():
+        if fid == szene["figuren"][0]["id"] and _im_bild(f["kopf_box"]) < 0.98:
+            warnungen.append(f"Kopf von {fid} am Bildrand angeschnitten")
+        elif _im_bild(f["kopf_box"]) < 0.6:
+            warnungen.append(f"Kopf von {fid} kaum sichtbar")
+    for fid, it in info["items"].items():
+        if _im_bild(it["box"]) < 0.7:
+            warnungen.append(f"Item von {fid} kaum sichtbar ({int(_im_bild(it['box']) * 100)} % im Bild)")
+    for m in info["mobs"]:
+        if _im_bild(m["box"]) < 0.5:
+            warnungen.append(f"Mob {m['art']} kaum sichtbar")
+    if fehler > 0.1:
+        warnungen.append(f"Kamera trifft das Stilbuch nicht (Abweichung {fehler:.2f}) – Thema näher an die Figur legen")
+    info["warnungen"] = warnungen
     if ausgabe:
         scene.render.filepath = ausgabe
         bpy.ops.render.render(write_still=True)
