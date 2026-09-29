@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-29
+
+> Eigenes Bild: Hintergrund hochladen und Pose frei beschreiben; Serie „Minecraft durchspielen“ entfernt
+
 ### Hinzugefügt
 - Eigenes Bild mit deinem Skin: Hintergrund hochladen, Pose frei beschreiben (z. B. „ich zeige erschrocken nach links“), Claude setzt sie in Winkel um, Blender rendert deinen echten Skin genau so; ohne Pfeil, Wort nur auf Wunsch.
 

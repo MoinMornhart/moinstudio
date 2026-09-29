@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.8.0** (2026-09-29): Eigenes Bild: Hintergrund hochladen und Pose frei beschreiben; Serie „Minecraft durchspielen“ entfernt
 - **0.7.0** (2026-09-29): Spiele-Vorlagen: du an der Stelle der Person im Spiele-Thumbnail; neue Gesten; Reactions mit kleinerer Figur, freiem Gesicht und Pfeil
 - **0.6.0** (2026-09-29): Gaming-Thumbnails mit Spielname, bessere Reaction-Posen, saubere Tiermodelle.
 - **0.5.0** (2026-09-29): Alle Mobs und Blöcke (immer die neuesten), Enderdrache und End, Mimik und Gesten, Serien-Vorlagen und Reaction-Thumbnails.
 - **0.4.1** (2026-09-29): Riesige Mobs passen automatisch ins Bild.
-- **0.4.0** (2026-09-29): Thumbnail aus Beschreibung oder Video: Claude plant nach großen Vorbildern, Blender rendert, Selbstprüfung korrigiert, Text in Minecraft-Schrift.
 <!-- CHANGELOG:END -->
 
 ## Installation
