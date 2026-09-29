@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-29
+
+> Schnitt-Reiter: Projekte, Import, Vorschau, Wellenform
+
 ### Hinzugefügt
 - Schnitt-Reiter neu (ROADMAP 6.2): Projekte anlegen, Rohvideo wählen (bleibt, wo es liegt; nur Pfad, Größe, Prüfsumme), Vorschau in 540p, Wellenform und Standbild-Leiste mit Fortschritt; Player im Reiter, Klick auf Wellenform oder Leiste springt an die Stelle; Projekte löschen.
 - Eigenes Medien-Protokoll für Videos im Reiter (Springen per Range-Anfrage, nur Dateien aus dem Datenordner).
