@@ -252,6 +252,27 @@ def _gesicht_sichtbar(scene, cam, fig, raster=5):
     return treffer / (raster * raster)
 
 
+def _mob_sichtbar(scene, cam, mob):
+    """Anteil der Mob-Punkte im Bild, die die Kamera wirklich sieht (Strahl trifft zuerst den Mob selbst)."""
+    tiefe = bpy.context.evaluated_depsgraph_get()
+    von = cam.matrix_world.translation
+    vorsilbe = mob.wurzel.name[: -len(".wurzel")] + "."
+    im_bild = treffer = 0
+    for o in mob.teile.values():
+        ecken = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        mitte = sum(ecken, Vector()) / 8
+        for p in [mitte] + [mitte + (e - mitte) * 0.7 for e in ecken]:
+            v = world_to_camera_view(scene, cam, p)
+            if v.z <= 0 or not (0 <= v.x <= 1 and 0 <= v.y <= 1):
+                continue
+            im_bild += 1
+            richtung = p - von
+            ok, _, _, _, ob, _ = scene.ray_cast(tiefe, von, richtung.normalized(), distance=richtung.length + 0.05)
+            if ok and ob is not None and ob.name.startswith(vorsilbe):
+                treffer += 1
+    return treffer / im_bild if im_bild else 1.0  # ganz außerhalb: das meldet die Prüfung „kaum sichtbar“
+
+
 def _sicht_versperrt(scene, cam, haupt, raster=12):
     """Anteil des Bildes, in dem Welt oder Objekte näher an der Kamera sind als 70 % des Abstands zur Hauptfigur
     (Figuren, Items und Mobs zählen nicht: die gehören ins Bild)."""
@@ -326,6 +347,13 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     info["sicht_versperrt"] = round(verdeckt, 2)
     if verdeckt > 0.12:
         warnungen.append(f"Etwas versperrt die Sicht ({int(verdeckt * 100)} % des Bildes liegen vor der Hauptfigur)")
+    # Verdeckte Mobs (Freiform-Test: Wölfe hinter Philip und seinem Schwert): je Mob-Art zählt der am besten sichtbare
+    beste = {}
+    for m, mob in mobs:
+        beste[m["art"]] = max(beste.get(m["art"], 0.0), _mob_sichtbar(scene, cam, mob))
+    for art, anteil in beste.items():
+        if anteil < 0.25:
+            warnungen.append(f"Mob {art} verdeckt ({int(anteil * 100)} % sichtbar) – vor Philip oder daneben stellen")
     for m in info["mobs"]:
         b = m["box"]
         sichtbar = max(0.0, min(1, b[2]) - max(0, b[0])) * max(0.0, min(1, b[3]) - max(0, b[1]))

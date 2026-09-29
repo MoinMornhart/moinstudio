@@ -269,25 +269,35 @@ def art_info(art, texturen=None):
             continue
         tex, kette = _modell(texturen.ordner, kandidat)
         # nur ein Modell mit echten Texturen zählt (pointed_dripstone.json ist eine leere Vorlage)
-        if kette and any(isinstance(v, str) and not v.startswith("#") for v in tex.values()):
+        if kette and any(isinstance(v, dict) or (isinstance(v, str) and not v.startswith("#")) for v in tex.values()):
             break
 
     def t(*schluessel):
         for s in schluessel:
             v = tex.get(s)
-            while isinstance(v, str) and v.startswith("#"):
-                v = tex.get(v[1:])
+            while isinstance(v, (str, dict)):
+                if isinstance(v, dict):  # neue Spielversionen: {"sprite": "minecraft:block/glass", "force_translucent": true}
+                    v = v.get("sprite")
+                elif v.startswith("#"):
+                    v = tex.get(v[1:])
+                else:
+                    break
             if isinstance(v, str):
                 return v.split("/")[-1]
         return None
 
     ungefaerbt = any(k in art for k in ("cherry", "azalea", "pale_oak"))  # im Spiel nicht eingefärbt
     farbe = None if ungefaerbt else LAUB if any(k in art for k in _TINT_LAUB) else (GRAS if any(k in art for k in _TINT_GRAS) else None)
-    if "cross" in kette or "tinted_cross" in kette or "flower_pot_cross" in kette or ("cross" in tex and not any(k in tex for k in ("all", "side", "top"))):
+    if any(k.startswith(("flowerbed", "template_leaf_litter")) for k in kette):
+        # Bodendecker (Rosa Blütenblätter, Wildblumen, Laubstreu): flach mit Transparenz wie Pflanzen, nie als Würfel
+        info = {"alle": (t("flowerbed", "texture") or art, farbe if "leaf_litter" in art else None), "kreuz": True, "durchsichtig": True}
+        KREUZ_TEXTUR[art] = info["alle"][0]
+    elif "cross" in kette or "tinted_cross" in kette or "flower_pot_cross" in kette or ("cross" in tex and not any(k in tex for k in ("all", "side", "top"))):
         info = {"alle": (t("cross", "plant") or art, farbe), "kreuz": True, "durchsichtig": True}
         KREUZ_TEXTUR[art] = info["alle"][0]
     else:
-        alle = t("all", "texture", "particle")
+        # sonst die erste echte Textur des Modells (Glasscheiben: „pane“, Ketten, Gitter …)
+        alle = t("all", "texture", "particle") or t(*[k for k, v in tex.items() if isinstance(v, dict) or (isinstance(v, str) and not v.startswith("#"))])
         oben = t("top", "end", "up") or alle
         unten = t("bottom", "end", "down") or oben
         seite = t("side", "front", "north") or alle

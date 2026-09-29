@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Behoben
+
+- Thumbnail: Alle 1288 Blöcke der Spieldatei lassen sich jetzt darstellen, auch neue Modellformate (`sprite`-Texturen) und Glasscheiben. Rosa Blütenblätter, Wildblumen und Laubstreu sind flache Bodendecker statt schwarzer Würfel. Die Selbstprüfung erkennt verdeckte Mobs, z. B. hinter Philip, und lässt die Szene korrigieren.
+
 ## [0.29.3] - 2026-09-29
 
 > Thumbnail: auf etwas stehen, Kürbiskopf
