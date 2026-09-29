@@ -288,6 +288,8 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     for m, mob in mobs:
         pts = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
         xs = [_bildpunkt(scene, cam, p) for p in pts]
+        if not xs:  # Entity ohne Geometrie (z. B. fireball): nicht messbar, aber kein Absturz
+            continue
         info["mobs"].append({"art": m["art"], "box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]})
     for fid, ob in gehalten.items():
         pts = [ob.matrix_world @ v.co for v in ob.data.vertices]
@@ -361,6 +363,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         mfigur.pose(fig, p)
         if f.get("mimik"):
             mmimik.setze_mimik(fig, f["mimik"])
+        if f.get("kopf"):
+            _kopf_block(fig, f["kopf"], texturen)
         _auf_den_boden(scene, fig, f.get("hoehe"))
         figuren.append((f, fig))
     haupt = figuren[0][1]
@@ -383,6 +387,11 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
                 blick = math.degrees(math.atan2(d.x, -d.y))
             mob.wurzel.rotation_euler = (0, 0, math.radians(blick))
             mobs.append((m, mob))
+
+    # „auf“: Figur steht, sitzt oder macht Handstand auf einem Mob oder Objekt – MoinStudio rechnet die Lage selbst aus
+    for f, fig in figuren:
+        if f.get("auf"):
+            _auf_etwas(fig, f["auf"], mobs, f.get("hoehe") or 0)
 
     k = szene.get("kamera", {})
     _riesen_zurueck(haupt, mobs, k.get("thema"))
@@ -530,6 +539,46 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         vorne = [fig.wurzel for f, fig in figuren] + [mob.wurzel for m, mob in mobs] + list(gehalten.values())
         _maske(scene, vorne, os.path.splitext(ausgabe)[0] + ".maske.png")
     return info
+
+
+def _kopf_block(fig, block, texturen):
+    """Block auf dem Kopf (geschnitzter Kürbis, Helm aus Blöcken …): etwas größer als der Kopf, dreht mit ihm.
+    Der Name beginnt mit „<figur>.kopf“, damit die Gesichtsprüfung ihn als gewollt zählt."""
+    kopf = fig.teile["kopf"]
+    halb = 0.5 * BLOCK
+    ob = bloecke.baue({(0, 0, 1): block}, bloecke.Texturen(texturen), f"{fig.name}.kopf_block", versatz=(-halb, -halb, -halb))
+    bpy.context.view_layer.update()
+    s = 9.4 * mfigur.PX / BLOCK  # größer als die zweite Skin-Schicht (Haare, Hut), die sonst herausschaut
+    ob.matrix_world = kopf.matrix_world @ mathutils_Matrix.Scale(s, 4)
+    ob.parent = kopf
+    ob.matrix_parent_inverse = kopf.matrix_world.inverted()
+
+
+def _auf_etwas(fig, ziel, mobs, hoehe=0.0):
+    """Stellt die Figur mittig auf einen Mob („mob:0“ oder Mob-Art) oder ein Objekt („objekt:0“); der tiefste Punkt der
+    Figur (Füße, beim Handstand die Hände/der Kopf) liegt auf dessen Oberseite."""
+    punkte = []
+    if isinstance(ziel, str) and ziel.startswith("objekt:"):
+        ob = bpy.data.objects.get(f"objekt{int(ziel[7:])}")
+        punkte = [ob.matrix_world @ Vector(c) for c in ob.bound_box] if ob else []
+    elif isinstance(ziel, str):
+        mob = None
+        if ziel.startswith("mob:") and int(ziel[4:]) < len(mobs):
+            mob = mobs[int(ziel[4:])][1]
+        else:
+            mob = next((mb for m, mb in mobs if m["art"] == ziel), None)
+        if mob:
+            punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+    if not punkte:
+        print("MOIN_WARNUNG auf: Ziel nicht gefunden", ziel)
+        return
+    bpy.context.view_layer.update()
+    oben = max(p.z for p in punkte)
+    tief = min((o.matrix_world @ Vector(c)).z for o in fig.teile.values() for c in o.bound_box)
+    fig.wurzel.location.x = sum(p.x for p in punkte) / len(punkte)
+    fig.wurzel.location.y = sum(p.y for p in punkte) / len(punkte)
+    fig.wurzel.location.z += oben + hoehe * BLOCK - tief
+    bpy.context.view_layer.update()
 
 
 def _bild_leer(pfad):

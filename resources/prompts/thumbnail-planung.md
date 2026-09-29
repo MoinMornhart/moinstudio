@@ -64,7 +64,10 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Sitzen = {"bein_r": {"vor": 90}, "bein_l": {"vor": 90}} mit `hoehe` 0.5 · Klettern = {"arm_r": {"heben": 160}, "arm_l": {"heben": 120}, "bein_l": {"vor": 60, "beugen": 70}}.
 11. **Gegenstände:** Alles, was kein Block ist (Boot, Bett, Elytra, Angel, Eimer, Kuchen, Eier …), hält Philip als `item`
    mit der Minecraft-ID (oak_boat, red_bed, elytra, fishing_rod, water_bucket, cake, sniffer_egg …). Worauf Philip steht
-   oder was er trägt, baust du als Block (hay_block, ladder, carved_pumpkin als `objekt` genau auf Kopfhöhe z ≈ 1.6 …).
+   oder was er trägt, baust du als Block. Zwei Felder je Figur helfen dabei:
+   `"auf": "mob:0"` bzw. `"auf": "objekt:0"` stellt die Figur mittig auf einen Mob oder ein Objekt (Handstand auf dem Creeper,
+   Yoga auf dem Heuballen, im Boot aus Blöcken) – MoinStudio rechnet die Höhe selbst aus, `position` ist dann egal.
+   `"kopf": "carved_pumpkin"` setzt einen Block auf den Kopf (Kürbis-Verkleidung, Block-Helm); das Gesicht zeigt nach vorn.
 
 # Koordinaten
 

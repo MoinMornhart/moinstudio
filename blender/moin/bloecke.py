@@ -268,7 +268,8 @@ def art_info(art, texturen=None):
         if not kandidat:
             continue
         tex, kette = _modell(texturen.ordner, kandidat)
-        if kette:
+        # nur ein Modell mit echten Texturen zählt (pointed_dripstone.json ist eine leere Vorlage)
+        if kette and any(isinstance(v, str) and not v.startswith("#") for v in tex.values()):
             break
 
     def t(*schluessel):
@@ -282,7 +283,7 @@ def art_info(art, texturen=None):
 
     ungefaerbt = any(k in art for k in ("cherry", "azalea", "pale_oak"))  # im Spiel nicht eingefärbt
     farbe = None if ungefaerbt else LAUB if any(k in art for k in _TINT_LAUB) else (GRAS if any(k in art for k in _TINT_GRAS) else None)
-    if "cross" in kette or "tinted_cross" in kette or "flower_pot_cross" in kette:
+    if "cross" in kette or "tinted_cross" in kette or "flower_pot_cross" in kette or ("cross" in tex and not any(k in tex for k in ("all", "side", "top"))):
         info = {"alle": (t("cross", "plant") or art, farbe), "kreuz": True, "durchsichtig": True}
         KREUZ_TEXTUR[art] = info["alle"][0]
     else:
@@ -296,6 +297,9 @@ def art_info(art, texturen=None):
             else:
                 raise KeyError(f"Block „{art}“ gibt es in dieser Spielversion nicht")
         info = {"oben": (oben or seite, farbe), "unten": (unten or seite, None), "seite": (seite or oben, farbe if "leaves" in art else None)}
+        vorn = t("front")
+        if vorn and vorn != (seite or oben):  # eigenes Gesicht vorn (geschnitzter Kürbis, Ofen, Werkbank …)
+            info["vorn"] = (vorn, None)
         if any(k in art for k in ("glass", "leaves", "ice")) and "packed" not in art:
             info["durchsichtig"] = True
         if any(k in art for k in ("glowstone", "lantern", "shroomlight", "sea_lantern", "magma", "froglight", "lamp_on")):
@@ -312,6 +316,8 @@ def _seiten_textur(art, seite):
         return d["oben"], None
     if seite == "unten":
         return d["unten"], None
+    if seite == "vorn" and "vorn" in d:
+        return d["vorn"], None
     return d["seite"], d.get("overlay")
 
 
