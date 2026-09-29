@@ -77,6 +77,7 @@ const api: MoinApi = {
   claudeLogin: () => ipcRenderer.invoke(IPC.claudeLogin),
   thumbSkins: () => ipcRenderer.invoke(IPC.thumbSkins),
   thumbSkinAdd: (rolle: 'ich' | 'freund') => ipcRenderer.invoke(IPC.thumbSkinAdd, rolle),
+  thumbSkinName: (name: string, rolle: 'ich' | 'freund') => ipcRenderer.invoke(IPC.thumbSkinName, name, rolle),
   thumbSkinUpdate: (id: string, patch: { name?: string; rolle?: 'ich'; entfernen?: boolean }) => ipcRenderer.invoke(IPC.thumbSkinUpdate, id, patch),
   thumbSkinBild: (id: string) => ipcRenderer.invoke(IPC.thumbSkinBild, id),
   thumbStart: (start: ThumbStart) => ipcRenderer.invoke(IPC.thumbStart, start),

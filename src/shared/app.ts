@@ -50,6 +50,7 @@ export const IPC = {
   claudeLogin: 'claude:login',
   thumbSkins: 'thumb:skins',
   thumbSkinAdd: 'thumb:skin-add',
+  thumbSkinName: 'thumb:skin-name',
   thumbSkinUpdate: 'thumb:skin-update',
   thumbSkinBild: 'thumb:skin-bild',
   thumbStart: 'thumb:start',
@@ -236,6 +237,8 @@ export interface MoinApi {
   thumbSkins(): Promise<ThumbSkin[]>
   /** Dateidialog: Skins hochladen; rolle „ich“ = Philips Hauptskin */
   thumbSkinAdd(rolle: 'ich' | 'freund'): Promise<ThumbSkin[]>
+  /** Skin per Minecraft-Name laden (Mojang) */
+  thumbSkinName(name: string, rolle: 'ich' | 'freund'): Promise<ThumbSkin[]>
   /** Umbenennen, zum Hauptskin machen oder entfernen */
   thumbSkinUpdate(id: string, patch: { name?: string; rolle?: 'ich'; entfernen?: boolean }): Promise<ThumbSkin[]>
   /** Skin-Bild als Data-URL */

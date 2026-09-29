@@ -46,6 +46,8 @@ export interface VorlagenAnalyse {
   ziel?: [number, number]
   blick?: number
   gegenstand?: { box: Box; suchwort: string; hand?: 'r' | 'l' }
+  /** Titel und Logos, die über der Person liegen, mit ihrer Textfarbe */
+  titel?: { box: Box; farbe: string }[]
   titel_boxen?: Box[]
   logo_boxen?: Box[]
 }
@@ -66,8 +68,7 @@ const SCHEMA = {
     ziel: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
     blick: { type: 'number' },
     gegenstand: { type: 'object', properties: { box: BOX, suchwort: { type: 'string' }, hand: { type: 'string', enum: ['r', 'l'] } } },
-    titel_boxen: { type: 'array', items: BOX },
-    logo_boxen: { type: 'array', items: BOX }
+    titel: { type: 'array', items: { type: 'object', required: ['box', 'farbe'], properties: { box: BOX, farbe: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } } } }
   }
 } as const
 
@@ -167,13 +168,22 @@ export function begrenzeWinkel(w: Record<string, unknown>): Record<string, unkno
 
 /**
  * Kopfgröße (Anteil der Bildhöhe): Claudes Schätzung, aber so groß, dass die Figur (etwa 2,2 Kopfbreiten breit) die
- * entfernte Person weitgehend abdeckt – sonst bleibt ein verwaschener Rand der Auffüllung sichtbar. Höchstens +30 %.
+ * entfernte Person weitgehend abdeckt. Höchstens +15 % (die Personenbreite enthält oft den ausgestreckten Arm).
  */
 export function kopfAnteil(geschaetzt: number | undefined, person: { box?: Box }): number {
   const basis = Math.min(0.7, Math.max(0.15, geschaetzt || 0.35))
   const b = person.box
   const ausBreite = b ? ((b[2] - b[0]) * 1280) / 2.2 / 720 : 0
-  return Math.min(0.7, Math.max(basis, Math.min(ausBreite, basis * 1.3)))
+  return Math.min(0.6, Math.max(basis, Math.min(ausBreite, basis * 1.15)))
+}
+
+/** Argumente für vorlage_titel.py aus der Analyse (neue Form mit Farbe, ältere Kästen weiter unterstützt). */
+export function titelArgumente(a: Pick<VorlagenAnalyse, 'titel' | 'titel_boxen' | 'logo_boxen'>): string[] {
+  return [
+    ...(a.titel ?? []).filter((t) => t.box?.length === 4 && /^#[0-9a-f]{6}$/i.test(t.farbe)).map((t) => `farbe=${t.farbe}:${t.box.join(',')}`),
+    ...(a.titel_boxen ?? []).map((b) => b.join(',')),
+    ...(a.logo_boxen ?? []).map((b) => `logo:${b.join(',')}`)
+  ]
 }
 
 export function analysePrompt(bild: string, posen: string[], beispiele: string, wunsch?: string): string {
@@ -199,8 +209,8 @@ ${beispiele}
   (ohne Hand), suchwort
   (englisch, ein bis zwei Wörter, z. B. "pistol", "sword", "controller", "camera") und hand ("r" = die im Bild linke
   Hand der Person, "l" = die im Bild rechte)
-- titel_boxen: Kästen um weiße oder helle Titelschrift, die über der Person liegt (sie wird danach wieder obendrauf gelegt)
-- logo_boxen: Kästen um farbige Logos (z. B. goldene Spiel-Logos), die über der Person liegen
+- titel: alle Titel, Schriftzüge und Logos im Bild als Liste {box: [x0, y0, x1, y1], farbe: "#rrggbb"} – die Farbe
+  ist die Farbe der Buchstaben selbst (z. B. "#111111" für schwarze, "#ffffff" für weiße Schrift); je Farbe ein Eintrag
 ${wunsch ? `\nPhilip wünscht zusätzlich: „${wunsch}“ – berücksichtige das bei Pose, Mimik und Gegenstand.\n` : ''}
 Antworte nur mit JSON nach dem Schema.`
 }
@@ -208,10 +218,15 @@ Antworte nur mit JSON nach dem Schema.`
 export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ claudeSession?: string; claudePrompted?: boolean }>): Promise<{ varianten: ThumbnailVariante[] }> {
   const c = ctx as JobContext<unknown>
   await mkdir(p.ausgabe, { recursive: true })
-  const vorlage = join(p.ausgabe, `vorlage${extname(p.vorlage).toLowerCase() || '.jpg'}`)
-  await copyFile(p.vorlage, vorlage)
+  const original = join(p.ausgabe, `original${extname(p.vorlage).toLowerCase() || '.jpg'}`)
+  await copyFile(p.vorlage, original)
+  const python = await sicherePython(p.uv, p.pyDir, c)
+  // Vorlage auf 16:9 bringen (schwarze Balken weg, kleine Bilder hochskaliert) – alle Schritte nutzen genau dieses Bild
+  ctx.progress(4, 'Bereite die Vorlage vor …')
+  const vorlage = join(p.ausgabe, 'vorlage.png')
+  await lauf(python, [join(p.blenderDir, 'vorlage_vorbereiten.py'), original, vorlage], c)
 
-  ctx.progress(5, 'Claude sieht sich die Vorlage an …')
+  ctx.progress(8, 'Claude sieht sich die Vorlage an …')
   const prompt = analysePrompt(vorlage, await posenNamen(p.blenderDir), await posenBeispiele(p.blenderDir, ['pistole', 'zeigen', 'panik', 'jubeln', 'nachdenken']), p.wunsch)
   const res = await runClaudeInJob(
     { cli: p.claudeCli, prompt, workDir: join(p.datenOrdner, 'claude-work', 'spielvorlage'), tools: ['Read'], allowedTools: ['Read'], addDirs: [p.ausgabe], maxTurns: 6, jsonSchema: SCHEMA },
@@ -222,7 +237,6 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   await writeFile(join(p.ausgabe, 'analyse.json'), JSON.stringify(a, null, 1))
 
   await ctx.yield()
-  const python = await sicherePython(p.uv, p.pyDir, c)
   ctx.progress(25, 'Entferne die Person aus der Vorlage …')
   const extra = a.gegenstand?.box ? [a.gegenstand.box.join(',')] : []
   await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra], c, { ...process.env, MOIN_LAMA: lamaPfad(p.pyDir) })
@@ -260,11 +274,11 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   )
   const bericht = JSON.parse(await readFile(join(p.ausgabe, 'bericht.json'), 'utf8').catch(() => '{}')) as { fehler?: string }
   let bild: string | null = code === 0 && !bericht.fehler ? render : null
-  if (bild && (a.titel_boxen?.length || a.logo_boxen?.length)) {
+  const boxen = titelArgumente(a)
+  if (bild && boxen.length) {
     ctx.progress(90, 'Lege den Titel der Vorlage wieder obendrauf …')
     const fertig = join(p.ausgabe, 'fertig.png')
-    const boxen = [...(a.titel_boxen ?? []).map((b) => b.join(',')), ...(a.logo_boxen ?? []).map((b) => `logo:${b.join(',')}`)]
-    await lauf(python, [join(p.blenderDir, 'vorlage_titel.py'), vorlage, render, fertig, ...boxen], c)
+    await lauf(python, [join(p.blenderDir, 'vorlage_titel.py'), vorlage, render, fertig, ...boxen, `--maske=${join(p.ausgabe, 'maske.png')}`], c)
     bild = fertig
   }
   ctx.progress(100, 'Fertig')

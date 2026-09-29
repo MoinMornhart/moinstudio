@@ -72,7 +72,9 @@ def main(vorlage, ordner, dazu=()):
     # Maske großzügig erweitern (Haare, Ränder, Schatten), dann auffüllen
     groesser = cv2.dilate(m, np.ones((25, 25), np.uint8), iterations=2)
     for x_0, y_0, x_1, y_1 in dazu:
-        groesser[int(y_0 * h):int(y_1 * h), int(x_0 * w):int(x_1 * w)] = 255
+        # Gegenstände samt Rand (Claudes Kästen sind oft knapp; Reste wie ein Laufende sehen sonst verloren aus)
+        rx, ry = 0.04 * (x_1 - x_0) + 0.015, 0.06 * (y_1 - y_0) + 0.02
+        groesser[max(0, int((y_0 - ry) * h)):int((y_1 + ry) * h), max(0, int((x_0 - rx) * w)):int((x_1 + rx) * w)] = 255
     arr = cv2.cvtColor(np.array(bild), cv2.COLOR_RGB2BGR)
     gefuellt = lama(arr, groesser) if os.path.exists(LAMA) else None
     if gefuellt is None:

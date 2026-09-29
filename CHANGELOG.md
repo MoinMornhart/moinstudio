@@ -6,6 +6,16 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Skin per Minecraft-Name: Namen eintippen, der aktuelle Skin kommt direkt von Mojang (ohne Anmeldung), inklusive dünner Arme; derselbe Name ersetzt den alten Skin.
+
+### Geändert
+- Thumbnail-Reiter aufgeräumt: oben „Was möchtest du machen?“ (Minecraft, Reaction, Gaming, Spiele-Vorlage mit Kanal), darunter nur das passende Formular; die Wahl wird gemerkt.
+
+### Behoben
+- Spiele-Vorlage: Vorlagen werden zuerst auf 16:9 gebracht (schwarze Balken weg, kleine Bilder hochskaliert) – der Titel liegt nie mehr doppelt oder versetzt; Titel werden in ihrer echten Farbe (auch schwarz) wiederhergestellt.
+- Spiele-Vorlage: Kopf bleibt immer ganz im Bild, Figur nicht mehr übergroß; beidhändiges Zielen (zweite Hand greift an die Waffenhand); Reste des Original-Gegenstands verschwinden.
+
 ## [0.10.0] - 2026-09-29
 
 > Lebendiger Text auch bei Minecraft-Thumbnails

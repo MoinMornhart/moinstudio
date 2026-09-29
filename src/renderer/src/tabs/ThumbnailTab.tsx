@@ -43,8 +43,30 @@ function SkinBild({ id, klein }: { id: string; klein?: boolean }): React.JSX.Ele
   )
 }
 
+type Modus = 'minecraft' | 'reaction' | 'gaming' | 'vorlage'
+const MODI: { id: Modus; titel: string; kanal: string; text: string }[] = [
+  { id: 'minecraft', titel: 'Minecraft', kanal: 'MoinMornhart', text: 'Szene aus Beschreibung oder Video' },
+  { id: 'reaction', titel: 'Reaction', kanal: 'MoinMorni', text: 'Original-Thumbnail + dein Skin' },
+  { id: 'gaming', titel: 'Gaming', kanal: 'MoinMorni', text: 'Spielbild oder Hintergrund + deine Pose' },
+  { id: 'vorlage', titel: 'Spiele-Vorlage', kanal: 'MoinMorni', text: 'Du statt der Person im Thumbnail' }
+]
+
 function Skins({ skins, setSkins }: { skins: ThumbSkin[]; setSkins: (s: ThumbSkin[]) => void }): React.JSX.Element {
   const [fehler, setFehler] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [laedt, setLaedt] = useState(false)
+  const perName = async (rolle: 'ich' | 'freund'): Promise<void> => {
+    setFehler(null)
+    setLaedt(true)
+    try {
+      setSkins(await window.moin.thumbSkinName(name, rolle))
+      setName('')
+    } catch (err) {
+      setFehler(fehlerText(err))
+    } finally {
+      setLaedt(false)
+    }
+  }
   const hochladen = (rolle: 'ich' | 'freund') => async (): Promise<void> => {
     setFehler(null)
     try {
@@ -56,7 +78,7 @@ function Skins({ skins, setSkins }: { skins: ThumbSkin[]; setSkins: (s: ThumbSki
   return (
     <Card title="Skins" badge={`${skins.length}`}>
       {fehler && <p className="warn">{fehler}</p>}
-      {skins.length === 0 && <p className="muted">Lade zuerst deinen eigenen Skin hoch. Skins von Freunden kommen dazu, wenn sie mit ins Bild sollen.</p>}
+      {skins.length === 0 && <p className="muted">Gib zuerst deinen Minecraft-Namen ein oder lade deinen Skin hoch. Skins von Freunden kommen dazu, wenn sie mit ins Bild sollen.</p>}
       <ul className="skin-grid">
         {skins.map((s) => (
           <li key={s.id} className="skin-tile">
@@ -78,6 +100,21 @@ function Skins({ skins, setSkins }: { skins: ThumbSkin[]; setSkins: (s: ThumbSki
           </li>
         ))}
       </ul>
+      <div className="row wrap">
+        <input
+          className="input"
+          placeholder="Minecraft-Name, z. B. MoinMornhart"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && name.trim() && void perName(skins.some((s) => s.rolle === 'ich') ? 'freund' : 'ich')}
+        />
+        <button className="btn primary" disabled={laedt || !name.trim()} onClick={() => void perName('ich')}>
+          {laedt ? 'Lade …' : 'Als meinen Skin'}
+        </button>
+        <button className="btn" disabled={laedt || !name.trim()} onClick={() => void perName('freund')}>
+          Als Freund
+        </button>
+      </div>
       <div className="row wrap">
         <button className="btn" onClick={() => void hochladen('ich')()}>
           Mein Skin hochladen
@@ -284,6 +321,21 @@ export function ThumbnailTab(): React.JSX.Element {
   const [mitWort, setMitWort] = useState('')
   const [vorlageWunsch, setVorlageWunsch] = useState('')
   const [loeschen, setLoeschen] = useState<string | null>(null)
+  const [modus, setModus] = useState<Modus>(() => {
+    try {
+      return (localStorage.getItem('thumb-modus') as Modus | null) ?? 'minecraft'
+    } catch {
+      return 'minecraft'
+    }
+  })
+  const waehle = (m: Modus): void => {
+    setModus(m)
+    try {
+      localStorage.setItem('thumb-modus', m)
+    } catch {
+      /* egal */
+    }
+  }
   useEffect(() => {
     void window.moin.thumbSkins().then(setSkins, (err: unknown) => setFehler(fehlerText(err)))
   }, [])
@@ -354,9 +406,19 @@ export function ThumbnailTab(): React.JSX.Element {
   return (
     <>
       <PageHeader title="Thumbnail" subtitle="Beschreibe dein Video – Claude plant Szenen nach den großen Minecraft-Kanälen, Blender rendert sie mit echten Texturen." />
+      <div className="modus-wahl" aria-label="Was möchtest du machen?">
+        {MODI.map((m) => (
+          <button key={m.id} aria-pressed={modus === m.id} className={modus === m.id ? 'modus on' : 'modus'} onClick={() => waehle(m.id)}>
+            <strong>{m.titel}</strong>
+            <span className="muted small">{m.text}</span>
+            <span className="modus-kanal">{m.kanal}</span>
+          </button>
+        ))}
+      </div>
+      {fehler && <p className="warn">{fehler}</p>}
       <div className="grid">
+        {modus === 'minecraft' && (
         <Card title="Neues Thumbnail">
-          {fehler && <p className="warn">{fehler}</p>}
           <textarea
             className="input"
             rows={3}
@@ -405,6 +467,8 @@ export function ThumbnailTab(): React.JSX.Element {
             </button>
           </div>
         </Card>
+        )}
+        {modus === 'reaction' && (
         <Card title="Reaction-Thumbnail" badge="MoinMorni">
           <p className="muted small">
             Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose, mit Wort und Pfeil.
@@ -423,6 +487,8 @@ export function ThumbnailTab(): React.JSX.Element {
             </button>
           </div>
         </Card>
+        )}
+        {modus === 'gaming' && (
         <Card title="Gaming-Thumbnail" badge="MoinMorni">
           <p className="muted small">
             Lade ein Spielbild, einen Screenshot oder einen eigenen Hintergrund hoch. Beschreibe, wie du posieren willst – oder lass das Feld leer, dann wählt Claude Pose, Wort und
@@ -450,6 +516,8 @@ export function ThumbnailTab(): React.JSX.Element {
             </button>
           </div>
         </Card>
+        )}
+        {modus === 'vorlage' && (
         <Card title="Spiele-Vorlage: du statt der Person" badge="MoinMorni">
           <p className="muted small">
             Wähle ein Spiele-Thumbnail eines anderen Creators. Die Person darin wird entfernt, dein Skin steht an ihrer Stelle in passender Pose – mit echtem 3D-Gegenstand, falls sie
@@ -462,6 +530,7 @@ export function ThumbnailTab(): React.JSX.Element {
             </button>
           </div>
         </Card>
+        )}
         <Skins skins={skins} setSkins={setSkins} />
         <Card title="Aufträge" badge={`${auftraege.length}`}>
           {auftraege.length === 0 && <p className="muted">Noch keine Thumbnails erstellt.</p>}

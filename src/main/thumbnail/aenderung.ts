@@ -6,6 +6,7 @@ import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import type { ThumbnailVariante } from './job'
 import { sichereMcAssets } from './minecraft'
+import { titelArgumente } from './spielvorlage'
 
 /**
  * Änderungswunsch zu einem fertigen Thumbnail (Philip, 29.09.: „wenn man das Thumbnail unten sieht, auch Änderungen
@@ -132,11 +133,11 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
       bild = `${ziel}.roh.png`
       // Titel der Vorlage wieder obendrauf (Kästen aus der ersten Analyse)
       const ordner = join(p.szene, '..')
-      const analyse = JSON.parse(await readFile(join(ordner, 'analyse.json'), 'utf8').catch(() => '{}')) as { titel_boxen?: number[][]; logo_boxen?: number[][] }
-      const boxen = [...(analyse.titel_boxen ?? []).map((b) => b.join(',')), ...(analyse.logo_boxen ?? []).map((b) => `logo:${b.join(',')}`)]
-      const vorlage = ['vorlage.jpg', 'vorlage.png', 'vorlage.webp'].map((n) => join(ordner, n))
+      const analyse = JSON.parse(await readFile(join(ordner, 'analyse.json'), 'utf8').catch(() => '{}')) as Parameters<typeof titelArgumente>[0]
+      const boxen = [...titelArgumente(analyse), `--maske=${join(ordner, 'maske.png')}`]
+      const vorlage = ['vorlage.png', 'vorlage.jpg', 'vorlage.webp'].map((n) => join(ordner, n))
       const quelle = (await Promise.all(vorlage.map(existiert))).findIndex(Boolean)
-      if (p.python && boxen.length && quelle >= 0) {
+      if (p.python && boxen.length > 1 && quelle >= 0) {
         await lauf(p.python, [join(p.blenderDir, 'vorlage_titel.py'), vorlage[quelle]!, bild, `${ziel}.png`, ...boxen], c).then(
           () => (bild = `${ziel}.png`),
           () => undefined

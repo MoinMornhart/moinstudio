@@ -1,6 +1,6 @@
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { copyFile, mkdir, readFile, rm } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
 import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
 import { findClaudeCli } from '../claude/cli'
@@ -15,6 +15,7 @@ import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG, UV } from '../tools/specs'
 import { localRoot } from '../tools/ipc'
 import { spielvorlageJob, type SpielvorlagePayload } from './spielvorlage'
 import { aenderungJob, type AenderungPayload, type AenderungsArt } from './aenderung'
+import { skinAusName } from './skinname'
 import { z } from 'zod'
 import { thumbnailJob, type ThumbnailPayload, type ThumbnailVariante } from './job'
 import { ladeVorbilder } from './planung'
@@ -261,6 +262,24 @@ export function registerThumbnailIpc(
       if (r === 'ich') for (const s of skins) if (s.rolle === 'ich') s.rolle = 'freund' // nur ein Hauptskin
       skins.push({ id, name: basename(f, extname(f)), datei, rolle: r, slim: null })
     }
+    await speichereSkins(dir, skins)
+    return skins
+  })
+
+  // Skin per Minecraft-Name (Mojang, ohne Anmeldung); gleicher Name ersetzt den alten Skin
+  ipcMain.handle(IPC.thumbSkinName, async (_e, name: unknown, rolle: unknown) => {
+    const dir = await datenOrdner(settings)
+    const s = await skinAusName(String(name ?? ''))
+    const skins = await ladeSkins(dir)
+    await mkdir(join(dir, 'skins'), { recursive: true })
+    const alt = skins.find((x) => x.name.toLowerCase() === s.name.toLowerCase())
+    const id = alt?.id ?? randomUUID().slice(0, 8)
+    const datei = `${id}.png`
+    await writeFile(join(dir, 'skins', datei), s.png)
+    const r = rolle === 'ich' ? 'ich' : 'freund'
+    if (r === 'ich') for (const x of skins) if (x.rolle === 'ich') x.rolle = 'freund' // nur ein Hauptskin
+    if (alt) Object.assign(alt, { datei, rolle: r, slim: s.slim })
+    else skins.push({ id, name: s.name, datei, rolle: r, slim: s.slim })
     await speichereSkins(dir, skins)
     return skins
   })

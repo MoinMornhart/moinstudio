@@ -303,3 +303,10 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 
 /* YouTube-Prüfung unter dem fertigen Video (7.10) */
 .youtube-check { display: grid; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+
+/* Thumbnail-Reiter: Auswahl „Was möchtest du machen?“ */
+.modus-wahl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 14px; }
+.modus { display: grid; gap: 3px; text-align: left; background: var(--bg-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: inherit; cursor: pointer; }
+.modus:hover { border-color: var(--muted, #888); }
+.modus.on { border-color: var(--accent); background: #33301f; }
+.modus-kanal { font-size: 11px; color: var(--accent); letter-spacing: 0.03em; }

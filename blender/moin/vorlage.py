@@ -62,30 +62,31 @@ def _requisit(pfad, knoten, laenge_m):
     return leer
 
 
-def _ziele(fig, p, seite, punkt):
-    """Sucht heben/drehen des Arms `seite`, sodass Schulter → Faust auf `punkt` zeigt (grob, dann fein). Der zweite
-    Arm stützt: gleiche Richtung, etwas gebeugt. Gibt die gefundenen Winkel zurück."""
+def _richte(fig, p, seite, punkt, beugen):
+    """Sucht heben/drehen des Arms (seite r|l), sodass Schulter → Faust auf den Punkt zeigt (grob, dann fein)."""
     arm = f"arm_{seite}"
-    andere = "arm_l" if seite == "r" else "arm_r"
 
     def fehler(heben, drehen):
         q = dict(p)
-        q[arm] = {**p.get(arm, {}), "heben": heben, "drehen": drehen, "seitlich": 0, "beugen": 4}
+        q[arm] = {**p.get(arm, {}), "heben": heben, "drehen": drehen, "seitlich": 0, "beugen": beugen}
         mfigur.pose(fig, q)
         schulter = fig.teile[arm].matrix_world.translation
-        richtung = (fig.hand(seite) - schulter).normalized()
-        return richtung.angle((punkt - schulter).normalized())
+        return (fig.hand(seite) - schulter).normalized().angle((punkt - schulter).normalized())
 
-    beste = min(((fehler(h, d), h, d) for h in range(0, 181, 20) for d in range(-90, 91, 20)))
+    beste = min(((fehler(h, d), h, d) for h in range(0, 181, 20) for d in range(-100, 101, 20)))
     _, h0, d0 = beste
     beste = min(((fehler(h, d), h, d) for h in range(h0 - 16, h0 + 17, 4) for d in range(d0 - 16, d0 + 17, 4)))
-    _, h, d = beste
-    p[arm] = {**p.get(arm, {}), "heben": h, "drehen": d, "seitlich": 0, "beugen": 4}
-    # Stützhand: zur Waffenhand hin (drehen Richtung Körpermitte), leicht gebeugt
-    zur_mitte = -20 if andere == "arm_l" else 20
-    p[andere] = {"heben": max(0, h - 6), "drehen": d + zur_mitte, "seitlich": -10, "beugen": 35}
+    p[arm] = {**p.get(arm, {}), "heben": beste[1], "drehen": beste[2], "seitlich": 0, "beugen": beugen}
     mfigur.pose(fig, p)
-    return {"heben": h, "drehen": d, "fehler_grad": round(math.degrees(beste[0]), 1)}
+    return {"heben": beste[1], "drehen": beste[2], "fehler_grad": round(math.degrees(beste[0]), 1)}
+
+
+def _ziele(fig, p, seite, punkt):
+    """Waffenarm leicht gebeugt aufs Ziel; die zweite Hand greift von unten an die Waffenhand (beidhändig)."""
+    waffe = _richte(fig, p, seite, punkt, beugen=10)
+    andere = "l" if seite == "r" else "r"
+    stuetze = _richte(fig, p, andere, fig.hand(seite) - Vector((0, 0, 1.5 * mfigur.PX)), beugen=35)
+    return {"waffe": waffe, "stuetze": stuetze}
 
 
 def baue_vorlage(spec, ausgabe, bericht=None):
@@ -121,13 +122,20 @@ def baue_vorlage(spec, ausgabe, bericht=None):
     kopf = fig.kopf_mitte()
     kopf_h = 8 * mfigur.PX * 1.06
     vfov = 2 * math.atan(cam_daten.sensor_width * HOEHE / BREITE / 2 / cam_daten.lens)
-    abstand = kopf_h / spec.get("kopf_anteil", 0.4) / (2 * math.tan(vfov / 2))
-    breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
-    hoehe_m = breite_m * HOEHE / BREITE
     u, v = spec.get("kopf", [0.5, 0.3])
-    cam.location = kopf + Vector((-(u - 0.5) * breite_m, -abstand, -(0.5 - v) * hoehe_m))
-    cam.rotation_euler = (math.radians(90), 0, 0)
-    bpy.context.view_layer.update()
+    from bpy_extras.object_utils import world_to_camera_view
+
+    # Kopf ganz im Bild halten: ragt er hinaus, wird die Figur schrittweise kleiner
+    for faktor in (1.0, 0.9, 0.8, 0.7, 0.6):
+        abstand = kopf_h / (spec.get("kopf_anteil", 0.4) * faktor) / (2 * math.tan(vfov / 2))
+        breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
+        hoehe_m = breite_m * HOEHE / BREITE
+        cam.location = kopf + Vector((-(u - 0.5) * breite_m, -abstand, -(0.5 - v) * hoehe_m))
+        cam.rotation_euler = (math.radians(90), 0, 0)
+        bpy.context.view_layer.update()
+        ecken = [world_to_camera_view(scene, cam, e) for e in fig.kopf_ecken()]
+        if all(0.01 < e.x < 0.99 and 0.02 < e.y < 0.99 for e in ecken):
+            break
     _bildflaeche(spec["hintergrund"], cam, abstand * 6, helligkeit=spec.get("hintergrund_hell", 1.0))
 
     info = {}
@@ -137,7 +145,9 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         # Der Zielpunkt liegt auf dem Sehstrahl durch (u, v), deutlich hinter der Figur (im Bild „in der Szene“).
         zu, zv = spec["ziel"]
         strahl = Vector(((zu - 0.5) * breite_m, abstand, (0.5 - zv) * hoehe_m)).normalized()
-        punkt = cam.location + strahl * abstand * 1.7
+        # von vorn: Zielpunkt knapp vor der Figur (Arm seitlich und leicht zur Kamera, wie beim Zielen im Bild);
+        # von hinten: in der Szene hinter der Figur
+        punkt = cam.location + strahl * abstand * (1.7 if spec.get("ansicht") == "hinten" else 0.85)
         info["ziel"] = [zu, zv]
         info["arm"] = _ziele(fig, p, (r or {}).get("hand", "r"), punkt)
     if r and os.path.exists(r["gltf"]):
