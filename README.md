@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.6.0** (2026-09-29): Gaming-Thumbnails mit Spielname, bessere Reaction-Posen, saubere Tiermodelle.
 - **0.5.0** (2026-09-29): Alle Mobs und Blöcke (immer die neuesten), Enderdrache und End, Mimik und Gesten, Serien-Vorlagen und Reaction-Thumbnails.
 - **0.4.1** (2026-09-29): Riesige Mobs passen automatisch ins Bild.
 - **0.4.0** (2026-09-29): Thumbnail aus Beschreibung oder Video: Claude plant nach großen Vorbildern, Blender rendert, Selbstprüfung korrigiert, Text in Minecraft-Schrift.
 - **0.3.0** (2026-09-29): Blender von Grund auf neu: echte Mobs, Welten, Kampfszenen wie GommeHD, Ellbogen und Knie, Kamera mit Selbstprüfung.
-- **0.2.0** (2026-09-29): Vorbilder und Stilbuch aus über 290 Thumbnails großer Kanäle; Blender-Neubau mit echter Welt, Himmel, Posen und Schwert.
 <!-- CHANGELOG:END -->
 
 ## Installation

@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-29
+
+> Gaming-Thumbnails mit Spielname, bessere Reaction-Posen, saubere Tiermodelle.
+
 ### Hinzugefügt
 - Gaming-Thumbnails im Bastian-Stil: Spielbild statt Original, Spielname als Logo in der Ecke gegenüber der Figur.
 
