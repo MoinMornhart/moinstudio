@@ -70,7 +70,10 @@ export const IPC = {
   schnittTranskript: 'schnitt:transkript',
   schnittTranskriptStart: 'schnitt:transkript-start',
   schnittRohschnittStart: 'schnitt:rohschnitt-start',
-  schnittListe: 'schnitt:liste'
+  schnittListe: 'schnitt:liste',
+  schnittUmschalten: 'schnitt:umschalten',
+  schnittBereich: 'schnitt:bereich',
+  schnittWunsch: 'schnitt:wunsch'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -87,7 +90,7 @@ export interface SchnittListe {
   version: 1
   dauer: number
   behalten: { start: number; ende: number }[]
-  entfernt: { start: number; ende: number; grund: 'pause' | 'aehm' | 'wiederholung' | 'versprecher' | 'leerlauf' | 'manuell'; text?: string }[]
+  entfernt: { start: number; ende: number; grund: 'pause' | 'aehm' | 'wiederholung' | 'versprecher' | 'leerlauf' | 'manuell'; text?: string; aus?: boolean }[]
 }
 
 /** Schnitt-Projekt für die Oberfläche (ROADMAP 6.2) */
@@ -306,6 +309,10 @@ export interface MoinApi {
   /** Rohschnitt neu berechnen; Schnittliste (behalten/entfernt) lesen */
   schnittRohschnittStart(id: string): Promise<string>
   schnittListe(id: string): Promise<SchnittListe | null>
+  /** Schnitt ändern (ROADMAP 6.5): Stelle an/aus, Bereich raus/zurück, Wunsch in Worten (Auftrag) */
+  schnittUmschalten(id: string, index: number): Promise<SchnittListe>
+  schnittBereich(id: string, start: number, ende: number, raus: boolean, text?: string): Promise<SchnittListe>
+  schnittWunsch(id: string, wunsch: string): Promise<string>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */

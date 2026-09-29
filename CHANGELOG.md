@@ -6,6 +6,9 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Schnitt prüfen und ändern (ROADMAP 6.5): jede Schnittstelle mit einem Klick drinlassen oder wieder rausschneiden, jeden Satz im Transkript raus oder zurück, Änderungswunsch in Worten („lass die Stelle mit dem Creeper länger drin“) – Claude setzt ihn in der Schnittliste um und sagt, was es geändert hat.
+
 ## [0.16.0] - 2026-09-29
 
 > Schnitt: automatischer Rohschnitt

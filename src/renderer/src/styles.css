@@ -333,3 +333,6 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .schnitt-streifen { position: relative; height: 10px; background: #2d6b3f; border-radius: 4px; overflow: hidden; }
 .schnitt-streifen .weg { position: absolute; top: 0; bottom: 0; background: #7a2626; }
 .schnitt-streifen .weg.aehm, .schnitt-streifen .weg.wiederholung, .schnitt-streifen .weg.versprecher, .schnitt-streifen .weg.leerlauf { background: #d6452f; }
+.schnittstelle { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.schnittstelle.aus .satz { opacity: 0.5; text-decoration: line-through; }
+.schnitt-streifen .weg.aus { display: none; }

@@ -22,6 +22,8 @@ export interface Bereich {
 export interface Entfernt extends Bereich {
   grund: Grund
   text?: string
+  /** von Philip ausgeschaltet: bleibt im Video (ROADMAP 6.5) */
+  aus?: boolean
 }
 export interface Schnittliste {
   version: 1

@@ -14,6 +14,8 @@ import { resourceDir } from '../resources'
 import { liesAbschnitte, transkriptJob, type Abschnitt, type TranskriptPayload } from './transkript'
 import { rohschnittJob, type RohschnittPayload, type Schnittliste } from './rohschnitt'
 import { findClaudeCli } from '../claude/cli'
+import { writeFile } from 'node:fs/promises'
+import { bereichSetzen, umschalten, wunschJob, type WunschPayload } from './bearbeiten'
 import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
@@ -35,10 +37,11 @@ export function registerSchnittIpc(
   tools: ToolManager,
   hardware: HardwareController,
   getWindow: () => BrowserWindow | undefined
-): { starteImport: (video: string, kanal?: string) => Promise<string> } {
+): { starteImport: (video: string, kanal?: string) => Promise<string>; starteWunsch: (id: string, wunsch: string) => Promise<string> } {
   queue.register('schnitt-import', importJob)
   queue.register('schnitt-transkript', transkriptJob)
   queue.register('schnitt-rohschnitt', rohschnittJob)
+  queue.register('schnitt-wunsch', wunschJob)
 
   const alsAnsicht = (daten: string, p: Projekt): SchnittProjekt => {
     const ordner = projektOrdner(daten, p.id)
@@ -133,6 +136,30 @@ export function registerSchnittIpc(
   })
   ipcMain.handle(IPC.schnittTranskriptStart, async (_e, id: unknown) => starteTranskript(String(id)))
   ipcMain.handle(IPC.schnittRohschnittStart, async (_e, id: unknown) => starteRohschnitt(String(id)))
+  // Schnitt ändern (ROADMAP 6.5): direkt in der Schnittliste, Wunsch in Worten als Auftrag
+  const aendereListe = async (id: string, f: (l: Schnittliste) => Schnittliste): Promise<Schnittliste> => {
+    const daten = await datenOrdner(settings)
+    const datei = join(projektOrdner(daten, id), 'schnitt.json')
+    const neu = f(JSON.parse(await readFile(datei, 'utf8')) as Schnittliste)
+    await writeFile(datei, JSON.stringify(neu, null, 1))
+    return neu
+  }
+  ipcMain.handle(IPC.schnittUmschalten, (_e, id: unknown, index: unknown) => aendereListe(String(id), (l) => umschalten(l, Number(index))))
+  ipcMain.handle(IPC.schnittBereich, (_e, id: unknown, start: unknown, ende: unknown, raus: unknown, text: unknown) =>
+    aendereListe(String(id), (l) => bereichSetzen(l, Number(start), Number(ende), raus === true, typeof text === 'string' ? text : undefined))
+  )
+  const starteWunsch = async (id: unknown, wunsch: unknown): Promise<string> => {
+    const text = typeof wunsch === 'string' ? wunsch.trim() : ''
+    if (!text) throw new Error('Bitte schreib, was geändert werden soll.')
+    const daten = await datenOrdner(settings)
+    const cli = await findClaudeCli()
+    if (!cli) throw new Error('Claude ist nicht verbunden (Einstellungen → Mit Claude verbinden).')
+    const payload: WunschPayload = { daten, projekt: String(id), wunsch: text, claudeCli: cli }
+    const auftrag = await queue.enqueue('schnitt-wunsch', `Schnitt: ${text.slice(0, 40)}`, payload)
+    await aendereProjekt(daten, String(id), (p) => ({ auftraege: [...(p.auftraege ?? []), auftrag] }))
+    return auftrag
+  }
+  ipcMain.handle(IPC.schnittWunsch, (_e, id: unknown, wunsch: unknown) => starteWunsch(id, wunsch))
   ipcMain.handle(IPC.schnittListe, async (_e, id: unknown): Promise<Schnittliste | null> => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'schnitt.json'), 'utf8').catch(() => null)
@@ -144,5 +171,5 @@ export function registerSchnittIpc(
     for (const a of p?.auftraege ?? []) await queue.remove(a)
     await loescheProjekt(daten, String(id))
   })
-  return { starteImport }
+  return { starteImport, starteWunsch }
 }

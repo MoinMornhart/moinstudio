@@ -71,8 +71,22 @@ const GRUND: Record<SchnittListe['entfernt'][number]['grund'], string> = {
 }
 
 /** Rohschnitt: vorher/nachher, was rausfliegt (Klick springt hin). */
-function Rohschnitt({ liste, springe }: { liste: SchnittListe; springe: (s: number) => void }): React.JSX.Element {
+function Rohschnitt({ id, liste, setListe, springe }: { id: string; liste: SchnittListe; setListe: (l: SchnittListe) => void; springe: (s: number) => void }): React.JSX.Element {
   const nachher = liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
+  const [pausenZeigen, setPausenZeigen] = useState(false)
+  const [wunsch, setWunsch] = useState('')
+  const [meldung, setMeldung] = useState<string | null>(null)
+  const umschalten = (i: number): void => void window.moin.schnittUmschalten(id, i).then(setListe)
+  const senden = async (): Promise<void> => {
+    setMeldung(null)
+    try {
+      await window.moin.schnittWunsch(id, wunsch)
+      setWunsch('')
+      setMeldung('Claude arbeitet deinen Wunsch ein …')
+    } catch (err) {
+      setMeldung(err instanceof Error ? err.message : String(err))
+    }
+  }
   return (
     <div className="rohschnitt">
       <p>
@@ -80,35 +94,70 @@ function Rohschnitt({ liste, springe }: { liste: SchnittListe; springe: (s: numb
       </p>
       <div className="schnitt-streifen">
         {liste.entfernt.map((e, i) => (
-          <span key={i} className={`weg ${e.grund}`} style={{ left: `${(e.start / liste.dauer) * 100}%`, width: `${((e.ende - e.start) / liste.dauer) * 100}%` }} title={`${GRUND[e.grund]} ${zeitText(e.start)}`} />
+          <span key={i} className={`weg ${e.grund}${e.aus ? ' aus' : ''}`} style={{ left: `${(e.start / liste.dauer) * 100}%`, width: `${((e.ende - e.start) / liste.dauer) * 100}%` }} title={`${GRUND[e.grund]} ${zeitText(e.start)}`} />
         ))}
       </div>
       <div className="transkript">
-        {liste.entfernt
-          .filter((e) => e.grund !== 'pause')
-          .map((e, i) => (
-            <button key={i} className="satz" onClick={() => springe(e.start)}>
-              <span className="muted small">{zeitText(e.start)}</span>
-              <span>
-                <span className="badge">{GRUND[e.grund]}</span> {e.text ?? ''}
-              </span>
-            </button>
-          ))}
-        <p className="muted small">
-          Dazu {liste.entfernt.filter((e) => e.grund === 'pause').length} lange Pausen gekürzt (laute Action-Stellen bleiben drin).
-        </p>
+        {liste.entfernt.map((e, i) =>
+          e.grund === 'pause' && !pausenZeigen ? null : (
+            <div key={i} className={e.aus ? 'schnittstelle aus' : 'schnittstelle'}>
+              <button className="satz" onClick={() => springe(Math.max(0, e.start - 1))}>
+                <span className="muted small">{zeitText(e.start)}</span>
+                <span>
+                  <span className="badge">{GRUND[e.grund]}</span> {e.text ?? `${(e.ende - e.start).toFixed(1)} s`}
+                </span>
+              </button>
+              <button className="btn small" title={e.aus ? 'Wieder rausschneiden' : 'Doch drinlassen'} onClick={() => umschalten(i)}>
+                {e.aus ? 'bleibt drin' : 'raus'}
+              </button>
+            </div>
+          )
+        )}
+        <button className="btn small" onClick={() => setPausenZeigen((z) => !z)}>
+          {pausenZeigen ? 'Pausen ausblenden' : `${liste.entfernt.filter((e) => e.grund === 'pause').length} gekürzte Pausen zeigen`}
+        </button>
+      </div>
+      <div className="row wrap">
+        <input
+          className="input"
+          placeholder="Änderung in Worten, z. B. lass die Stelle mit dem Creeper länger drin"
+          value={wunsch}
+          onChange={(e) => setWunsch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && wunsch.trim() && void senden()}
+        />
+        <button className="btn" disabled={!wunsch.trim()} onClick={() => void senden()}>
+          Ändern
+        </button>
+        {meldung && <p className="muted small">{meldung}</p>}
       </div>
     </div>
   )
 }
 
 /** Transkript: jeder Satz mit Zeit, Klick springt hin, der gerade laufende Satz ist hervorgehoben. */
-function Transkript({ id, bereit, zeit, springe }: { id: string; bereit: boolean; zeit: number; springe: (s: number) => void }): React.JSX.Element | null {
+function Transkript({
+  id,
+  bereit,
+  zeit,
+  springe,
+  liste,
+  setListe
+}: {
+  id: string
+  bereit: boolean
+  zeit: number
+  springe: (s: number) => void
+  liste: SchnittListe | null
+  setListe: (l: SchnittListe) => void
+}): React.JSX.Element | null {
   const [abschnitte, setAbschnitte] = useState<SchnittAbschnitt[] | null>(null)
   useEffect(() => {
     if (bereit) void window.moin.schnittTranskript(id).then(setAbschnitte)
   }, [id, bereit])
   if (!abschnitte) return null
+  // Satz gilt als rausgeschnitten, wenn aktive Schnitte mehr als die Hälfte davon abdecken
+  const raus = (a: SchnittAbschnitt): boolean =>
+    !!liste && liste.entfernt.filter((e) => !e.aus).reduce((s, e) => s + Math.max(0, Math.min(e.ende, a.ende) - Math.max(e.start, a.start)), 0) > (a.ende - a.start) / 2
   return (
     <div className="transkript">
       <div className="card-head">
@@ -118,12 +167,22 @@ function Transkript({ id, bereit, zeit, springe }: { id: string; bereit: boolean
         </button>
       </div>
       {abschnitte.length === 0 && <p className="muted">Im Video wurde nichts gesprochen.</p>}
-      {abschnitte.map((a) => (
-        <button key={a.start} className={zeit >= a.start && zeit < a.ende ? 'satz aktiv' : 'satz'} onClick={() => springe(a.start)}>
-          <span className="muted small">{zeitText(a.start)}</span>
-          <span>{a.text}</span>
-        </button>
-      ))}
+      {abschnitte.map((a) => {
+        const weg = raus(a)
+        return (
+          <div key={a.start} className={weg ? 'schnittstelle aus' : 'schnittstelle'}>
+            <button className={zeit >= a.start && zeit < a.ende ? 'satz aktiv' : 'satz'} onClick={() => springe(a.start)}>
+              <span className="muted small">{zeitText(a.start)}</span>
+              <span>{a.text}</span>
+            </button>
+            {liste && (
+              <button className="btn small" title={weg ? 'Satz zurückholen' : 'Satz rausschneiden'} onClick={() => void window.moin.schnittBereich(id, a.start - 0.05, a.ende + 0.1, !weg, a.text).then(setListe)}>
+                {weg ? 'zurück' : 'raus'}
+              </button>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -134,9 +193,10 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
   const [sicher, setSicher] = useState(false)
   const [liste, setListe] = useState<SchnittListe | null>(null)
   const [geschnitten, setGeschnitten] = useState(true)
+  // neu laden, wenn der Rohschnitt fertig ist oder ein Auftrag (z. B. ein Änderungswunsch) endet
   useEffect(() => {
-    if (p.rohschnitt) void window.moin.schnittListe(p.id).then(setListe)
-  }, [p.id, p.rohschnitt])
+    if (p.rohschnitt && !p.auftrag) void window.moin.schnittListe(p.id).then(setListe)
+  }, [p.id, p.rohschnitt, p.auftrag])
   const dauer = p.quelle?.dauer ?? 0
   // Vorschau des Schnitts: entfernte Stellen werden beim Abspielen übersprungen
   const zeitUpdate = (t: number): void => {
@@ -185,8 +245,8 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
           <input type="checkbox" checked={geschnitten} onChange={(e) => setGeschnitten(e.target.checked)} /> Geschnitten abspielen (entfernte Stellen überspringen)
         </label>
       )}
-      {liste && <Rohschnitt liste={liste} springe={springe} />}
-      <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} />
+      {liste && <Rohschnitt id={p.id} liste={liste} setListe={setListe} springe={springe} />}
+      <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} liste={liste} setListe={setListe} />
       {p.quelle && (
         <dl className="facts" style={{ marginTop: 12 }}>
           <dt>Länge</dt>
