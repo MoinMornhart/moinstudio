@@ -211,8 +211,78 @@ class Texturen:
         return mat
 
 
+# Einfärbung wie im Spiel für Blöcke mit tintindex (Gras, Laub, Ranken …)
+_TINT_GRAS = ("grass", "fern", "vine", "sugar_cane", "lily_pad")
+_TINT_LAUB = ("leaves",)
+_GENERISCH = {}
+KREUZ_TEXTUR = {}  # Pflanzenblock → Texturname (z. B. sunflower → sunflower_bottom)
+
+
+def _modell(ordner, name, tiefe=0):
+    """Blockmodell mit aufgelösten Eltern: (textures-dict, parent-Kette)."""
+    pfad = os.path.join(ordner, "..", "models", "block", f"{name}.json")
+    if tiefe > 8 or not os.path.exists(pfad):
+        return {}, []
+    import json as _json
+    with open(pfad, encoding="utf-8") as fh:
+        m = _json.load(fh)
+    eltern = m.get("parent", "").split("/")[-1].replace("minecraft:", "")
+    tex, kette = _modell(ordner, eltern, tiefe + 1) if eltern else ({}, [])
+    tex = {**tex, **m.get("textures", {})}
+    return tex, [name] + kette
+
+
+def art_info(art, texturen=None):
+    """Block-Eintrag: aus ARTEN oder – für jeden anderen Block der Spieldatei – aus seinem Blockmodell abgeleitet
+    (cube_all, cube_column, cube_bottom_top, orientable, cross …). So kennt MoinStudio alle Blöcke, auch neue."""
+    if art in ARTEN:
+        return ARTEN[art]
+    if art in _GENERISCH:
+        return _GENERISCH[art]
+    if texturen is None:
+        raise KeyError(art)
+    tex, kette = {}, []
+    # Manche Blöcke haben nur Teilmodelle (Doppelpflanzen, Wachstumsstufen, Zustände)
+    for kandidat in (art, f"{art}_bottom", f"{art}_stage3", f"{art}_stage2", f"{art}_0", f"{art}_inventory", f"{art}_off", f"{art}_floor"):
+        tex, kette = _modell(texturen.ordner, kandidat)
+        if kette:
+            break
+
+    def t(*schluessel):
+        for s in schluessel:
+            v = tex.get(s)
+            while isinstance(v, str) and v.startswith("#"):
+                v = tex.get(v[1:])
+            if isinstance(v, str):
+                return v.split("/")[-1]
+        return None
+
+    ungefaerbt = any(k in art for k in ("cherry", "azalea", "pale_oak"))  # im Spiel nicht eingefärbt
+    farbe = None if ungefaerbt else LAUB if any(k in art for k in _TINT_LAUB) else (GRAS if any(k in art for k in _TINT_GRAS) else None)
+    if "cross" in kette or "tinted_cross" in kette or "flower_pot_cross" in kette:
+        info = {"alle": (t("cross", "plant") or art, farbe), "kreuz": True, "durchsichtig": True}
+        KREUZ_TEXTUR[art] = info["alle"][0]
+    else:
+        alle = t("all", "texture", "particle")
+        oben = t("top", "end", "up") or alle
+        unten = t("bottom", "end", "down") or oben
+        seite = t("side", "front", "north") or alle
+        if not (oben or seite):
+            if os.path.exists(os.path.join(texturen.ordner, "block", f"{art}.png")):
+                oben = unten = seite = art
+            else:
+                raise KeyError(f"Block „{art}“ gibt es in dieser Spielversion nicht")
+        info = {"oben": (oben or seite, farbe), "unten": (unten or seite, None), "seite": (seite or oben, farbe if "leaves" in art else None)}
+        if any(k in art for k in ("glass", "leaves", "ice")) and "packed" not in art:
+            info["durchsichtig"] = True
+        if any(k in art for k in ("glowstone", "lantern", "shroomlight", "sea_lantern", "magma", "froglight", "lamp_on")):
+            info["leuchtet"] = 1.5
+    _GENERISCH[art] = info
+    return info
+
+
 def _seiten_textur(art, seite):
-    d = ARTEN[art]
+    d = art_info(art)
     if "alle" in d:
         return d["alle"], None
     if seite == "oben":
@@ -227,12 +297,16 @@ def baue(welt, texturen, name="welt", collection=None, versatz=(0.0, 0.0, 0.0)):
     col = collection or bpy.context.scene.collection
     verts, faces, uvs, mat_idx = [], [], [], []
     mats, mat_nr = [], {}
+    kreuze = []  # Pflanzenblöcke (Blumen, Setzlinge …) als gekreuzte Flächen
     for (x, y, z), art in welt.items():
-        info = ARTEN[art]
+        info = art_info(art, texturen)
+        if info.get("kreuz"):
+            kreuze.append((x, y, z, art))
+            continue
         for seite, ((nx, ny, nz), ecken) in SEITEN.items():
             nachbar = welt.get((x + nx, y + ny, z + nz))
             if nachbar is not None:
-                n_info = ARTEN[nachbar]
+                n_info = art_info(nachbar, texturen)
                 # verdeckt, außer ein durchsichtiger/flüssiger Nachbar einer anderen Art
                 if not n_info.get("durchsichtig") or nachbar == art:
                     continue
@@ -266,6 +340,10 @@ def baue(welt, texturen, name="welt", collection=None, versatz=(0.0, 0.0, 0.0)):
     me.update()
     ob = bpy.data.objects.new(name, me)
     col.objects.link(ob)
+    if kreuze:  # Pflanzenblöcke aus „bloecke“ (Blumen, Setzlinge, Pilze …) mit ihrer Kreuz-Textur
+        for x, y, z, art in kreuze:
+            PFLANZEN.setdefault(art, art_info(art)["alle"][1])
+        baue_pflanzen(kreuze, texturen, name=f"{name}.pflanzen", collection=collection)
     return ob
 
 
@@ -290,7 +368,7 @@ def baue_pflanzen(pflanzen, texturen, name="pflanzen", collection=None):
     for x, y, z, art in pflanzen:
         if art not in nr:
             nr[art] = len(mats)
-            mats.append(texturen.material(art, PFLANZEN.get(art), None, True, 0.0))
+            mats.append(texturen.material(KREUZ_TEXTUR.get(art, art), PFLANZEN.get(art), None, True, 0.0))
         img = mats[nr[art]].node_tree.nodes.get("Image Texture").image
         w, h = img.size
         f = w / h if h > w else 1.0

@@ -93,7 +93,9 @@ function katalogText(k: Katalog): string {
     `Himmel: ${k.himmel.join(', ')}`,
     `Kamera-Modi: ${k.kameraModi.join(', ')}`,
     `Mobs: ${k.mobs.join(', ')}`,
-    `Blöcke für „bloecke“ und „objekte“: ${k.bloecke.join(', ')} (zum Graben: luft)`
+    k.bloecke.length > 120
+      ? `Blöcke für „bloecke“ und „objekte“: jede Minecraft-Block-ID der neuesten Version (${k.bloecke.length} Stück, z. B. ${k.bloecke.slice(0, 60).join(', ')} …); zum Graben: luft`
+      : `Blöcke für „bloecke“ und „objekte“: ${k.bloecke.join(', ')} (zum Graben: luft)`
   ].join('\n')
 }
 

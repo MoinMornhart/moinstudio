@@ -5,6 +5,7 @@ import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import { ladeKatalog } from './katalog'
 import { sichereMcAssets } from './minecraft'
+import { sichereMobs } from './mobimport'
 import {
   ernsteWarnungen,
   korrekturPrompt,
@@ -74,7 +75,9 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
   await mkdir(p.ausgabe, { recursive: true })
   ctx.progress(2, 'Minecraft-Texturen prüfen …')
   const mc = await sichereMcAssets(p.datenOrdner, { onProgress: (t) => ctx.progress(null, t) })
-  const katalog = await ladeKatalog(p.blenderDir, p.minecraftDir)
+  // Alle Mobs der neuesten Vorschau (geprüfte behalten Vorrang)
+  const mobs = await sichereMobs(p.datenOrdner, { onProgress: (t) => ctx.progress(null, t), kuratiert: { tabelle: join(p.minecraftDir, 'mobs.json'), texturen: mc.textures } })
+  const katalog = await ladeKatalog(p.blenderDir, mobs.tabelle, join(mc.assets, 'models', 'block'))
   const vorbilder = await ladeVorbilder(p.configDir)
   const vorlage = await readFile(p.promptDatei, 'utf8')
   const ids = p.figuren.map((f) => f.id)
@@ -120,6 +123,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         if (s?.slim !== undefined && s.slim !== null) f.slim = s.slim
       }
       szene['render'] = { ...(szene['render'] as object | undefined), samples: p.blender.samples, geraet: p.blender.geraet }
+      szene['mob_tabelle'] = mobs.tabelle
       await writeFile(`${pfad}.szene.json`, JSON.stringify(szene, null, 1))
       const { code, output } = await renderAufruf('render_szene.py', [`${pfad}.szene.json`, mc.textures, `${pfad}.png`, `${pfad}.bericht.json`])
       const bericht = JSON.parse(await readFile(`${pfad}.bericht.json`, 'utf8').catch(() => '{}')) as { warnungen?: string[]; fehler?: string }

@@ -448,8 +448,7 @@ def aendern(welt, liste):
         x0, x1 = sorted((int(x0), int(x1)))
         y0, y1 = sorted((int(y0), int(y1)))
         z0, z1 = sorted((int(z0), int(z1)))
-        if art != "luft" and art not in bloecke.ARTEN:
-            raise ValueError(f"Unbekannter Block „{art}“")
+        # Blockart wird beim Bauen aus ARTEN oder dem Blockmodell der Spieldatei aufgelöst (alle Blöcke)
         # Geländeoberkante je Spalte vor dem Graben: Wände nur bis dorthin, nie in die Luft darüber
         oberkante = {}
         if art == "luft":

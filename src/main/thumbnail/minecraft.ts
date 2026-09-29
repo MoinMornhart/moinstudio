@@ -20,7 +20,7 @@ export interface McAssets {
 }
 
 interface Manifest {
-  latest: { release: string }
+  latest: { release: string; snapshot: string }
   versions: { id: string; url: string; sha1: string }[]
 }
 
@@ -54,7 +54,7 @@ export function mcPfade(datenOrdner: string, version: string): McAssets {
 }
 
 /**
- * Liefert die Texturen der neuesten Vollversion; lädt und entpackt sie beim ersten Mal (ca. 30 MB).
+ * Liefert die Texturen der neuesten Version (auch Snapshots); lädt und entpackt sie beim ersten Mal (ca. 30 MB).
  * `vorhanden` = bereits entpackte Version, die ohne Internet weiter genutzt wird.
  */
 export async function sichereMcAssets(datenOrdner: string, o: { fetcher?: typeof fetch; onProgress?: (text: string) => void } = {}): Promise<McAssets> {
@@ -63,9 +63,10 @@ export async function sichereMcAssets(datenOrdner: string, o: { fetcher?: typeof
   let version: string | null = null
   try {
     const manifest = await json<Manifest>(MANIFEST, fetcher)
-    version = manifest.latest.release
+    // Philip: immer das Neueste, auch Snapshots (neue Blöcke und Mobs vor dem offiziellen Release)
+    version = manifest.latest.snapshot || manifest.latest.release
     const pfade = mcPfade(datenOrdner, version)
-    if (existsSync(join(pfade.textures, 'block', 'stone.png'))) {
+    if (existsSync(join(pfade.textures, 'block', 'stone.png')) && existsSync(join(pfade.assets, 'models', 'block', 'stone.json'))) {
       await writeFile(merker, JSON.stringify({ version }))
       return pfade
     }
@@ -87,7 +88,7 @@ export async function sichereMcAssets(datenOrdner: string, o: { fetcher?: typeof
       await rename(`${jar}.teil`, jar)
     }
     o.onProgress?.('Entpacke Texturen und Schrift …')
-    await entpacke(jar, join(ordner, 'extracted'), ['assets/minecraft/textures', 'assets/minecraft/font'])
+    await entpacke(jar, join(ordner, 'extracted'), ['assets/minecraft/textures', 'assets/minecraft/font', 'assets/minecraft/models', 'assets/minecraft/blockstates'])
     await writeFile(merker, JSON.stringify({ version }))
     return pfade
   } catch (err) {

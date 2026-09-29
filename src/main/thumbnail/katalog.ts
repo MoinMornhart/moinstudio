@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
@@ -51,14 +51,15 @@ function schluessel(quelle: string, block: string, muster = /^ {4}"([a-z0-9_]+)"
   return ergebnis
 }
 
-export async function ladeKatalog(blenderDir: string, minecraftDir: string): Promise<Katalog> {
+/** `mobTabelle`: Pfad zur Mob-Tabelle (Ordner mit mobs.json oder die Datei selbst); `blockModelle`: models/block der Spieldatei */
+export async function ladeKatalog(blenderDir: string, mobTabelle: string, blockModelle?: string): Promise<Katalog> {
   const lies = (f: string): Promise<string> => readFile(join(blenderDir, 'moin', f), 'utf8')
   const [posen, kamera, himmel, bloecke, mobs] = await Promise.all([
     lies('posen.py'),
     lies('kamera.py'),
     lies('himmel.py'),
     lies('bloecke.py'),
-    readFile(join(minecraftDir, 'mobs.json'), 'utf8')
+    readFile(mobTabelle.endsWith('.json') ? mobTabelle : join(mobTabelle, 'mobs.json'), 'utf8')
   ])
   return {
     posen: schluessel(posen, 'POSEN'),
@@ -66,6 +67,15 @@ export async function ladeKatalog(blenderDir: string, minecraftDir: string): Pro
     himmel: schluessel(himmel, 'VARIANTEN').map((e) => e.name),
     welten: WELTEN,
     mobs: Object.keys(JSON.parse(mobs) as Record<string, unknown>).filter((k) => !k.startsWith('_')),
-    bloecke: schluessel(bloecke, 'ARTEN').map((e) => e.name)
+    bloecke: [...new Set([...schluessel(bloecke, 'ARTEN').map((e) => e.name), ...(blockModelle ? await alleBloecke(blockModelle) : [])])]
   }
+}
+
+/** Alle Block-IDs der Spieldatei (models/block/*.json), ohne Teilmodelle wie Treppenstufen-Varianten */
+async function alleBloecke(ordner: string): Promise<string[]> {
+  const dateien = await readdir(ordner).catch(() => [] as string[])
+  return dateien
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => f.slice(0, -5))
+    .filter((n) => !/_(inner|outer|top|bottom|side|post|noside|inventory|on|off|open|lit|stage\d+|\d+)$/.test(n))
 }
