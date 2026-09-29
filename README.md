@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.27.0** (2026-09-29): Schnitt für Premiere (ungetestet)
 - **0.26.0** (2026-09-29): Adobe-Erkennung (ungetestet)
 - **0.25.1** (2026-09-29): Plan für die Adobe-Anbindung
 - **0.25.0** (2026-09-29): Planung: Verbindung zu Schnitt und Thumbnail, Ideen mit Claude, Claude Desktop
 - **0.24.0** (2026-09-29): Planung: Kalender
-- **0.23.0** (2026-09-29): Planung: Board
 <!-- CHANGELOG:END -->
 
 ## Installation
