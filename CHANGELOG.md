@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-29
+
+> Änderungen unter jedem Thumbnail schreiben, Aufträge löschen, Spiele-Vorlage in der App, lebendiger Text, Reaction und Gaming getrennt
+
 ### Geändert
 - Reaction und Gaming sind getrennte Karten (beide MoinMorni); Gaming vereint Spielbild/eigenen Hintergrund, Spielname und frei beschriebene Pose.
 - Ohne Vorbild steht unter jedem Bild die Grundlage, auf der es entstanden ist.
