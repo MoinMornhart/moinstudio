@@ -16,6 +16,7 @@ import { rohschnittJob, type RohschnittPayload, type Schnittliste } from './rohs
 import { findClaudeCli } from '../claude/cli'
 import { writeFile } from 'node:fs/promises'
 import { bereichSetzen, umschalten, wunschJob, type WunschPayload } from './bearbeiten'
+import { einstellungen, vorschauJob, type VorschauPayload } from './vorschau'
 import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
@@ -42,6 +43,7 @@ export function registerSchnittIpc(
   queue.register('schnitt-transkript', transkriptJob)
   queue.register('schnitt-rohschnitt', rohschnittJob)
   queue.register('schnitt-wunsch', wunschJob)
+  queue.register('schnitt-vorschau', vorschauJob)
 
   const alsAnsicht = (daten: string, p: Projekt): SchnittProjekt => {
     const ordner = projektOrdner(daten, p.id)
@@ -57,6 +59,8 @@ export function registerSchnittIpc(
       wellenform: p.wellenform,
       transkript: !!p.transkript,
       rohschnitt: !!p.rohschnitt,
+      einstellungen: einstellungen(p),
+      vorschauUrl: p.vorschau ? `${medienUrl(join(ordner, 'vorschau.mp4'))}?v=${p.vorschau}` : null,
       auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null } : null
     }
   }
@@ -160,6 +164,28 @@ export function registerSchnittIpc(
     return auftrag
   }
   ipcMain.handle(IPC.schnittWunsch, (_e, id: unknown, wunsch: unknown) => starteWunsch(id, wunsch))
+  ipcMain.handle(IPC.schnittEinstellungen, async (_e, id: unknown, patch: unknown) => {
+    const daten = await datenOrdner(settings)
+    const q = (patch ?? {}) as { untertitel?: string; zooms?: boolean }
+    await aendereProjekt(daten, String(id), (p) => ({
+      einstellungen: {
+        ...p.einstellungen,
+        ...(q.untertitel === 'aus' || q.untertitel === 'an' || q.untertitel === 'karaoke' ? { untertitel: q.untertitel } : {}),
+        ...(typeof q.zooms === 'boolean' ? { zooms: q.zooms } : {})
+      }
+    }))
+  })
+  ipcMain.handle(IPC.schnittVorschau, async (_e, id: unknown): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const ffmpeg = await tools.exePath(FFMPEG)
+    if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
+    const p = await ladeProjekt(daten, String(id))
+    if (!p) throw new Error('Projekt nicht gefunden.')
+    const payload: VorschauPayload = { daten, projekt: p.id, ffmpeg }
+    const auftrag = await queue.enqueue('schnitt-vorschau', `Schnitt: ${p.name} Vorschau`, payload)
+    await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
+    return auftrag
+  })
   ipcMain.handle(IPC.schnittListe, async (_e, id: unknown): Promise<Schnittliste | null> => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'schnitt.json'), 'utf8').catch(() => null)

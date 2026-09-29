@@ -40,7 +40,7 @@ export function bereich(kopf: string | null, groesse: number): [number, number] 
 export function medienBedienen(settings: SettingsStore): void {
   void app.whenReady().then(() =>
     protocol.handle(MEDIEN_SCHEMA, async (req) => {
-      const pfad = decodeURIComponent(new URL(req.url).pathname.replace(/^\//, ''))
+      const pfad = decodeURIComponent(new URL(req.url).pathname.replace(/^\//, '')) // ?v=… (neu laden) wird ignoriert
       const daten = process.env['MOIN_TEST_DATEN'] ?? (await settings.load()).dataDir
       if (!daten || !resolve(pfad).startsWith(resolve(daten) + sep)) return new Response('verboten', { status: 403 })
       const info = await stat(pfad).catch(() => null)

@@ -34,6 +34,10 @@ export interface Projekt {
   transkript?: boolean
   transkriptModell?: string
   rohschnitt?: boolean
+  /** Untertitel und Zooms (ROADMAP 6.6) */
+  einstellungen?: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean }
+  /** Zeitpunkt der letzten geschnittenen Vorschau */
+  vorschau?: number
   /** Aufträge am Projekt (Import, Transkript …) in Reihenfolge; die Oberfläche zeigt den ersten, der noch läuft */
   auftraege?: string[]
   fehler?: string | null

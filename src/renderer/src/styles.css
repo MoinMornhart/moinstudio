@@ -336,3 +336,4 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .schnittstelle { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .schnittstelle.aus .satz { opacity: 0.5; text-decoration: line-through; }
 .schnitt-streifen .weg.aus { display: none; }
+.schnitt-fertig { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }

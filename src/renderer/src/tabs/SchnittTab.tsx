@@ -187,7 +187,7 @@ function Transkript({
   )
 }
 
-function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void }): React.JSX.Element {
+function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void; neuLaden: () => void }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
   const [sicher, setSicher] = useState(false)
@@ -246,6 +246,27 @@ function ProjektAnsicht({ p, zurueck, loeschen }: { p: SchnittProjekt; zurueck: 
         </label>
       )}
       {liste && <Rohschnitt id={p.id} liste={liste} setListe={setListe} springe={springe} />}
+      {liste && (
+        <div className="schnitt-fertig">
+          <div className="card-head">
+            <h2>Fertiger Schnitt</h2>
+          </div>
+          <div className="row wrap" style={{ marginTop: 0 }}>
+            <select className="input" style={{ flex: '0 0 200px' }} value={p.einstellungen.untertitel} onChange={(e) => void window.moin.schnittEinstellungen(p.id, { untertitel: e.target.value as 'aus' | 'an' | 'karaoke' }).then(neuLaden)}>
+              <option value="aus">Keine Untertitel</option>
+              <option value="an">Untertitel</option>
+              <option value="karaoke">Untertitel Wort für Wort</option>
+            </select>
+            <label className="row" style={{ alignItems: 'center', marginTop: 0 }}>
+              <input type="checkbox" checked={p.einstellungen.zooms} onChange={(e) => void window.moin.schnittEinstellungen(p.id, { zooms: e.target.checked }).then(neuLaden)} /> Zooms auf Höhepunkte
+            </label>
+            <button className="btn primary" disabled={!!p.auftrag} onClick={() => void window.moin.schnittVorschau(p.id).then(neuLaden)}>
+              Vorschau rendern
+            </button>
+          </div>
+          {p.vorschauUrl && <video className="schnitt-player" src={p.vorschauUrl} controls preload="metadata" style={{ marginTop: 10 }} />}
+        </div>
+      )}
       <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} liste={liste} setListe={setListe} />
       {p.quelle && (
         <dl className="facts" style={{ marginTop: 12 }}>
@@ -302,6 +323,7 @@ export function SchnittTab(): React.JSX.Element {
         {aktiv ? (
           <ProjektAnsicht
             p={aktiv}
+            neuLaden={laden}
             zurueck={() => setOffen(null)}
             loeschen={() =>
               void window.moin.schnittLoeschen(aktiv.id).then(() => {

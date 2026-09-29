@@ -18,9 +18,9 @@ export interface ImportPayload {
 }
 
 /** FFmpeg mit Fortschritt (out_time aus -progress) – für lange Streams wichtig, damit man sieht, dass es läuft. */
-export function ffmpegMitFortschritt(exe: string, args: string[], ctx: JobContext<unknown>, dauer: number, melde: (anteil: number) => void): Promise<void> {
+export function ffmpegMitFortschritt(exe: string, args: string[], ctx: JobContext<unknown>, dauer: number, melde: (anteil: number) => void, cwd?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(exe, ['-hide_banner', '-y', '-nostats', '-progress', 'pipe:1', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(exe, ['-hide_banner', '-y', '-nostats', '-progress', 'pipe:1', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], cwd })
     ctx.track(child)
     let fehler = ''
     child.stdout.on('data', (d: Buffer) => {

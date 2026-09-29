@@ -73,7 +73,9 @@ export const IPC = {
   schnittListe: 'schnitt:liste',
   schnittUmschalten: 'schnitt:umschalten',
   schnittBereich: 'schnitt:bereich',
-  schnittWunsch: 'schnitt:wunsch'
+  schnittWunsch: 'schnitt:wunsch',
+  schnittEinstellungen: 'schnitt:einstellungen',
+  schnittVorschau: 'schnitt:vorschau'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -106,6 +108,9 @@ export interface SchnittProjekt {
   wellenform: boolean
   transkript: boolean
   rohschnitt: boolean
+  einstellungen: { untertitel: 'aus' | 'an' | 'karaoke'; zooms: boolean }
+  /** geschnittene Vorschau (ROADMAP 6.6), sobald gerendert */
+  vorschauUrl: string | null
   /** laufender Auftrag (Import, Transkript …) */
   auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
 }
@@ -313,6 +318,9 @@ export interface MoinApi {
   schnittUmschalten(id: string, index: number): Promise<SchnittListe>
   schnittBereich(id: string, start: number, ende: number, raus: boolean, text?: string): Promise<SchnittListe>
   schnittWunsch(id: string, wunsch: string): Promise<string>
+  /** Untertitel/Zooms einstellen, geschnittene Vorschau rendern (Auftrag) */
+  schnittEinstellungen(id: string, patch: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean }): Promise<void>
+  schnittVorschau(id: string): Promise<string>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */
