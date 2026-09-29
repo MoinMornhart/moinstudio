@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-09-29
+
+> Spiele-Vorlage: Hintergrund-Logos bleiben heil, sauberer Titel, kein Geist der alten Person
+
 ### Behoben
 - Spiele-Vorlage mit großem Logo im Hintergrund (z. B. das goldene „007“ hinter Bond): das Logo wurde als Titel behandelt, teilweise entfernt und golden über die Figur gelegt – jetzt gelten nur Schriften vor der Person als Titel, riesige Logos werden nie angefasst.
 - Spiele-Vorlage: Titel über der Person werden vor dem Auffüllen ganz entfernt und danach vollständig wiederhergestellt (kein zerstückeltes „F“ mehr).
