@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-29
+
+> Skin per Minecraft-Name, aufgeräumter Thumbnail-Reiter, bessere Spiele-Vorlagen
+
 ### Hinzugefügt
 - Skin per Minecraft-Name: Namen eintippen, der aktuelle Skin kommt direkt von Mojang (ohne Anmeldung), inklusive dünner Arme; derselbe Name ersetzt den alten Skin.
 
