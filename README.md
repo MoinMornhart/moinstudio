@@ -41,6 +41,7 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.2.0** (2026-09-29): Vorbilder und Stilbuch aus über 290 Thumbnails großer Kanäle; Blender-Neubau mit echter Welt, Himmel, Posen und Schwert.
 - **0.1.0** (2026-09-28): Neustart: das App-Fundament – Installer, Updates, Einrichtung, Hardware-Test, Aufgaben, Claude- und Blender-Anbindung.
 <!-- CHANGELOG:END -->
 
