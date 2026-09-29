@@ -22,7 +22,7 @@ Die vollständige, abhakbare Masterliste. Es wird **immer nur ein Schritt** bear
 | M3 Vorbilder | → 0.2.0 | Thumbnails großer Minecraft-Kanäle sammeln, Stilbuch, Vergleichsgalerie | ⬜ |
 | M4 Blender neu | → 0.3.0 | Figur, Posen, Welt, Grafik-Look, Kamera, Mobs/Items, Nachbau-Test | ⬜ |
 | M5 Thumbnail neu | → 0.4.0 | Planung, Text, strenge Selbstprüfung, Reiter, Video-Upload mit Vorschlägen, Abnahme | ⬜ |
-| M6 Schnitt | → 0.5.0 | Neuaufbau nach den Thumbnails | ⬜ |
+| M6 Schnitt | ab 0.14.0 | Import, Transkript, Rohschnitt, Untertitel, Export, Stream-Highlights | 🔄 |
 | M7 Planung | → 0.6.0 | Boards, Kalender | ⬜ |
 | M8 Adobe (ungetestet) | → 0.7.0 | Adobe-Anbindung | ⬜ |
 | M9 Stabil | **1.0.0** | Politur, Release | ⬜ |
@@ -170,9 +170,22 @@ Neustart (Philip, 28.09.2026): Alles Bisherige zur Thumbnail-Erstellung ist gel�
 - [x] **5.5 Video hochladen → Thumbnail-Vorschläge** (Philip, 28.09.): Video in den Reiter ziehen, die KI analysiert Inhalt, Höhepunkte und Stimmung und schlägt passende Thumbnails vor. ✅ 5 Testvideos, Vorschläge passen zum Inhalt — erledigt: 3 Testvideos richtig erkannt (docs/tests/video-vorschlaege.md); 5 echte Videos von Philip folgen in 5.6.
 - [ ] **5.6 Abnahme:** 30 echte Aufträge von Philips Kanälen, jeweils neben Vorbild; Philip gibt frei. ✅ Freigabe
 
-## M6 – Schnitt (Neuaufbau) → 0.5.0
+## M6 – Schnitt (Neuaufbau)
 
-- [ ] **6.1 Neu planen**, sobald die Thumbnails stehen.
+Ziel (Philip): **Rohvideo rein, fertiges Video raus** – ohne dass er dabei sein muss. Maßstab sind seine echten Inhalte:
+Minecraft-Videos für MoinMornhart (Let's Plays, Challenges, Kämpfe) und Stream-Highlights und Reactions für MoinMorni.
+Alles läuft lokal und kostenlos (FFmpeg, faster-whisper, Claude über das Abo), auf jeder Hardware mit CPU-Rückfall.
+Rohvideos bleiben, wo sie liegen; im Projekt stehen nur Pfad, Größe und Prüfsumme. Grundlage: [Technik §8–9](docs/research/tech.md).
+
+- [x] **6.1 Neu planen.** ✅ Plan steht hier (29.09.2026, selbst geplant nach Philips Vorgabe „alles ohne mich“).
+- [ ] **6.2 Projekt und Import:** Schnitt-Reiter mit Projektliste; Rohvideo wählen → ffprobe-Daten, Vorschau-Proxy (540p), Wellenform, Standbild-Leiste; Player im Reiter. 🧰 FFmpeg · ✅ die 3 Testvideos laden, Proxy und Wellenform stimmen mit der Länge überein.
+- [ ] **6.3 Transkript lokal:** faster-whisper im eigenen Python-Umfeld (uv), Modell nach Hardware-Profil, beim ersten Einsatz gemessen; Wortzeiten; pausierbar pro Abschnitt. ✅ deutsches Testvideo richtig transkribiert, Zeiten ±0,3 s.
+- [ ] **6.4 Automatischer Rohschnitt:** Stille und lange Pausen raus (Lautstärke + Wortlücken), Versprecher, Wiederholungen und Leerlauf erkennt Claude im Transkript; Ergebnis ist eine Schnittliste (EDL-JSON), nie das Original verändert. ✅ Testvideos werden kürzer, kein Satz wird mitten im Wort geschnitten.
+- [ ] **6.5 Schnitt prüfen und ändern:** Segmentliste mit Vorschau, Segmente an/aus, Ränder verschieben; Änderungswunsch in Worten wie bei Thumbnails („lass die Stelle mit dem Creeper drin“). ✅ Änderung per Text landet richtig in der Schnittliste.
+- [ ] **6.6 Untertitel und Zooms:** Untertitel aus dem Transkript (ASS, gut lesbar, optional Minecraft-Schrift), sparsame Zooms auf Höhepunkte – keine KI-Effekte. ✅ Untertitel synchron, Zoom ruckelt nicht.
+- [ ] **6.7 Export für YouTube:** Rendern mit dem Encoder aus dem Hardware-Profil nach YouTube-Vorgaben, Kapitel, Titel- und Beschreibungsvorschlag; Prüfung der Datei; Übergabe ans Thumbnail (Video-Vorschläge aus demselben Projekt). ✅ Export besteht die YouTube-Prüfung (Codec, Farbraum, Ton, Kapitel).
+- [ ] **6.8 Stream-Highlights und Shorts (MoinMorni):** Lange Streams → Höhepunkte (Lautstärkespitzen, Lachen, Transkript/Claude) → einzelne Clips und 9:16-Shorts mit Facecam-Layout. ✅ In einem langen Test-Stream werden die markierten Höhepunkte gefunden.
+- [ ] **6.9 MCP und Abnahme:** MCP-Werkzeug `video_edit` für Claude Desktop; Abnahme mit Philips echten Videos. ✅ Freigabe.
 
 ## M7 – Planung → 0.6.0
 
