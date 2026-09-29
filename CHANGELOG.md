@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-29
+
+> Schnitt: Transkript lokal mit Whisper
+
 ### Hinzugefügt
 - Transkript im Schnitt-Reiter (ROADMAP 6.3): startet nach dem Import von selbst, läuft lokal mit faster-whisper (Grafikkarte, wenn möglich, sonst Prozessor), wortgenaue Zeiten, fortsetzbar nach Pause oder Neustart; beim ersten Einsatz wird die Geschwindigkeit gemessen und bei Bedarf ein kleineres Modell gewählt. Jeder Satz mit Zeit, Klick springt im Video hin.
 
