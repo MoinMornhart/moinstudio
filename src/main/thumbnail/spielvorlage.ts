@@ -21,6 +21,8 @@ export interface SpielvorlagePayload {
   slim?: boolean | null
   /** optional: Philips eigene Worte, was anders sein soll (z. B. „ich halte ein Schwert statt der Pistole“) */
   wunsch?: string
+  /** Freunde: ersetzen weitere Personen der Vorlage, sonst stehen sie neben Philip */
+  freunde?: { skin: string; slim?: boolean | null; name: string }[]
   claudeCli: string
   blender: { exe: string; mesa: boolean; geraet: string; samples: number }
   /** uv.exe zum Einrichten der Python-Umgebung (rembg, OpenCV) */
@@ -33,6 +35,15 @@ export interface SpielvorlagePayload {
 }
 
 type Box = [number, number, number, number]
+
+export interface Person {
+  kopf: [number, number]
+  kopf_anteil: number
+  pose?: string
+  winkel?: Record<string, unknown>
+  ansicht?: 'vorn' | 'hinten'
+  blick?: number
+}
 
 export interface VorlagenAnalyse {
   inhalt: string
@@ -48,6 +59,8 @@ export interface VorlagenAnalyse {
   gegenstand?: { box: Box; suchwort: string; hand?: 'r' | 'l' }
   /** Titel und Logos, die über der Person liegen, mit ihrer Textfarbe */
   titel?: { box: Box; farbe: string }[]
+  /** weitere Personen (von links nach rechts), die Freunde ersetzen */
+  weitere?: Person[]
   titel_boxen?: Box[]
   logo_boxen?: Box[]
 }
@@ -68,7 +81,15 @@ const SCHEMA = {
     ziel: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
     blick: { type: 'number' },
     gegenstand: { type: 'object', properties: { box: BOX, suchwort: { type: 'string' }, hand: { type: 'string', enum: ['r', 'l'] } } },
-    titel: { type: 'array', items: { type: 'object', required: ['box', 'farbe'], properties: { box: BOX, farbe: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } } } }
+    titel: { type: 'array', items: { type: 'object', required: ['box', 'farbe'], properties: { box: BOX, farbe: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } } } },
+    weitere: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['kopf', 'kopf_anteil'],
+        properties: { kopf: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 }, kopf_anteil: { type: 'number' }, pose: { type: 'string' }, winkel: { type: 'object' }, ansicht: { type: 'string', enum: ['vorn', 'hinten'] }, blick: { type: 'number' } }
+      }
+    }
   }
 } as const
 
@@ -177,6 +198,30 @@ export function kopfAnteil(geschaetzt: number | undefined, person: { box?: Box }
   return Math.min(0.6, Math.max(basis, Math.min(ausBreite, basis * 1.15)))
 }
 
+/**
+ * Wo die Freunde stehen: an der Stelle weiterer Personen der Vorlage, sonst neben Philip auf der Seite mit mehr Platz
+ * (etwas kleiner, also weiter hinten).
+ */
+export function freundePlaetze(a: Pick<VorlagenAnalyse, 'kopf' | 'kopf_anteil' | 'weitere' | 'ansicht'>, freunde: { skin: string; slim?: boolean | null }[]): Record<string, unknown>[] {
+  const [u, v] = a.kopf
+  const seite = u < 0.5 ? 1 : -1
+  return freunde.map((f, i) => {
+    const w = a.weitere?.[i]
+    if (w)
+      return {
+        skin: f.skin,
+        slim: f.slim ?? null,
+        kopf: w.kopf,
+        kopf_anteil: Math.min(0.6, Math.max(0.1, w.kopf_anteil)),
+        pose: w.winkel && Object.keys(w.winkel).length ? begrenzeWinkel(w.winkel) : w.pose ?? 'neutral',
+        ansicht: w.ansicht ?? 'vorn',
+        ...(typeof w.blick === 'number' ? { blick: w.blick } : {})
+      }
+    const versatz = (i - (a.weitere?.length ?? 0) + 1) * 0.24
+    return { skin: f.skin, slim: f.slim ?? null, kopf: [Math.min(0.9, Math.max(0.1, u + seite * versatz)), v + 0.02], kopf_anteil: a.kopf_anteil * 0.85, pose: 'neutral', ansicht: a.ansicht ?? 'vorn', blick: -seite * 15 }
+  })
+}
+
 /** Argumente für vorlage_titel.py aus der Analyse (neue Form mit Farbe, ältere Kästen weiter unterstützt). */
 export function titelArgumente(a: Pick<VorlagenAnalyse, 'titel' | 'titel_boxen' | 'logo_boxen'>): string[] {
   return [
@@ -186,7 +231,7 @@ export function titelArgumente(a: Pick<VorlagenAnalyse, 'titel' | 'titel_boxen' 
   ]
 }
 
-export function analysePrompt(bild: string, posen: string[], beispiele: string, wunsch?: string): string {
+export function analysePrompt(bild: string, posen: string[], beispiele: string, wunsch?: string, freunde: string[] = []): string {
   return `Du hilfst Philip (YouTube-Kanal MoinMorni): Er möchte als sein Minecraft-Skin in dieses Spiele-Thumbnail eines anderen
 Creators, genau an die Stelle der Person darin. Sieh dir das Bild an: ${bild}
 
@@ -211,7 +256,9 @@ ${beispiele}
   Hand der Person, "l" = die im Bild rechte)
 - titel: alle Titel, Schriftzüge und Logos im Bild als Liste {box: [x0, y0, x1, y1], farbe: "#rrggbb"} – die Farbe
   ist die Farbe der Buchstaben selbst (z. B. "#111111" für schwarze, "#ffffff" für weiße Schrift); je Farbe ein Eintrag
-${wunsch ? `\nPhilip wünscht zusätzlich: „${wunsch}“ – berücksichtige das bei Pose, Mimik und Gegenstand.\n` : ''}
+${freunde.length ? `- weitere: Philip bringt ${freunde.join(' und ')} mit. Sind weitere Personen im Bild, gib sie hier an (die wichtigsten
+  zuerst, höchstens ${freunde.length}): kopf, kopf_anteil, pose oder winkel, ansicht, blick wie oben – sie werden durch die Freunde ersetzt
+` : ''}${wunsch ? `\nPhilip wünscht zusätzlich: „${wunsch}“ – berücksichtige das bei Pose, Mimik und Gegenstand.\n` : ''}
 Antworte nur mit JSON nach dem Schema.`
 }
 
@@ -227,7 +274,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   await lauf(python, [join(p.blenderDir, 'vorlage_vorbereiten.py'), original, vorlage], c)
 
   ctx.progress(8, 'Claude sieht sich die Vorlage an …')
-  const prompt = analysePrompt(vorlage, await posenNamen(p.blenderDir), await posenBeispiele(p.blenderDir, ['pistole', 'zeigen', 'panik', 'jubeln', 'nachdenken']), p.wunsch)
+  const prompt = analysePrompt(vorlage, await posenNamen(p.blenderDir), await posenBeispiele(p.blenderDir, ['pistole', 'zeigen', 'panik', 'jubeln', 'nachdenken']), p.wunsch, (p.freunde ?? []).map((f) => f.name))
   const res = await runClaudeInJob(
     { cli: p.claudeCli, prompt, workDir: join(p.datenOrdner, 'claude-work', 'spielvorlage'), tools: ['Read'], allowedTools: ['Read'], addDirs: [p.ausgabe], maxTurns: 6, jsonSchema: SCHEMA },
     ctx
@@ -239,7 +286,8 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   await ctx.yield()
   ctx.progress(25, 'Entferne die Person aus der Vorlage …')
   const extra = a.gegenstand?.box ? [a.gegenstand.box.join(',')] : []
-  await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra], c, { ...process.env, MOIN_LAMA: lamaPfad(p.pyDir) })
+  const ersetzt = Math.min(p.freunde?.length ?? 0, a.weitere?.length ?? 0)
+  await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra, `--personen=${1 + ersetzt}`], c, { ...process.env, MOIN_LAMA: lamaPfad(p.pyDir) })
 
   const person = JSON.parse(await readFile(join(p.ausgabe, 'person.json'), 'utf8').catch(() => '{}')) as { box?: Box }
   let requisit: string | null = null
@@ -263,6 +311,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     ...(a.ziel?.length === 2 ? { ziel: a.ziel } : {}),
     ...(typeof a.blick === 'number' ? { blick: Math.max(-90, Math.min(90, a.blick)) } : {}),
     requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: 10 } : undefined,
+    ...(p.freunde?.length ? { freunde: freundePlaetze(a, p.freunde) } : {}),
     samples: p.blender.samples,
     geraet: p.blender.geraet
   }

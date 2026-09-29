@@ -368,7 +368,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const reaktion = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni' })
+      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni', freunde })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -380,7 +380,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const eigenesBild = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', spiel, wunsch: wunsch.trim() || undefined, ohneExtras: Boolean(wunsch.trim()) && !mitWort.trim() })
+      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', spiel, wunsch: wunsch.trim() || undefined, ohneExtras: Boolean(wunsch.trim()) && !mitWort.trim(), freunde })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -392,7 +392,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const spielvorlage = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbSpielvorlage(vorlageWunsch)
+      const id = await window.moin.thumbSpielvorlage({ wunsch: vorlageWunsch, freunde })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -402,6 +402,21 @@ export function ThumbnailTab(): React.JSX.Element {
     }
   }
   const freundSkins = skins.filter((s) => s.rolle === 'freund')
+  // Freunde mit aufs Bild – in jeder Art (Philip: z. B. Chained Together mit einem Freund)
+  const freundWahl = freundSkins.length > 0 && (
+    <div className="friends">
+      <span className="muted small">Mit im Bild:</span>
+      {freundSkins.map((s) => {
+        const an = freunde.includes(s.id)
+        return (
+          <button key={s.id} className={an ? 'chip on' : 'chip'} onClick={() => setFreunde((f) => (an ? f.filter((x) => x !== s.id) : [...f, s.id]))}>
+            <SkinBild id={s.id} klein />
+            {s.name}
+          </button>
+        )
+      })}
+    </div>
+  )
 
   return (
     <>
@@ -426,20 +441,7 @@ export function ThumbnailTab(): React.JSX.Element {
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
           />
-          {freundSkins.length > 0 && (
-            <div className="friends">
-              <span className="muted small">Mit im Bild:</span>
-              {freundSkins.map((s) => {
-                const an = freunde.includes(s.id)
-                return (
-                  <button key={s.id} className={an ? 'chip on' : 'chip'} onClick={() => setFreunde((f) => (an ? f.filter((x) => x !== s.id) : [...f, s.id]))}>
-                    <SkinBild id={s.id} klein />
-                    {s.name}
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {freundWahl}
           <div className="row wrap">
             <select className="input" value={kanal} onChange={(e) => setKanal(e.target.value)} style={{ flex: '0 0 170px' }}>
               {KANAELE.map((k) => (
@@ -473,6 +475,7 @@ export function ThumbnailTab(): React.JSX.Element {
           <p className="muted small">
             Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose, mit Wort und Pfeil.
           </p>
+          {freundWahl}
           <div className="row wrap">
             <select className="input" value={gefuehl} onChange={(e) => setGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
               {GEFUEHLE.map((g) => (
@@ -501,6 +504,7 @@ export function ThumbnailTab(): React.JSX.Element {
             value={wunsch}
             onChange={(e) => setWunsch(e.target.value)}
           />
+          {freundWahl}
           <div className="row wrap">
             <select className="input" value={wunschGefuehl} onChange={(e) => setWunschGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
               {GEFUEHLE.map((g) => (
@@ -521,8 +525,9 @@ export function ThumbnailTab(): React.JSX.Element {
         <Card title="Spiele-Vorlage: du statt der Person" badge="MoinMorni">
           <p className="muted small">
             Wähle ein Spiele-Thumbnail eines anderen Creators. Die Person darin wird entfernt, dein Skin steht an ihrer Stelle in passender Pose – mit echtem 3D-Gegenstand, falls sie
-            etwas hält. Der Titel bleibt obendrauf. Das Ergebnis ist nur für dich (fremde Vorlage).
+            etwas hält. Der Titel bleibt obendrauf. Das Ergebnis ist nur für dich (fremde Vorlage). Sind mehrere Personen drauf, ersetzen deine gewählten Freunde die anderen.
           </p>
+          {freundWahl}
           <div className="row wrap">
             <input className="input" placeholder="Wunsch (optional, z. B. schau wütender)" value={vorlageWunsch} onChange={(e) => setVorlageWunsch(e.target.value)} />
             <button className="btn primary" onClick={() => void spielvorlage()}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analysePrompt, begrenzeWinkel, besterTreffer, kopfAnteil, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
+import { analysePrompt, begrenzeWinkel, besterTreffer, freundePlaetze, kopfAnteil, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
 
 describe('Spiele-Vorlage', () => {
   it('findet das passende Poly-Haven-Modell zum Suchwort', () => {
@@ -29,6 +29,14 @@ describe('Spiele-Vorlage', () => {
       'farbe=#111111:0.5,0.1,0.9,0.3',
       'logo:0.1,0.1,0.2,0.2'
     ])
+  })
+
+  it('setzt Freunde an die Stelle weiterer Personen, sonst neben Philip', () => {
+    const f = [{ skin: 'a.png' }, { skin: 'b.png' }]
+    const plaetze = freundePlaetze({ kopf: [0.3, 0.4], kopf_anteil: 0.4, weitere: [{ kopf: [0.7, 0.35], kopf_anteil: 0.35, pose: 'jubeln' }] }, f)
+    expect(plaetze[0]).toMatchObject({ skin: 'a.png', kopf: [0.7, 0.35], kopf_anteil: 0.35, pose: 'jubeln' })
+    expect(plaetze[1]).toMatchObject({ skin: 'b.png', pose: 'neutral' })
+    expect((plaetze[1]!['kopf'] as number[])[0]).toBeCloseTo(0.54, 2)
   })
 
   it('begrenzt verdrehte Körper (Rückansicht nur über ansicht)', () => {

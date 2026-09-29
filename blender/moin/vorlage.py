@@ -163,6 +163,25 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         leer.matrix_world = Matrix.Translation(fig.hand(seite) + lauf * 0.6 * mfigur.PX + oben * 0.8 * mfigur.PX) @ Matrix((lauf, quer, oben)).transposed().to_4x4()
         info["requisit"] = r["gltf"]
 
+    # Freunde (Philip, 29.09.): an der Stelle weiterer Personen der Vorlage oder daneben. Die Größe ergibt sich aus der
+    # Entfernung: halb so großer Kopf = doppelt so weit weg, auf dem Sehstrahl durch die Kopfmitte im Bild
+    haupt_anteil = spec.get("kopf_anteil", 0.4)
+    for i, fr in enumerate(spec.get("freunde") or []):
+        f = mfigur.baue_figur(f"freund{i}", fr["skin"], slim=fr.get("slim"))
+        roh_f = fr.get("pose", "neutral")
+        pf = {k: (dict(w) if isinstance(w, dict) else w) for k, w in (roh_f if isinstance(roh_f, dict) else POSEN.get(roh_f, POSEN["neutral"])).items()}
+        pf["blick"] = fr.get("blick", pf.get("blick", 0))
+        if fr.get("ansicht") == "hinten":
+            pf = mszene._spiegeln(pf)
+            pf["blick"] = 180 - pf.get("blick", 0)
+        mfigur.pose(f, pf)
+        fu, fv = fr.get("kopf", [0.5, 0.3])
+        tiefe = abstand * haupt_anteil / max(0.05, fr.get("kopf_anteil", haupt_anteil))
+        ziel_kopf = cam.location + Vector(((fu - 0.5) * breite_m / abstand, 1, (0.5 - fv) * hoehe_m / abstand)) * tiefe
+        f.wurzel.location = ziel_kopf - f.kopf_mitte()
+        bpy.context.view_layer.update()
+        info.setdefault("freunde", []).append({"kopf": [fu, fv], "tiefe": round(tiefe, 2)})
+
     # Licht wie in der Vorlage: warmes Key-Licht von der Lichtseite, kühle Füllung, helle Randkante
     for name, ort, energie, groesse, farbe in (
         ("key", Vector((s * 1.4, -1.3, 1.1)), 120, 1.6, (1.0, 0.86, 0.66)),

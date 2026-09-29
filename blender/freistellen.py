@@ -39,7 +39,7 @@ def lama(arr, maske, groesse=512):
         return None
 
 
-def main(vorlage, ordner, dazu=()):
+def main(vorlage, ordner, dazu=(), personen=1):
     os.makedirs(ordner, exist_ok=True)
     bild = Image.open(vorlage).convert("RGB")
     w, h = bild.size
@@ -47,9 +47,13 @@ def main(vorlage, ordner, dazu=()):
     m = (np.array(maske) > 110).astype(np.uint8) * 255
     # größte zusammenhängende Fläche = die Person (kleine Flecken weg)
     anzahl, beschriftung, werte, _ = cv2.connectedComponentsWithStats(m, 8)
+    alle = m.copy()
     if anzahl > 1:
         groesste = 1 + int(np.argmax(werte[1:, cv2.CC_STAT_AREA]))
         m = np.where(beschriftung == groesste, 255, 0).astype(np.uint8)
+        # Mehrere Personen ersetzen (Philip mit Freunden): alle großen Personenflächen entfernen, nicht nur die größte
+        gross = [i for i in range(1, anzahl) if werte[i, cv2.CC_STAT_AREA] >= 0.12 * werte[groesste, cv2.CC_STAT_AREA]]
+        alle = np.where(np.isin(beschriftung, gross), 255, 0).astype(np.uint8) if personen > 1 else m
     ys, xs = np.nonzero(m)
     if not len(xs):
         raise SystemExit("Keine Person gefunden")
@@ -70,7 +74,7 @@ def main(vorlage, ordner, dazu=()):
         kopf = [float((kx.min() + kx.max()) / 2 / w) if len(kx) else float((x0 + x1) / 2 / w), float((y0 + kopf_bis) / 2 / h)]
         kopf_hoehe = float((kopf_bis - y0) / h)
     # Maske großzügig erweitern (Haare, Ränder, Schatten), dann auffüllen
-    groesser = cv2.dilate(m, np.ones((25, 25), np.uint8), iterations=2)
+    groesser = cv2.dilate(alle, np.ones((25, 25), np.uint8), iterations=2)
     for x_0, y_0, x_1, y_1 in dazu:
         # Gegenstände samt Rand (Claudes Kästen sind oft knapp; Reste wie ein Laufende sehen sonst verloren aus)
         rx, ry = 0.04 * (x_1 - x_0) + 0.015, 0.06 * (y_1 - y_0) + 0.02
@@ -95,4 +99,5 @@ def main(vorlage, ordner, dazu=()):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], [tuple(float(z) for z in a.split(",")) for a in sys.argv[3:]])
+    personen = next((int(a.split("=")[1]) for a in sys.argv[3:] if a.startswith("--personen=")), 1)
+    main(sys.argv[1], sys.argv[2], [tuple(float(z) for z in a.split(",")) for a in sys.argv[3:] if not a.startswith("--")], personen)

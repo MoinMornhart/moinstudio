@@ -88,8 +88,8 @@ const api: MoinApi = {
   thumbLoeschen: (jobId: string) => ipcRenderer.invoke(IPC.thumbLoeschen, jobId),
   thumbVideo: (kanal: string, titel?: string) => ipcRenderer.invoke(IPC.thumbVideo, kanal, titel),
   thumbVideoErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbVideoErgebnis, jobId),
-  thumbSpielvorlage: (wunsch?: string) => ipcRenderer.invoke(IPC.thumbSpielvorlage, wunsch),
-  thumbReaktion: (o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean }) => ipcRenderer.invoke(IPC.thumbReaktion, o)
+  thumbSpielvorlage: (o: { wunsch?: string; freunde?: string[] }) => ipcRenderer.invoke(IPC.thumbSpielvorlage, o),
+  thumbReaktion: (o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[] }) => ipcRenderer.invoke(IPC.thumbReaktion, o)
 }
 
 contextBridge.exposeInMainWorld('moin', api)

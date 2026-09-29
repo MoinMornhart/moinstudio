@@ -26,6 +26,8 @@ export interface ReaktionPayload {
   wunsch?: string
   /** Nur Skin + Hintergrund: kein Wort, kein Pfeil */
   ohneExtras?: boolean
+  /** Freunde, die mit aufs Bild sollen (z. B. bei Koop-Spielen wie Chained Together) */
+  freunde?: { skin: string; slim?: boolean | null; name: string }[]
   claudeCli: string
   blender: { exe: string; mesa: boolean; geraet: string; samples: number }
   blenderDir: string
@@ -144,7 +146,7 @@ export async function reaktionJob(p: ReaktionPayload, ctx: JobContext<{ claudeSe
   const prompt = `Du hilfst Philip (YouTube-Kanal ${p.kanal}) bei einem Reaction-Thumbnail im Stil von BastiGHGs Zweitkanal und Zarbex.
 ${p.spiel ? `Es ist ein Gaming-Video über das Spiel „${p.spiel}“; das Bild ist ein Spielmotiv (kein fremdes Thumbnail).\n` : ''}Sieh dir das Bild an: ${original}
 Philip wird als sein Minecraft-Skin am Rand einer Bildhälfte stehen (Kopf etwa 42 % der Bildhöhe, auf Hüfthöhe
-angeschnitten) und das Original füllt das Bild dahinter.
+angeschnitten)${p.freunde?.length ? `, zusammen mit ${p.freunde.map((f) => f.name).join(' und ')} (etwas kleiner, daneben zum Rand hin)` : ''}, und das Original füllt das Bild dahinter.
 
 Bestimme:
 - inhalt: kurz, worum es im Original geht
@@ -200,6 +202,7 @@ Antworte nur mit JSON nach dem Schema.`
       pose_fest: Boolean(wunschPose),
       // Startwert für lebendigen Text (Platz, Neigung, Farbe) – jede Variante anders
       sperren: (a.sperren ?? []).filter((b) => b.length === 4),
+      ...(p.freunde?.length ? { freunde: p.freunde.map((f) => ({ skin: f.skin, slim: f.slim ?? null, pose: 'neutral' })), kopf_anteil: 0.3 } : {}),
       zufall: Math.floor(Math.random() * 1_000_000),
       kopf_drehung: pl.kopf,
       wort,

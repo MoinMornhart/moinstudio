@@ -168,7 +168,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
         hoehe_m = breite_m * HOEHE / BREITE
         # Kopf bei 22 % (bzw. 78 %) der Breite und auf halber Höhe, Figur nah am Rand (Philip: „etwas weniger vom Skin“)
-        ziel = kopf + Vector((-s * (0.5 - 0.22) * breite_m, 0, -(0.5 - 0.5) * hoehe_m))
+        ziel = kopf + Vector((-s * (0.5 - (0.32 if spec.get("freunde") else 0.22)) * breite_m, 0, -(0.5 - 0.5) * hoehe_m))
         cam.location = ziel + Vector((0, -abstand, 0))
         cam.rotation_euler = (math.radians(90), 0, 0)
         bpy.context.view_layer.update()
@@ -202,7 +202,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         sicht = mszene._gesicht_sichtbar(scene, cam, fig)
     # Liegt der wichtige Punkt hinter der Figur, rückt die Figur zum Rand (Kopf bleibt ganz im Bild);
     # reicht der Platz nicht, wird die Figur schrittweise kleiner (Kopf 42 → 31 % der Bildhöhe)
-    if spec.get("pfeil_ziel"):
+    if spec.get("pfeil_ziel") and not spec.get("freunde"):  # mit Freunden steht die Gruppe fest (Kopf bei 30 %)
         zu = spec["pfeil_ziel"][0]
         start = spec.get("kopf_anteil", 0.42)
         for anteil in (start, start * 0.87, start * 0.74):
@@ -220,9 +220,32 @@ def baue_reaktion(spec, ausgabe, bericht=None):
                 break
     if spec.get("mimik"):
         mmimik.setze_mimik(fig, spec["mimik"])
+    # Freunde (Philip, 29.09.: „wenn ich mit einem anderen ein Video aufnehme, muss er mit aufs Thumbnail“):
+    # neben Philip zur Randseite hin, etwas weiter hinten (kleiner, leicht unscharf), gleiche Stimmung; Philip rückt
+    # dafür etwas zur Mitte (Kopf bei 30 % statt 22 % der Breite)
+    freunde = []
+    richtung = 1 if seite == "links" else -1  # Inhaltsseite im Bild
+    u_haupt, v_haupt = bild(kopf)
+    for i, fr in enumerate(spec.get("freunde") or []):
+        f = mfigur.baue_figur(f"freund{i}", fr["skin"], slim=fr.get("slim"))
+        roh = fr.get("pose", "neutral")
+        pf = {k: (dict(v) if isinstance(v, dict) else v) for k, v in (roh if isinstance(roh, dict) else POSEN.get(roh, POSEN["neutral"])).items()}
+        if s > 0:
+            pf = mszene._spiegeln(pf)
+        pf["blick"] = -s * 14  # leicht zu Philip und zum Inhalt gedreht
+        mfigur.pose(f, pf)
+        tiefe = abstand * (1.12 + 0.1 * i)
+        u_f = u_haupt - richtung * (0.23 + 0.16 * i)  # zur Randseite, damit der Inhalt frei bleibt
+        breite_t = 2 * tiefe * math.tan(cam_daten.angle_x / 2)
+        ziel_kopf = cam.location + Vector(((u_f - 0.5) * breite_t, tiefe, (0.5 - (v_haupt - 0.02)) * breite_t * HOEHE / BREITE))
+        f.wurzel.location = ziel_kopf - f.kopf_mitte()
+        bpy.context.view_layer.update()
+        if spec.get("mimik"):
+            mmimik.setze_mimik(f, spec["mimik"])
+        freunde.append(f)
     cam_daten.dof.use_dof = True
     cam_daten.dof.focus_distance = abstand
-    cam_daten.dof.aperture_fstop = 2.8
+    cam_daten.dof.aperture_fstop = 4.0 if freunde else 2.8
 
     # Hintergrund weit hinten (Tiefenschärfe macht ihn weich, Stilbuch 14.9)
     hinten = abstand * 9
@@ -257,11 +280,12 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     rng = mtext.zufall(spec)
     if spec.get("wort"):
         wort = spec["wort"].upper()
-        ecken_k = [bild(c) for c in fig.kopf_ecken()]
+        # Figur-Bereich: Philip und alle Freunde (Text nie über einem Kopf oder Körper)
+        ecken_k = [bild(c) for g in [fig, *freunde] for c in g.kopf_ecken()]
         f0, f1 = min(e[0] for e in ecken_k) - 0.03, max(e[0] for e in ecken_k) + 0.03
         f_oben = min(e[1] for e in ecken_k) - 0.03
         ziel = spec.get("pfeil_ziel")
-        haende = [bild(fig.hand(h)) for h in ("r", "l")]
+        haende = [bild(g.hand(h)) for g in [fig, *freunde] for h in ("r", "l")]
         sperren = spec.get("sperren") or []  # Titel, Logos, Gesichter im Original (von Claude)
 
         def frei_fuer(anteil, halb_b, mit_sperren=True):
