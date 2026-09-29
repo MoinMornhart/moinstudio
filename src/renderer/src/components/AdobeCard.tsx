@@ -8,6 +8,14 @@ const NAME = { premiere: 'Premiere', photoshop: 'Photoshop', aftereffects: 'Afte
 export function AdobeCard(): React.JSX.Element {
   const [status, setStatus] = useState<AdobeStatus | null>(null)
   const [sucht, setSucht] = useState(false)
+  const [test, setTest] = useState<string | null>(null)
+  const selbsttest = (): void => {
+    setTest('Selbsttest läuft … (Photoshop öffnet sich kurz, falls installiert)')
+    void window.moin.adobeSelbsttest().then(
+      (r) => setTest(`Photoshop: ${r.photoshop.status === 'ok' ? 'bestanden' : r.photoshop.status} – ${r.photoshop.details} Für Premiere liegt im geöffneten Ordner eine Checkliste.`),
+      (e: unknown) => setTest(`Fehler: ${String(e)}`)
+    )
+  }
   const suche = (neu: boolean): void => {
     setSucht(true)
     void window.moin
@@ -43,7 +51,11 @@ export function AdobeCard(): React.JSX.Element {
         <button className="btn small" disabled={sucht} onClick={() => suche(true)}>
           {sucht ? 'Suche …' : 'Neu suchen'}
         </button>
+        <button className="btn small" onClick={selbsttest} title="Erzeugt Testdateien, prüft Photoshop automatisch und öffnet eine Checkliste für Premiere">
+          Selbsttest
+        </button>
       </div>
+      {test && <p className="muted small">{test}</p>}
     </Card>
   )
 }

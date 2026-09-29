@@ -124,6 +124,7 @@ const api: MoinApi = {
   adobeStatus: (neu?: boolean) => ipcRenderer.invoke(IPC.adobeStatus, neu),
   schnittPremiere: (id: string) => ipcRenderer.invoke(IPC.schnittPremiere, id),
   thumbPhotoshop: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbPhotoshop, jobId, index),
+  adobeSelbsttest: () => ipcRenderer.invoke(IPC.adobeSelbsttest),
   planungRhythmusSetzen: (rhythmus: Parameters<MoinApi['planungRhythmusSetzen']>[0]) => ipcRenderer.invoke(IPC.planungRhythmusSetzen, rhythmus),
   onPlanungGeaendert(handler: () => void) {
     const listener = (): void => handler()

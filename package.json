@@ -19,7 +19,8 @@
     "start": "node scripts/electron.mjs .",
     "release": "node scripts/release.mts",
     "dist": "electron-vite build && electron-builder --win --publish never",
-    "screenshot": "electron-vite build && node scripts/electron.mjs . --moin-screenshot=test-output/screenshots"
+    "screenshot": "electron-vite build && node scripts/electron.mjs . --moin-screenshot=test-output/screenshots",
+    "test:adobe": "vitest run -c vitest.adobe.config.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.1.0",

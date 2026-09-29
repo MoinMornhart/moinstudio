@@ -32,7 +32,7 @@ export function setupJobs(
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
   const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
   const { starteImport, starteWunsch } = schnitt
-  registerAdobeIpc(settings, queue, getWindow)
+  registerAdobeIpc(settings, queue, getWindow, tools)
   const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport })
 
   const enqueueProbe = async (): Promise<string> => {

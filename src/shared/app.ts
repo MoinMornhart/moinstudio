@@ -103,7 +103,8 @@ export const IPC = {
   planungGeaendert: 'planung:geaendert',
   adobeStatus: 'adobe:status',
   schnittPremiere: 'schnitt:premiere',
-  thumbPhotoshop: 'thumb:photoshop'
+  thumbPhotoshop: 'thumb:photoshop',
+  adobeSelbsttest: 'adobe:selbsttest'
 } as const
 
 /** Planung (ROADMAP 7.2/7.3): Spalten des Boards in fester Reihenfolge */
@@ -469,6 +470,8 @@ export interface MoinApi {
   schnittPremiere(id: string): Promise<{ xml: string; srt: string | null }>
   /** Variante als Photoshop-Datei mit Ebenen (Speichern-Dialog), ungetestet */
   thumbPhotoshop(jobId: string, index: number): Promise<{ datei: string; ebenen: string[] } | null>
+  /** Adobe-Selbsttest: Proben erzeugen, Photoshop prüfen, Ordner mit Premiere-Checkliste öffnen */
+  adobeSelbsttest(): Promise<{ ordner: string; photoshop: { status: 'ok' | 'fehler' | 'übersprungen'; details: string } }>
   onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>

@@ -2,13 +2,32 @@ import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import type { JobQueue } from '../jobs/queue'
 import type { ThumbnailVariante } from '../thumbnail/job'
 import { thumbnailPsd } from './photoshop'
+import { join } from 'node:path'
+import { writeFile } from 'node:fs/promises'
+import type { ToolManager } from '../tools/manager'
+import { FFMPEG } from '../tools/specs'
+import { localRoot } from '../tools/ipc'
+import { erzeugeProben, premiereCheckliste, pruefePhotoshop } from './selbsttest'
 import type { SettingsStore } from '../data/settings'
 import { premiereDateien } from './premiere-export'
 import { IPC, type AdobeStatus } from '@shared/app'
 import { findeAdobe } from './erkennung'
 
 /** Adobe (ROADMAP M8, ungetestet): Erkennung für die Einstellungen; das Ergebnis wird bis zum nächsten „Neu suchen“ gemerkt. */
-export function registerAdobeIpc(settings: SettingsStore, queue: JobQueue, getWindow: () => BrowserWindow | undefined): void {
+export function registerAdobeIpc(settings: SettingsStore, queue: JobQueue, getWindow: () => BrowserWindow | undefined, tools: ToolManager): void {
+  // Selbsttest (ROADMAP 8.5): Proben lokal erzeugen (nicht im geteilten Datenordner), Photoshop prüfen, Premiere-Checkliste öffnen
+  ipcMain.handle(IPC.adobeSelbsttest, async () => {
+    const ffmpeg = await tools.exePath(FFMPEG)
+    if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
+    const ordner = join(localRoot(), 'adobe-test')
+    const erwartung = await erzeugeProben(ordner, ffmpeg)
+    const checkliste = join(ordner, 'premiere-checkliste.md')
+    await writeFile(checkliste, premiereCheckliste(erwartung.premiere, ordner))
+    const photoshop = await pruefePhotoshop(join(ordner, 'ebenen.psd'), erwartung.photoshop)
+    await writeFile(join(ordner, 'ergebnis.json'), JSON.stringify({ photoshop, zeit: new Date().toISOString() }, null, 2))
+    void shell.openPath(ordner)
+    return { ordner, photoshop }
+  })
   // Photoshop (ROADMAP 8.4): Variante eines Thumbnail-Auftrags als PSD mit Ebenen speichern
   ipcMain.handle(IPC.thumbPhotoshop, async (_e, jobId: unknown, index: unknown) => {
     const v = queue.result<{ varianten: ThumbnailVariante[] }>(String(jobId))?.varianten[Number(index)]
