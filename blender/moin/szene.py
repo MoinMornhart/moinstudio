@@ -23,6 +23,7 @@ from . import figur as mfigur
 from . import himmel as mhimmel
 from . import items as mitems
 from . import kamera as mkamera
+from . import look as mlook
 from . import welt as mwelt
 from .bloecke import BLOCK
 from .posen import POSEN
@@ -102,6 +103,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     fehler = mkamera.rahme(scene, cam, oben, unten, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
                            gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt)
     cam_data.dof.aperture_fstop = r.get("blende", 4)
+    mlook.gesichtslicht(scene, cam, (oben + unten) / 2, r.get("gesichtslicht", 10.0))
 
     gehalten = {}
     for f, fig in figuren:
@@ -121,6 +123,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     except TypeError:
         pass
     scene.view_settings.exposure = r.get("belichtung", -0.3)
+    mlook.farbkorrektur(scene, r.get("saettigung", 1.08), r.get("kontrast", 1.06))
 
     info = {"kamera_abweichung": round(fehler, 4), "linse": cam_data.lens, "figuren": {}, "items": {}}
     bpy.context.view_layer.update()

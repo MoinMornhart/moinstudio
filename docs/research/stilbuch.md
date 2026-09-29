@@ -473,3 +473,31 @@ G38 9Y_bOd4miH8 · G45 qGJGglyFRmk · G47 CD_6BKaG-eI · G49 79qwBkLYqE4 · G51 
 - **GommeHD:** 01 (Kampfpose), 53 (Shader-Look), 54 (Biom-Stimmung), 21 (Lava-Aufsicht), 04 (Requisiten-Geschichte), 35 (Froschperspektive), 28 (Rückenansicht), 03 (Größenkontrast), 57 (echte Mobs), 41 (Nacht-Sprung)
 - **Paluten:** 48 (Mob-Armee), 24 (Blick zum Objekt), 19 (Zeigen in Untersicht), 18 (TNT-Explosion), 32 (Umzingelung), 46 (V-Pose), 20 (Nachtlicht), 12 (Split-Duell), 02 (Horror), 38 (Knopf und TNT)
 - **Negativbeispiele Paluten:** 09, 39, 41, 47, 49 (rohe Screenshots, steife Collage)
+
+---
+
+## 14. Reactions und Gaming (MoinMorni)
+
+Grundlage: 96 Thumbnails, ausgewertet am 29.09.2026. Philips Vorgabe: Die Figur ist immer sein echter Minecraft-Skin als 3D-Render, nie gezeichnet.
+
+| Kanal | Rolle | Ausgewertet | Was übernommen wird |
+|---|---|---|---|
+| Bastian (@bastian, Zweitkanal BastiGHG) | Gaming und Reaction mit 3D-Skin | 24 | Look, Aufbau, Posen, Logo, Gesichter |
+| zarbexLIVE (@zarbexlive) | klassische Reaction | 24 | Aufbau (Original als Vollbild), Wort und Pfeil |
+| Mr. Geil (@MisterGeil, Zarbex Reaktion) | klassische Reaction | 24 | Aufbau, Seitenwahl |
+| BastiGHG Bonus (@BastiGHGClips, Drittkanal) | gezeichnet (24 von 24) | 24 | **nichts** außer Gesten-Ideen |
+
+Zarbex zeigt sich selbst als echte Person (48 von 48); seine Person wird bei uns durch Philips Skin ersetzt.
+
+1. **Reaction-Grundaufbau (zarbexLIVE Typ A):** Das Original füllt das Bild als Vollbild. Der Skin steht in einer Bildhälfte (Standard links), auf Brusthöhe angeschnitten. Der Kopf nimmt 55–65 % der Bildhöhe ein, die Figur 30–40 % der Bildbreite; die Kopfoberkante darf bis 5 % angeschnitten sein.
+2. **Kopf zum Inhalt:** 15–35° gedreht, 5–15° geneigt. Direkter Kamerablick nur als Variante (etwa 6 von 48).
+3. **Emotion ohne Hände ist Standard** (Hände in 0 von 40 der klassischen Reactions). Gesten nur als Variante: Zeigen 80–90° mit 20–40° zum Inhalt, Hand vor Mund 110–130° nach innen, Jubel 150–170° und 15–25° gespreizt.
+4. **Gesicht:** Skin-Augen bleiben (Bastian 14 von 24 unverändert). Lachen wird zu einer flach geschlossenen Lidkante, Cringe zu halb gesenkten Lidern und schrägem Kopf, Schock zu unveränderten Augen mit Kopf zurück. Thematische Zusätze nur mit Grund ($-Augen bei Geld, Schweißtropfen, Augenringe, Dreck). Nie ein Comic-Mund.
+5. **Ein Wort, groß:** genau ein Wort oder eine Zahl, 20–25 % der Bildhöhe, oben auf der Inhaltsseite. Weiße runde fette Schrift mit dünner dunkler Kontur und weichem Schatten; bei Minecraft-Themen die Pixel-Schrift. Text verdeckt die Figur nie (0 von 48).
+6. **Ein roter Pfeil**, gebogen (60–90°) vom Wort zum Detail, Rot etwa #E0141E, Strich etwa 3 % der Bildhöhe, 15–25 % der Bildbreite lang, höchstens einer (zarbexLIVE 12 von 24). Keine Kreise, keine Emojis (1 bzw. 0 von 96).
+7. **Quellen-Logo** (Sender, Spiel, Plattform) in der unteren Ecke gegenüber der Figur, 12–20 % der Bildbreite; bei Gaming praktisch immer (Bastian 20 von 24).
+8. **Skin-Look:** weiches Key-Licht von vorn oben, Seitenfläche 20–35 % dunkler, Kamera auf Augenhöhe mit 35–50 mm, nur eine dünne helle Randkante (2–4 px), kein Sticker-Rand, kein Glow.
+9. **Hintergrund dämpfen:** unruhige Originale um 10–20 % abdunkeln oder leicht unschärfen; die Figur bleibt heller und schärfer, leichte Vignette.
+10. **Gaming-Variante (Bastian):** Spielmotiv als Vollbild, Skin mit Kostüm oder Requisite zum Spiel (in 8 von 24 bringt ein Hut oder Kostüm das Thema), Kopf 45–50 % der Bildhöhe, Spiel-Logo unten in einer Ecke; optional Vergleich „alt → neu“ mit geradem roten Pfeil oder nachgebaute Spiel-UI (Dialog-Buttons, Tageszähler).
+
+**Maßstab (nur lokal, Video-IDs):** Bastian `_fKgTPA4i8g` (zeigt auf neuen Mob, „NEU“-Balken), Bastian `oQ4frrRfc5I` (gespiegelt, Nacht), Bastian `h3r2TAbOq-Y` (beste Reaction mit 3D-Skin, Kopf 65 %), Bastian `5g8_MdWT6gM` ($-Augen, Hammer), zarbexLIVE `Mfa_Lb1DCYM` (FAKE? mit Pfeil), zarbexLIVE `3gDIe6TyPr0` (WAFFE mit Pfeil).
