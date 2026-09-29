@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.16.0** (2026-09-29): Schnitt: automatischer Rohschnitt
 - **0.15.0** (2026-09-29): Schnitt: Transkript lokal mit Whisper
 - **0.14.0** (2026-09-29): Schnitt-Reiter: Projekte, Import, Vorschau, Wellenform
 - **0.13.1** (2026-09-29): Spiele-Vorlage: Hintergrund-Logos bleiben heil, sauberer Titel, kein Geist der alten Person
 - **0.13.0** (2026-09-29): Mit Claude verbinden per Knopf
-- **0.12.0** (2026-09-29): Freunde auch bei Reaction, Gaming und Spiele-Vorlage
 <!-- CHANGELOG:END -->
 
 ## Installation

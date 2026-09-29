@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-29
+
+> Schnitt: automatischer Rohschnitt
+
 ### Hinzugefügt
 - Automatischer Rohschnitt (ROADMAP 6.4): startet nach dem Transkript von selbst. Lange Pausen werden gekürzt – laute Action-Stellen ohne Sprache bleiben drin –, „ähm“ und abgebrochene Sätze vor ihrer Wiederholung fliegen raus, Claude findet zusätzlich Versprecher und Leerlauf. Ergebnis ist eine Schnittliste, das Original bleibt unverändert. Im Reiter: vorher/nachher, Streifen mit allen Schnitten, Liste mit Gründen, „geschnitten abspielen“.
 
