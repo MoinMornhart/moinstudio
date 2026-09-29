@@ -34,6 +34,8 @@ export interface UntertitelStil {
   karaoke: boolean
   /** höchstens so viele Wörter pro Einblendung */
   woerter: number
+  /** Abstand der Untertitel vom unteren Rand (Anteil der Höhe); Shorts: höher, über dem Gameplay */
+  unten?: number
 }
 
 const ass = (s: number): string => {
@@ -72,7 +74,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Moin,Arial,${groesse},${stil.karaoke ? '&H0000D7FF' : '&H00FFFFFF'},&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,${Math.max(2, Math.round(groesse / 11))},0,2,${Math.round(stil.breite * 0.08)},${Math.round(stil.breite * 0.08)},${Math.round(stil.hoehe * 0.07)},1
+Style: Moin,Arial,${groesse},${stil.karaoke ? '&H0000D7FF' : '&H00FFFFFF'},&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,${Math.max(2, Math.round(groesse / 11))},0,2,${Math.round(stil.breite * 0.08)},${Math.round(stil.breite * 0.08)},${Math.round(stil.hoehe * (stil.unten ?? 0.07))},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -130,6 +132,8 @@ export interface RenderOptionen {
   hoehe: number
   fps: number
   audio: boolean
+  /** Hochformat (Shorts, 1080×1920): Facecam oben (Anteile x0,y0,x1,y1 im Original), Gameplay darunter; ohne Facecam mittiger Ausschnitt */
+  hoch?: { cam: [number, number, number, number] | null }
   /** Video-Encoder-Argumente (z. B. libx264 -preset … oder h264_nvenc …) */
   encoder: string[]
   ausgabe: string
@@ -143,7 +147,17 @@ export function filterGraph(o: RenderOptionen): string {
   const zoom = o.zooms.length
     ? `,scale=w='iw*(1+0.12*(${o.zooms.map((z) => `min(1\\,max(0\\,(t-${zahl(z.start)})/0.35))*min(1\\,max(0\\,(${zahl(z.ende)}-t)/0.35))`).join('+')}))':h=-2:eval=frame,crop=${o.breite}:${o.hoehe}`
     : ''
-  const video = `[0:v]select='${auswahl}',setpts=N/FRAME_RATE/TB,fps=${o.fps},scale=${o.breite}:${o.hoehe}:force_original_aspect_ratio=increase,crop=${o.breite}:${o.hoehe}${zoom}${o.untertitel ? `,subtitles=${o.untertitel}` : ''},format=yuv420p[v]`
+  const ende = `${o.untertitel ? `,subtitles=${o.untertitel}` : ''},format=yuv420p[v]`
+  const basis = `[0:v]select='${auswahl}',setpts=N/FRAME_RATE/TB,fps=${o.fps}`
+  let video: string
+  if (o.hoch?.cam) {
+    // Short: Facecam oben (ein Drittel), Gameplay mittig darunter
+    const [x0, y0, x1, y1] = o.hoch.cam
+    const camH = Math.round(o.hoehe / 3 / 2) * 2
+    video = `${basis},split=2[g][c];[c]crop=iw*${zahl(x1 - x0)}:ih*${zahl(y1 - y0)}:iw*${zahl(x0)}:ih*${zahl(y0)},scale=${o.breite}:${camH}:force_original_aspect_ratio=increase,crop=${o.breite}:${camH}[cam];[g]scale=-2:${o.hoehe - camH},crop=${o.breite}:${o.hoehe - camH}[spiel];[cam][spiel]vstack${ende}`
+  } else {
+    video = `${basis},scale=${o.breite}:${o.hoehe}:force_original_aspect_ratio=increase,crop=${o.breite}:${o.hoehe}${o.hoch ? '' : zoom}${ende}`
+  }
   const ton = o.audio ? `;[0:a]aselect='${auswahl}',asetpts=N/SR/TB[a]` : ''
   return video + ton
 }

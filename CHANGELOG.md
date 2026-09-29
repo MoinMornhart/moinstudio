@@ -6,6 +6,9 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Stream-Highlights und Shorts (ROADMAP 6.8): „Höhepunkte finden“ – laute Spitzen plus Claude, das das Transkript in 10-Minuten-Blöcken liest und die stärksten Momente mit Titel und Bewertung wählt. Jeder Moment als Clip (16:9) oder Short (1080×1920): Facecam wird automatisch erkannt und oben eingesetzt, Gameplay darunter, Untertitel Wort für Wort; „Alle als Shorts“ und Ordner öffnen.
+
 ## [0.19.0] - 2026-09-29
 
 > Schnitt: Export für YouTube

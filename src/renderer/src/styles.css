@@ -338,3 +338,7 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .schnitt-streifen .weg.aus { display: none; }
 .schnitt-fertig { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 .pruefliste { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 3px; }
+.clip-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 10px 0; }
+.clip-raster figure { margin: 0; display: grid; gap: 4px; }
+.clip-raster video { width: 100%; background: #000; border-radius: 6px; aspect-ratio: 16 / 9; }
+.clip-raster figure.hoch video { aspect-ratio: 9 / 16; }

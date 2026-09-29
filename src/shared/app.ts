@@ -79,7 +79,12 @@ export const IPC = {
   schnittExport: 'schnitt:export',
   schnittExportInfo: 'schnitt:export-info',
   schnittExportSpeichern: 'schnitt:export-speichern',
-  schnittThumbnail: 'schnitt:thumbnail'
+  schnittThumbnail: 'schnitt:thumbnail',
+  schnittHighlightsStart: 'schnitt:highlights-start',
+  schnittHighlights: 'schnitt:highlights',
+  schnittClips: 'schnitt:clips',
+  schnittClipDateien: 'schnitt:clip-dateien',
+  schnittClipOrdner: 'schnitt:clip-ordner'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -97,6 +102,15 @@ export interface SchnittListe {
   dauer: number
   behalten: { start: number; ende: number }[]
   entfernt: { start: number; ende: number; grund: 'pause' | 'aehm' | 'wiederholung' | 'versprecher' | 'leerlauf' | 'manuell'; text?: string; aus?: boolean }[]
+}
+
+/** Höhepunkt aus einem Stream (ROADMAP 6.8) */
+export interface SchnittHighlight {
+  start: number
+  ende: number
+  titel: string
+  grund: string
+  wert: number
 }
 
 /** Export-Ergebnis (ROADMAP 6.7) */
@@ -125,6 +139,9 @@ export interface SchnittProjekt {
   rohschnitt: boolean
   einstellungen: { untertitel: 'aus' | 'an' | 'karaoke'; zooms: boolean }
   exportiert: boolean
+  /** Stream-Highlights (ROADMAP 6.8): Anzahl oder null (noch nicht gesucht), Stand der Clips */
+  highlights: number | null
+  clipsStand: number | null
   /** geschnittene Vorschau (ROADMAP 6.6), sobald gerendert */
   vorschauUrl: string | null
   /** laufender Auftrag (Import, Transkript …) */
@@ -342,6 +359,12 @@ export interface MoinApi {
   schnittExportInfo(id: string): Promise<SchnittExport | null>
   schnittExportSpeichern(id: string): Promise<string | null>
   schnittThumbnail(id: string): Promise<string>
+  /** Stream-Highlights und Shorts (ROADMAP 6.8) */
+  schnittHighlightsStart(id: string): Promise<string>
+  schnittHighlights(id: string): Promise<SchnittHighlight[] | null>
+  schnittClips(id: string, auswahl: { index: number; art: 'clip' | 'short' }[]): Promise<string>
+  schnittClipDateien(id: string): Promise<{ name: string; url: string }[]>
+  schnittClipOrdner(id: string): Promise<void>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */

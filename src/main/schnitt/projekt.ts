@@ -40,6 +40,10 @@ export interface Projekt {
   vorschau?: number
   /** Zeitpunkt des letzten Exports (ROADMAP 6.7) */
   export?: number
+  /** Stream-Highlights (ROADMAP 6.8): Anzahl gefundener Höhepunkte, Facecam-Bereich (null = keine), letzter Clip-Export */
+  highlights?: number
+  facecam?: [number, number, number, number] | null
+  clips?: number
   /** Aufträge am Projekt (Import, Transkript …) in Reihenfolge; die Oberfläche zeigt den ersten, der noch läuft */
   auftraege?: string[]
   fehler?: string | null

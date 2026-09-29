@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SchnittAbschnitt, SchnittExport, SchnittListe, SchnittProjekt } from '@shared/app'
+import type { SchnittAbschnitt, SchnittExport, SchnittHighlight, SchnittListe, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 
 /**
@@ -253,6 +253,70 @@ function Export({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): R
   )
 }
 
+/** Stream-Highlights und Shorts: Höhepunkte finden, als Clip (16:9) oder Short (9:16) exportieren. */
+function Highlights({ p, springe, neuLaden }: { p: SchnittProjekt; springe: (s: number) => void; neuLaden: () => void }): React.JSX.Element {
+  const [liste, setListe] = useState<SchnittHighlight[] | null>(null)
+  const [clips, setClips] = useState<{ name: string; url: string }[]>([])
+  useEffect(() => {
+    if (p.highlights !== null && !p.auftrag) void window.moin.schnittHighlights(p.id).then(setListe)
+    if (p.clipsStand && !p.auftrag) void window.moin.schnittClipDateien(p.id).then(setClips)
+  }, [p.id, p.highlights, p.clipsStand, p.auftrag])
+  const exportiere = (auswahl: { index: number; art: 'clip' | 'short' }[]): void => void window.moin.schnittClips(p.id, auswahl).then(neuLaden)
+  return (
+    <div className="schnitt-fertig">
+      <div className="card-head">
+        <h2>Highlights und Shorts</h2>
+      </div>
+      <p className="muted small">Für Streams: MoinStudio findet die stärksten Momente und macht daraus Clips oder Shorts im Hochformat (Facecam oben, Gameplay unten, Untertitel Wort für Wort).</p>
+      <div className="row wrap">
+        <button className="btn" disabled={!!p.auftrag || !p.transkript} onClick={() => void window.moin.schnittHighlightsStart(p.id).then(neuLaden)}>
+          {p.highlights === null ? 'Höhepunkte finden' : 'Neu suchen'}
+        </button>
+        {liste && liste.length > 0 && (
+          <button className="btn primary" disabled={!!p.auftrag} onClick={() => exportiere(liste.map((_, index) => ({ index, art: 'short' as const })))}>
+            Alle als Shorts
+          </button>
+        )}
+      </div>
+      {liste && liste.length === 0 && <p className="muted">Keine starken Momente gefunden.</p>}
+      {liste?.map((h, i) => (
+        <div key={i} className="schnittstelle">
+          <button className="satz" onClick={() => springe(h.start)}>
+            <span className="muted small">{zeitText(h.start)}</span>
+            <span>
+              <strong>{h.titel}</strong> <span className="badge">{h.wert}/10</span>
+              <span className="muted small"> {Math.round(h.ende - h.start)} s · {h.grund}</span>
+            </span>
+          </button>
+          <span className="row" style={{ marginTop: 0 }}>
+            <button className="btn small" disabled={!!p.auftrag} onClick={() => exportiere([{ index: i, art: 'clip' }])}>
+              Clip
+            </button>
+            <button className="btn small" disabled={!!p.auftrag} onClick={() => exportiere([{ index: i, art: 'short' }])}>
+              Short
+            </button>
+          </span>
+        </div>
+      ))}
+      {clips.length > 0 && (
+        <>
+          <div className="clip-raster">
+            {clips.map((c) => (
+              <figure key={c.name} className={c.name.includes('short') ? 'hoch' : ''}>
+                <video src={c.url} controls preload="metadata" />
+                <figcaption className="muted small">{c.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <button className="btn small" onClick={() => void window.moin.schnittClipOrdner(p.id)}>
+            Ordner mit den Clips öffnen
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void; neuLaden: () => void }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
@@ -334,6 +398,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
         </div>
       )}
       {liste && <Export p={p} neuLaden={neuLaden} />}
+      {p.transkript && <Highlights p={p} springe={springe} neuLaden={neuLaden} />}
       <Transkript id={p.id} bereit={p.transkript} zeit={zeit} springe={springe} liste={liste} setListe={setListe} />
       {p.quelle && (
         <dl className="facts" style={{ marginTop: 12 }}>

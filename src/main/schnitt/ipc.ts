@@ -1,4 +1,4 @@
-import { dialog, ipcMain, type BrowserWindow } from 'electron'
+import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
@@ -18,6 +18,8 @@ import { writeFile } from 'node:fs/promises'
 import { bereichSetzen, umschalten, wunschJob, type WunschPayload } from './bearbeiten'
 import { einstellungen, vorschauJob, type VorschauPayload } from './vorschau'
 import { exportJob, kapitelText, type ExportErgebnis, type ExportPayload } from './export'
+import { clipsJob, highlightJob, type ClipsPayload, type Highlight, type HighlightPayload } from './highlights'
+import { readdir } from 'node:fs/promises'
 import { copyFile } from 'node:fs/promises'
 import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
@@ -48,6 +50,8 @@ export function registerSchnittIpc(
   queue.register('schnitt-wunsch', wunschJob)
   queue.register('schnitt-vorschau', vorschauJob)
   queue.register('schnitt-export', exportJob)
+  queue.register('schnitt-highlights', highlightJob)
+  queue.register('schnitt-clips', clipsJob)
 
   const alsAnsicht = (daten: string, p: Projekt): SchnittProjekt => {
     const ordner = projektOrdner(daten, p.id)
@@ -65,6 +69,8 @@ export function registerSchnittIpc(
       rohschnitt: !!p.rohschnitt,
       einstellungen: einstellungen(p),
       exportiert: !!p.export,
+      highlights: p.highlights ?? null,
+      clipsStand: p.clips ?? null,
       vorschauUrl: p.vorschau ? `${medienUrl(join(ordner, 'vorschau.mp4'))}?v=${p.vorschau}` : null,
       auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null } : null
     }
@@ -230,6 +236,47 @@ export function registerSchnittIpc(
     if (!p?.quelle) throw new Error('Projekt nicht gefunden.')
     const titel = p.export ? ((JSON.parse(await readFile(join(projektOrdner(daten, p.id), 'export.json'), 'utf8')) as ExportErgebnis).titel[0] ?? p.name) : p.name
     return starteVideo(p.export ? join(projektOrdner(daten, p.id), 'export.mp4') : p.quelle.pfad, p.kanal, titel)
+  })
+  // Stream-Highlights und Shorts (ROADMAP 6.8)
+  const neuerAuftrag = async (daten: string, id: string, art: string, titel: string, payload: unknown): Promise<string> => {
+    const auftrag = await queue.enqueue(art, titel, payload)
+    await aendereProjekt(daten, id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
+    return auftrag
+  }
+  ipcMain.handle(IPC.schnittHighlightsStart, async (_e, id: unknown): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const p = await ladeProjekt(daten, String(id))
+    if (!p) throw new Error('Projekt nicht gefunden.')
+    const payload: HighlightPayload = { daten, projekt: p.id, claudeCli: await findClaudeCli() }
+    return neuerAuftrag(daten, p.id, 'schnitt-highlights', `Schnitt: ${p.name} Höhepunkte`, payload)
+  })
+  ipcMain.handle(IPC.schnittHighlights, async (_e, id: unknown): Promise<Highlight[] | null> => {
+    const daten = await datenOrdner(settings)
+    const text = await readFile(join(projektOrdner(daten, String(id)), 'highlights.json'), 'utf8').catch(() => null)
+    return text === null ? null : (JSON.parse(text) as Highlight[])
+  })
+  ipcMain.handle(IPC.schnittClips, async (_e, id: unknown, auswahl: unknown): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const p = await ladeProjekt(daten, String(id))
+    const ffmpeg = await tools.exePath(FFMPEG)
+    const uv = await tools.exePath(UV)
+    if (!p || !ffmpeg || !uv) throw new Error('Projekt, FFmpeg oder uv fehlt.')
+    const profile = await hardware.profiles.load()
+    const liste = (Array.isArray(auswahl) ? auswahl : []).filter((a): a is { index: number; art: 'clip' | 'short' } => typeof a?.index === 'number' && (a.art === 'clip' || a.art === 'short'))
+    if (!liste.length) throw new Error('Nichts ausgewählt.')
+    const payload: ClipsPayload = { daten, projekt: p.id, ffmpeg, encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', uv, pyDir: join(localRoot(), 'py', 'vorlage'), facecamSkript: join(resourceDir('blender'), 'facecam.py'), auswahl: liste }
+    return neuerAuftrag(daten, p.id, 'schnitt-clips', `Schnitt: ${p.name} ${liste.length} Clip(s)`, payload)
+  })
+  ipcMain.handle(IPC.schnittClipDateien, async (_e, id: unknown): Promise<{ name: string; url: string }[]> => {
+    const daten = await datenOrdner(settings)
+    const p = await ladeProjekt(daten, String(id))
+    const ordner = join(projektOrdner(daten, String(id)), 'clips')
+    const namen = (await readdir(ordner).catch(() => [] as string[])).filter((n) => n.endsWith('.mp4')).sort()
+    return namen.map((n) => ({ name: n, url: `${medienUrl(join(ordner, n))}?v=${p?.clips ?? 0}` }))
+  })
+  ipcMain.handle(IPC.schnittClipOrdner, async (_e, id: unknown): Promise<void> => {
+    const daten = await datenOrdner(settings)
+    await shell.openPath(join(projektOrdner(daten, String(id)), 'clips'))
   })
   ipcMain.handle(IPC.schnittListe, async (_e, id: unknown): Promise<Schnittliste | null> => {
     const daten = await datenOrdner(settings)
