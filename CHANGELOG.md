@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-29
+
+> Lebendiger Text auch bei Minecraft-Thumbnails
+
 ### Hinzugefügt
 - Lebendiger Text auch bei Minecraft-Thumbnails: Minecraft-Schrift an einer zufälligen freien Stelle (oben bevorzugt), leicht schräg (pixelscharf gedreht), Farbe passend zum Bild; kräftige Farben haben Vorrang vor Weiß.
 
