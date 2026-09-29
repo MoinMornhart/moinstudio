@@ -149,7 +149,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     scene.camera = cam
 
     def stelle(posen_name, anteil=None):
-        """Pose setzen und Kamera rahmen: Kopf ~60 % der Bildhöhe, Figur in ihrer Bildhälfte (Stilbuch 14.1–14.4)."""
+        """Pose setzen und Kamera rahmen: Kopf ~42 % der Bildhöhe, Figur in ihrer Bildhälfte (Stilbuch 14.1–14.4)."""
         p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in POSEN.get(posen_name, POSEN["neutral"]).items()}
         if s > 0:  # Inhalt links: Pose seitenverkehrt, damit Zeigen und Gesten zum Inhalt gehen
             p = mszene._spiegeln(p)
@@ -162,11 +162,11 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         kopf = fig.kopf_mitte()
         kopf_h = 8 * mfigur.PX * 1.06
         vfov = 2 * math.atan(cam_daten.sensor_width * HOEHE / BREITE / 2 / cam_daten.lens)
-        abstand = kopf_h / (anteil or spec.get("kopf_anteil", 0.6)) / (2 * math.tan(vfov / 2))
+        abstand = kopf_h / (anteil or spec.get("kopf_anteil", 0.42)) / (2 * math.tan(vfov / 2))
         breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
         hoehe_m = breite_m * HOEHE / BREITE
-        # Kopf bei 27 % (bzw. 73 %) der Breite und knapp über der Mitte; Kamera schaut geradeaus
-        ziel = kopf + Vector((-s * (0.5 - 0.27) * breite_m, 0, -(0.56 - 0.5) * hoehe_m))
+        # Kopf bei 22 % (bzw. 78 %) der Breite und auf halber Höhe, Figur nah am Rand (Philip: „etwas weniger vom Skin“)
+        ziel = kopf + Vector((-s * (0.5 - 0.22) * breite_m, 0, -(0.5 - 0.5) * hoehe_m))
         cam.location = ziel + Vector((0, -abstand, 0))
         cam.rotation_euler = (math.radians(90), 0, 0)
         bpy.context.view_layer.update()
@@ -197,10 +197,10 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         kopf, abstand = stelle(pose_name)
         sicht = mszene._gesicht_sichtbar(scene, cam, fig)
     # Liegt der wichtige Punkt hinter der Figur, rückt die Figur zum Rand (Kopf bleibt ganz im Bild);
-    # reicht der Platz nicht, wird die Figur schrittweise kleiner (Kopf 60 → 44 % der Bildhöhe)
+    # reicht der Platz nicht, wird die Figur schrittweise kleiner (Kopf 42 → 31 % der Bildhöhe)
     if spec.get("pfeil_ziel"):
         zu = spec["pfeil_ziel"][0]
-        start = spec.get("kopf_anteil", 0.6)
+        start = spec.get("kopf_anteil", 0.42)
         for anteil in (start, start * 0.87, start * 0.74):
             if anteil != start:
                 kopf, abstand = stelle(pose_name, anteil)

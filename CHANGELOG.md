@@ -13,6 +13,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 ### Geändert
 - Reaction: Figur steht immer gegenüber dem wichtigen Punkt; liegt er in der Mitte, rückt sie zum Rand und wird bei Bedarf kleiner, damit der Pfeil nie auf Philips Kopf zeigt.
 - Reaction: Gesten werden verworfen, wenn sie das Gesicht verdecken oder eine Hand in Wort oder Pfeil ragt; steht die Figur rechts, werden Gesten gespiegelt und zeigen zum Inhalt.
+- Reaction: Figur kleiner und näher am Rand (Kopf ~42 % statt 60 % der Bildhöhe), damit mehr vom Original zu sehen ist (Philip: „etwas weniger vom Skin“).
 - Gefühle ohne Umlaute („muede“, „wuetend“) werden erkannt.
 - Mimik: kein gezeichneter Mund mehr, der Mund aus dem Skin bleibt (nur Lider und Augenringe).
 

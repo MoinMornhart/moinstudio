@@ -97,7 +97,7 @@ export async function reaktionJob(p: ReaktionPayload, ctx: JobContext<{ claudeSe
   const vorgabe = gefuehlAus(p.gefuehl)
   const prompt = `Du hilfst Philip (YouTube-Kanal ${p.kanal}) bei einem Reaction-Thumbnail im Stil von BastiGHGs Zweitkanal und Zarbex.
 ${p.spiel ? `Es ist ein Gaming-Video über das Spiel „${p.spiel}“; das Bild ist ein Spielmotiv (kein fremdes Thumbnail).\n` : ''}Sieh dir das Bild an: ${original}
-Philip wird als sein Minecraft-Skin groß auf einer Bildhälfte stehen (Kopf etwa 60 % der Bildhöhe, auf Brusthöhe
+Philip wird als sein Minecraft-Skin am Rand einer Bildhälfte stehen (Kopf etwa 42 % der Bildhöhe, auf Hüfthöhe
 angeschnitten) und das Original füllt das Bild dahinter.
 
 Bestimme:
