@@ -16,6 +16,29 @@ from PIL import Image
 from rembg import new_session, remove
 
 
+# LaMa (Apache-2.0, Carve/LaMa-ONNX): füllt die Lücke mit echtem Hintergrund statt Verschmieren; CPU reicht
+LAMA = os.environ.get("MOIN_LAMA") or os.path.join(os.environ.get("LOCALAPPDATA", ""), "MoinStudio", "py", "modelle", "lama_fp32.onnx")
+
+
+def lama(arr, maske, groesse=512):
+    """Füllt `maske` (255 = Loch) in `arr` (BGR) mit LaMa; arbeitet auf 512×512 und setzt nur das Loch zurück ins Bild."""
+    try:
+        import onnxruntime as ort
+
+        h, w = arr.shape[:2]
+        sitzung = ort.InferenceSession(LAMA, providers=["CPUExecutionProvider"])
+        bild = cv2.resize(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB), (groesse, groesse), interpolation=cv2.INTER_AREA).astype(np.float32) / 255
+        m = (cv2.resize(maske, (groesse, groesse), interpolation=cv2.INTER_NEAREST) > 127).astype(np.float32)
+        aus = sitzung.run(None, {"image": bild.transpose(2, 0, 1)[None], "mask": m[None, None]})[0][0].transpose(1, 2, 0)
+        if aus.max() <= 1.5:
+            aus = aus * 255
+        aus = cv2.cvtColor(np.clip(aus, 0, 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
+        return cv2.resize(aus, (w, h), interpolation=cv2.INTER_CUBIC)
+    except Exception as fehler:  # Modell kaputt oder zu wenig Speicher: Rückfall auf OpenCV
+        print("MOIN_LAMA_FEHLER", fehler)
+        return None
+
+
 def main(vorlage, ordner, dazu=()):
     os.makedirs(ordner, exist_ok=True)
     bild = Image.open(vorlage).convert("RGB")
@@ -51,12 +74,15 @@ def main(vorlage, ordner, dazu=()):
     for x_0, y_0, x_1, y_1 in dazu:
         groesser[int(y_0 * h):int(y_1 * h), int(x_0 * w):int(x_1 * w)] = 255
     arr = cv2.cvtColor(np.array(bild), cv2.COLOR_RGB2BGR)
-    klein = cv2.resize(arr, (w // 2, h // 2))
-    mk = cv2.resize(groesser, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST)
-    gefuellt = cv2.inpaint(klein, mk, 21, cv2.INPAINT_TELEA)
-    gefuellt = cv2.resize(gefuellt, (w, h))
-    gefuellt = cv2.GaussianBlur(gefuellt, (0, 0), 3)
-    rand = cv2.GaussianBlur(groesser.astype(np.float32) / 255, (0, 0), 12)[..., None]
+    gefuellt = lama(arr, groesser) if os.path.exists(LAMA) else None
+    if gefuellt is None:
+        # Rückfall ohne Modell: OpenCV füllt weich (verwaschen, aber immer verfügbar)
+        klein = cv2.resize(arr, (w // 2, h // 2))
+        mk = cv2.resize(groesser, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST)
+        gefuellt = cv2.inpaint(klein, mk, 21, cv2.INPAINT_TELEA)
+        gefuellt = cv2.resize(gefuellt, (w, h))
+        gefuellt = cv2.GaussianBlur(gefuellt, (0, 0), 3)
+    rand = cv2.GaussianBlur(groesser.astype(np.float32) / 255, (0, 0), 6)[..., None]
     ergebnis = (arr * (1 - rand) + gefuellt * rand).astype(np.uint8)
     cv2.imwrite(os.path.join(ordner, "hintergrund.png"), ergebnis)
     cv2.imwrite(os.path.join(ordner, "maske.png"), groesser)

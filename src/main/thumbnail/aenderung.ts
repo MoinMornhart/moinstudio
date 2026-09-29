@@ -42,7 +42,8 @@ pfeil_ziel ([u, v] oder weglassen = kein Pfeil), sperren (Kästen, die Text nich
 unten in der Ecke), hintergrund_hell (0–1), zufall (Zahl: neuer Wert = neuer Textplatz und neue Neigung).`,
   spielvorlage: `Felder: pose (Posen-Name oder eigene Winkel wie oben), blick (Körperdrehung, positiv = nach rechts), ansicht (vorn|hinten),
 mimik, kopf ([u, v] Kopfmitte), kopf_anteil (Kopfhöhe als Anteil der Bildhöhe), kopf_drehung, licht_seite (links|rechts),
-requisit ({gltf, hand, laenge_px} – laenge_px = Größe des Gegenstands, weglassen = ohne Gegenstand), linse (mm).`
+requisit ({gltf, hand, laenge_px} – laenge_px = Größe des Gegenstands, weglassen = ohne Gegenstand), ziel ([u, v]: dorthin zeigt
+der Arm mit dem Gegenstand), linse (mm).`
 }
 
 export function aenderungsPrompt(p: Pick<AenderungPayload, 'art' | 'wunsch' | 'bild' | 'formatHilfe'>, szene: string): string {

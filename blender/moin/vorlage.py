@@ -62,6 +62,32 @@ def _requisit(pfad, knoten, laenge_m):
     return leer
 
 
+def _ziele(fig, p, seite, punkt):
+    """Sucht heben/drehen des Arms `seite`, sodass Schulter → Faust auf `punkt` zeigt (grob, dann fein). Der zweite
+    Arm stützt: gleiche Richtung, etwas gebeugt. Gibt die gefundenen Winkel zurück."""
+    arm = f"arm_{seite}"
+    andere = "arm_l" if seite == "r" else "arm_r"
+
+    def fehler(heben, drehen):
+        q = dict(p)
+        q[arm] = {**p.get(arm, {}), "heben": heben, "drehen": drehen, "seitlich": 0, "beugen": 4}
+        mfigur.pose(fig, q)
+        schulter = fig.teile[arm].matrix_world.translation
+        richtung = (fig.hand(seite) - schulter).normalized()
+        return richtung.angle((punkt - schulter).normalized())
+
+    beste = min(((fehler(h, d), h, d) for h in range(0, 181, 20) for d in range(-90, 91, 20)))
+    _, h0, d0 = beste
+    beste = min(((fehler(h, d), h, d) for h in range(h0 - 16, h0 + 17, 4) for d in range(d0 - 16, d0 + 17, 4)))
+    _, h, d = beste
+    p[arm] = {**p.get(arm, {}), "heben": h, "drehen": d, "seitlich": 0, "beugen": 4}
+    # Stützhand: zur Waffenhand hin (drehen Richtung Körpermitte), leicht gebeugt
+    zur_mitte = -20 if andere == "arm_l" else 20
+    p[andere] = {"heben": max(0, h - 6), "drehen": d + zur_mitte, "seitlich": -10, "beugen": 35}
+    mfigur.pose(fig, p)
+    return {"heben": h, "drehen": d, "fehler_grad": round(math.degrees(beste[0]), 1)}
+
+
 def baue_vorlage(spec, ausgabe, bericht=None):
     """spec: {hintergrund, skin, slim, pose, mimik, kopf: [u, v], kopf_anteil, blick, kopf_drehung,
     requisit: {gltf, knoten, hand: r|l, laenge_px}, licht_seite: rechts|links, samples, geraet}"""
@@ -106,6 +132,14 @@ def baue_vorlage(spec, ausgabe, bericht=None):
 
     info = {}
     r = spec.get("requisit")
+    if spec.get("ziel"):
+        # Worauf die Person zielt oder zeigt ([u, v] im Bild): den Arm mit dem Gegenstand genau dorthin richten.
+        # Der Zielpunkt liegt auf dem Sehstrahl durch (u, v), deutlich hinter der Figur (im Bild „in der Szene“).
+        zu, zv = spec["ziel"]
+        strahl = Vector(((zu - 0.5) * breite_m, abstand, (0.5 - zv) * hoehe_m)).normalized()
+        punkt = cam.location + strahl * abstand * 1.7
+        info["ziel"] = [zu, zv]
+        info["arm"] = _ziele(fig, p, (r or {}).get("hand", "r"), punkt)
     if r and os.path.exists(r["gltf"]):
         seite = r.get("hand", "r")
         teil = fig.teile[f"arm_{seite}"]

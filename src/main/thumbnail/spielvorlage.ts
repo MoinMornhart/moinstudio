@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { appendFile, copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { runClaudeInJob } from '../claude/run'
 import { runBlender } from '../jobs/blender'
@@ -43,6 +43,7 @@ export interface VorlagenAnalyse {
   mimik?: string
   licht_seite?: 'links' | 'rechts'
   ansicht?: 'vorn' | 'hinten'
+  ziel?: [number, number]
   blick?: number
   gegenstand?: { box: Box; suchwort: string; hand?: 'r' | 'l' }
   titel_boxen?: Box[]
@@ -62,6 +63,7 @@ const SCHEMA = {
     mimik: { type: 'string' },
     licht_seite: { type: 'string', enum: ['links', 'rechts'] },
     ansicht: { type: 'string', enum: ['vorn', 'hinten'] },
+    ziel: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
     blick: { type: 'number' },
     gegenstand: { type: 'object', properties: { box: BOX, suchwort: { type: 'string' }, hand: { type: 'string', enum: ['r', 'l'] } } },
     titel_boxen: { type: 'array', items: BOX },
@@ -86,11 +88,30 @@ const existiert = (p: string): Promise<boolean> => stat(p).then(() => true, () =
 /** Python-Umgebung für Freistellen und Titel (rembg, OpenCV) beim ersten Gebrauch einrichten – läuft auf der CPU. */
 export async function sicherePython(uv: string, pyDir: string, ctx: JobContext<unknown>): Promise<string> {
   const python = join(pyDir, 'Scripts', 'python.exe')
+  await sichereLama(pyDir, ctx)
   if (await existiert(python)) return python
   ctx.progress(null, 'Richte die Bildwerkzeuge ein (einmalig, ca. 700 MB) …')
   await lauf(uv, ['venv', pyDir, '--python', '3.12'], ctx)
   await lauf(uv, ['pip', 'install', '--python', python, 'rembg==2.0.*', 'onnxruntime', 'opencv-python-headless', 'pillow'], ctx)
   return python
+}
+
+/** LaMa-Modell (Apache-2.0, 208 MB) zum sauberen Auffüllen, wo die Person war; ohne Modell füllt OpenCV weich auf. */
+export const LAMA_URL = 'https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx'
+export const lamaPfad = (pyDir: string): string => join(pyDir, '..', 'modelle', 'lama_fp32.onnx')
+async function sichereLama(pyDir: string, ctx: JobContext<unknown>): Promise<void> {
+  const ziel = lamaPfad(pyDir)
+  if (await existiert(ziel)) return
+  ctx.progress(null, 'Lade das Modell zum Auffüllen des Hintergrunds (einmalig, 208 MB) …')
+  try {
+    const r = await fetch(LAMA_URL)
+    if (!r.ok) return
+    await mkdir(join(ziel, '..'), { recursive: true })
+    await writeFile(`${ziel}.teil`, Buffer.from(await r.arrayBuffer()))
+    await rename(`${ziel}.teil`, ziel)
+  } catch {
+    // ohne Modell geht es mit OpenCV weiter
+  }
 }
 
 /** Das beste CC0-Modell von Poly Haven zu einem Suchwort (Name, Tags, Kategorien), sonst null. */
@@ -171,8 +192,11 @@ ${beispiele}
 - ansicht: "vorn", wenn man das Gesicht der Person sieht, "hinten", wenn man sie von hinten sieht (z. B. Third-Person-Spiel)
 - blick: wohin der Körper gedreht ist, in Grad: 0 = frontal zur Kamera (bzw. bei hinten: gerade ins Bild hinein),
   positiv = zur rechten Bildseite, negativ = zur linken (z. B. 40, wenn die Person nach rechts zielt)
+- ziel: [u, v], falls die Person auf etwas zielt oder zeigt (z. B. den Gegner) – der Arm mit dem Gegenstand wird
+  automatisch genau dorthin gerichtet; sonst weglassen
 - licht_seite: von welcher Seite das Hauptlicht auf die Person fällt
-- gegenstand: falls die Person etwas in der Hand hält: box [x0, y0, x1, y1] um den Gegenstand (ohne Hand), suchwort
+- gegenstand: falls die Person etwas in der Hand hält: box [x0, y0, x1, y1] um den Gegenstand samt Effekten wie Mündungsfeuer
+  (ohne Hand), suchwort
   (englisch, ein bis zwei Wörter, z. B. "pistol", "sword", "controller", "camera") und hand ("r" = die im Bild linke
   Hand der Person, "l" = die im Bild rechte)
 - titel_boxen: Kästen um weiße oder helle Titelschrift, die über der Person liegt (sie wird danach wieder obendrauf gelegt)
@@ -201,7 +225,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   const python = await sicherePython(p.uv, p.pyDir, c)
   ctx.progress(25, 'Entferne die Person aus der Vorlage …')
   const extra = a.gegenstand?.box ? [a.gegenstand.box.join(',')] : []
-  await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra], c)
+  await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra], c, { ...process.env, MOIN_LAMA: lamaPfad(p.pyDir) })
 
   const person = JSON.parse(await readFile(join(p.ausgabe, 'person.json'), 'utf8').catch(() => '{}')) as { box?: Box }
   let requisit: string | null = null
@@ -222,8 +246,9 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     kopf_anteil: kopfAnteil(a.kopf_anteil, person),
     licht_seite: a.licht_seite ?? 'rechts',
     ansicht: a.ansicht ?? 'vorn',
+    ...(a.ziel?.length === 2 ? { ziel: a.ziel } : {}),
     ...(typeof a.blick === 'number' ? { blick: Math.max(-90, Math.min(90, a.blick)) } : {}),
-    requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: 8 } : undefined,
+    requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: 10 } : undefined,
     samples: p.blender.samples,
     geraet: p.blender.geraet
   }
