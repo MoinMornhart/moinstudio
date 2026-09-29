@@ -20,7 +20,47 @@ def _compositor_baum(scene):
     return scene.node_tree, 4
 
 
-def farbkorrektur(scene, saettigung=1.18, kontrast=1.06):
+def _mischen(baum, faktor_quelle, bild_quelle, farbe=(0, 0, 0, 1)):
+    """Bild zur Farbe hin mischen, Faktor aus faktor_quelle (Blender 4: MixRGB, Blender 5: Mix-Knoten)."""
+    try:
+        mix = baum.nodes.new("CompositorNodeMixRGB")
+        baum.links.new(faktor_quelle, mix.inputs[0])
+        baum.links.new(bild_quelle, mix.inputs[1])
+        mix.inputs[2].default_value = farbe
+        return mix.outputs[0]
+    except RuntimeError:
+        mix = baum.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        baum.links.new(faktor_quelle, mix.inputs["Factor"])
+        baum.links.new(bild_quelle, mix.inputs["A"])
+        mix.inputs["B"].default_value = farbe
+        return mix.outputs["Result"]
+
+
+def _vignette(baum, bild, staerke):
+    """Weiche Randabdunklung wie bei den Vorbildern: Blick bleibt in der Bildmitte, Ränder treten zurück."""
+    maske = baum.nodes.new("CompositorNodeEllipseMask")
+    maske.inputs["Size"].default_value = (0.95, 0.85)  # Blender 4.5 und 5: Größe als Eingang
+    weich = baum.nodes.new("CompositorNodeBlur")
+    if hasattr(weich, "size_x"):  # Blender 4
+        weich.filter_type = "GAUSS"
+        weich.use_relative = False
+        weich.size_x = weich.size_y = 260
+    else:  # Blender 5: Größe in Pixeln als Eingang
+        weich.inputs["Size"].default_value = (260, 260)
+    baum.links.new(maske.outputs[0], weich.inputs[0])
+    try:
+        umkehr = baum.nodes.new("CompositorNodeMath")
+    except RuntimeError:  # Blender 5
+        umkehr = baum.nodes.new("ShaderNodeMath")
+    umkehr.operation = "MULTIPLY_ADD"
+    umkehr.inputs[1].default_value = -staerke
+    umkehr.inputs[2].default_value = staerke
+    baum.links.new(weich.outputs[0], umkehr.inputs[0])
+    return _mischen(baum, umkehr.outputs[0], bild)
+
+
+def farbkorrektur(scene, saettigung=1.18, kontrast=1.06, vignette=0.35):
     baum, version = _compositor_baum(scene)
     for n in list(baum.nodes):
         baum.nodes.remove(n)
@@ -44,7 +84,10 @@ def farbkorrektur(scene, saettigung=1.18, kontrast=1.06):
         ziel = aus.inputs["Image"]
     baum.links.new(ein.outputs["Image"], hs.inputs["Image"])
     baum.links.new(hs.outputs["Image"], bc.inputs["Image"])
-    baum.links.new(bc.outputs["Image"], ziel)
+    ergebnis = bc.outputs["Image"]
+    if vignette > 0:
+        ergebnis = _vignette(baum, ergebnis, vignette)
+    baum.links.new(ergebnis, ziel)
 
 
 def gesichtslicht(scene, cam, kopf, staerke=60.0):
@@ -55,6 +98,7 @@ def gesichtslicht(scene, cam, kopf, staerke=60.0):
     licht.color = (1.0, 1.0, 1.0)  # neutral: warmes Gesichtslicht färbt Hauttöne gelb
     ob = bpy.data.objects.new("gesicht", licht)
     scene.collection.objects.link(ob)
+    ob.visible_camera = False  # Lampe selbst nie im Bild (unscharfe Scheibe)
     von = cam.matrix_world.translation
     richtung = (kopf - von)
     ob.location = von + Vector((0, 0, 0.45)) - richtung.normalized() * 0.2

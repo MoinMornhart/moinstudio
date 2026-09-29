@@ -60,9 +60,26 @@ def _randlicht(scene, figur):
     rand.size = 1.2
     ro = bpy.data.objects.new("rand", rand)
     scene.collection.objects.link(ro)
+    ro.visible_camera = False
     kopf = figur.kopf_mitte()
     ro.location = kopf + Vector((-1.8, 2.2, 1.0))
     ro.rotation_euler = (kopf - ro.location).to_track_quat("-Z", "Y").to_euler()
+
+
+def _pflanzen_vor_kamera_weg(cam, ziel, abstand=0.8):
+    """Gras und Blumen direkt vor der Linse entfernen: unscharf werden sie zu Flecken über dem Gesicht."""
+    ob = bpy.data.objects.get("pflanzen")
+    if not ob:
+        return
+    import bmesh
+    von = cam.matrix_world.translation
+    grenze = (ziel - von).length * abstand
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    weg = [f for f in bm.faces if (ob.matrix_world @ f.calc_center_median() - von).length < grenze]
+    bmesh.ops.delete(bm, geom=weg, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
 
 
 def _bildpunkt(scene, cam, p):
@@ -122,7 +139,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     erlaubt = (lambda pos: pos.x > (kante + 2.5) * BLOCK) if k.get("ueber_abgrund") else None
     fehler = mkamera.rahme(scene, cam, oben, unten, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
                            gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt)
-    cam_data.dof.aperture_fstop = r.get("blende", 4)
+    cam_data.dof.aperture_fstop = r.get("blende", 2.0)
+    _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)
     mlook.gesichtslicht(scene, cam, (oben + unten) / 2, r.get("gesichtslicht", 10.0))
 
     gehalten = {}
@@ -143,7 +161,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     except TypeError:
         pass
     scene.view_settings.exposure = r.get("belichtung", -0.3)
-    mlook.farbkorrektur(scene, r.get("saettigung", 1.08), r.get("kontrast", 1.06))
+    mlook.farbkorrektur(scene, r.get("saettigung", 1.08), r.get("kontrast", 1.06), r.get("vignette", 0.45))
 
     info = {"kamera_abweichung": round(fehler, 4), "linse": cam_data.lens, "figuren": {}, "items": {}}
     bpy.context.view_layer.update()

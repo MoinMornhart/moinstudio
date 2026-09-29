@@ -10,6 +10,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Echte Mobs in Blender (ROADMAP 4.6): 31 Mobs mit Originalmodell (Mojangs bedrock-samples) und Originaltextur aus der Spieldatei – Zombie, Skelett, Creeper, Enderman, Warden, Ghast, Blaze, Hexe, Dorfbewohner, Golems, Tiere und mehr. Im Szenen-Bauer mit Position, Größe und Blick zu einer Figur; der Bericht nennt die Bildfläche jedes Mobs.
 
 ### Geändert
+- Look näher an den Vorbildern: Hintergrund unschärfer (Blende 2,0) und weiche Randabdunklung (Blender 4 und 5); Gras und Blumen direkt vor der Linse werden entfernt, Lampen sind für die Kamera unsichtbar.
 - Pose „Schreck“: zurückweichen mit beiden Händen neben dem Kopf, damit Gesicht und Mobs frei bleiben; Wiese mit weniger dichtem Gras.
 
 ## [0.2.0] - 2026-09-29
