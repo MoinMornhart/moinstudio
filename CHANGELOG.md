@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-09-29
+
+> Planung: Board
+
 ### Hinzugefügt
 
 - Planung: neuer Reiter mit Board je Kanal (Idee, Aufnahme, Schnitt, Thumbnail, Upload, Veröffentlicht). Karten lassen sich anlegen, per Maus verschieben und mit Notizen, Checkliste und Upload-Termin bearbeiten. Änderungen vom anderen Gerät erscheinen von selbst (ROADMAP 7.3).
