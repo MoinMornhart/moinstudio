@@ -102,6 +102,24 @@ def klippe(seed=7, kante=2, tiefe=20, grund="water", gegenseite=True, breite=(-2
     return welt
 
 
+def bepflanzen(welt, seed=3, frei_radius=2.0, dichte=0.42):
+    """Gras und Blumen auf allen freien Grasblöcken (wie im Ebenen-Biom), um die Figur herum frei."""
+    rnd = random.Random(seed)
+    blumen = ["dandelion", "poppy", "cornflower", "oxeye_daisy", "azure_bluet"]
+    liste = []
+    for (x, y, z), art in welt.items():
+        if art != "grass_block" or (x, y, z + 1) in welt:
+            continue
+        if math.hypot(x + 0.5, y + 0.5) < frei_radius:
+            continue
+        r = rnd.random()
+        if r < 0.03:
+            liste.append((x, y, z + 1, rnd.choice(blumen)))
+        elif r < dichte:
+            liste.append((x, y, z + 1, "fern" if rnd.random() < 0.08 else "short_grass"))
+    return liste
+
+
 def wolken(texturen_ordner, hoehe=34, zentrum=(10, 40), groesse=64, zelle=6, collection=None):
     """Echte Minecraft-Wolken aus `environment/clouds.png` (jedes Pixel = eine Wolkenzelle) als flache Quader."""
     pfad = os.path.join(texturen_ordner, "environment", "clouds.png")
@@ -219,7 +237,9 @@ def dunst(von, bis, dichte=0.035, farbe=(0.62, 0.78, 1.0), collection=None):
 
 def baue_klippe(texturen_ordner, **kw):
     tex = bloecke.Texturen(texturen_ordner)
-    ob = bloecke.baue(klippe(**kw), tex, "klippe")
+    raster = klippe(**kw)
+    ob = bloecke.baue(raster, tex, "klippe")
+    bloecke.baue_pflanzen(bepflanzen(raster), tex)
     kante, tiefe = kw.get("kante", 2), kw.get("tiefe", 20)
     if not kw.get("gegenseite", True):
         meer(tex, tiefe, von_x=kante + 1)

@@ -72,7 +72,7 @@ def _rgba(node, name):
 
 # Luftperspektive (Stilbuch 6/7): Oberflächen mischen sich mit der Entfernung zur Kamera in Dunstfarbe.
 # Ohne Volumen – so bleibt das Sonnenlicht voll und die Renderzeit gleich.
-DUNST = {"farbe": (0.62, 0.80, 1.0), "halbwert": 160.0}
+DUNST = {"farbe": (0.42, 0.66, 1.0), "halbwert": 160.0}
 
 
 def dunst_einbauen(mat):
@@ -226,6 +226,61 @@ def baue(welt, texturen, name="welt", collection=None, versatz=(0.0, 0.0, 0.0)):
             f = w / h if h > w else 1.0
             uvs.extend([(0, 1 - f), (1, 1 - f), (1, 1), (0, 1)])
             mat_idx.append(mat_nr[key])
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    layer = me.uv_layers.new(name="uv")
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            layer.data[li].uv = uvs[me.loops[li].vertex_index]
+    for m in mats:
+        me.materials.append(m)
+    for poly, mi in zip(me.polygons, mat_idx):
+        poly.material_index = mi
+    me.update()
+    ob = bpy.data.objects.new(name, me)
+    col.objects.link(ob)
+    return ob
+
+
+# Pflanzen (Stilbuch 7: Welt nie leer): gekreuzte Flächen mit echter Textur, eingefärbt wie im Spiel
+PFLANZEN = {
+    "short_grass": GRAS,
+    "fern": GRAS,
+    "tall_grass_bottom": GRAS,
+    "tall_grass_top": GRAS,
+    "dandelion": None,
+    "poppy": None,
+    "cornflower": None,
+    "oxeye_daisy": None,
+    "azure_bluet": None,
+}
+
+
+def baue_pflanzen(pflanzen, texturen, name="pflanzen", collection=None):
+    """`pflanzen`: Liste (x, y, z, art) – die Pflanze steht im Luftblock (x, y, z) auf dem Block darunter."""
+    col = collection or bpy.context.scene.collection
+    verts, faces, uvs, mat_idx, mats, nr = [], [], [], [], [], {}
+    for x, y, z, art in pflanzen:
+        if art not in nr:
+            nr[art] = len(mats)
+            mats.append(texturen.material(art, PFLANZEN.get(art), None, True, 0.0))
+        img = mats[nr[art]].node_tree.nodes.get("Image Texture").image
+        w, h = img.size
+        f = w / h if h > w else 1.0
+        # leicht versetzt, damit Reihen nicht wie gestempelt wirken (fester Versatz je Position)
+        ox = (((x * 73856093) ^ (y * 19349663)) % 7 - 3) * 0.04
+        oy = (((x * 83492791) ^ (y * 2654435761)) % 7 - 3) * 0.04
+        cx, cy = x + 0.5 + ox, y + 0.5 + oy
+        z0, z1 = (z - 1) * BLOCK, z * BLOCK
+        for (ax, ay), (bx, by) in (((-0.45, -0.45), (0.45, 0.45)), ((-0.45, 0.45), (0.45, -0.45))):
+            b = len(verts)
+            verts += [((cx + ax) * BLOCK, (cy + ay) * BLOCK, z0), ((cx + bx) * BLOCK, (cy + by) * BLOCK, z0),
+                      ((cx + bx) * BLOCK, (cy + by) * BLOCK, z1), ((cx + ax) * BLOCK, (cy + ay) * BLOCK, z1)]
+            faces.append((b, b + 1, b + 2, b + 3))
+            uvs += [(0, 1 - f), (1, 1 - f), (1, 1), (0, 1)]
+            mat_idx.append(nr[art])
+    if not faces:
+        return None
     me = bpy.data.meshes.new(name)
     me.from_pydata(verts, [], faces)
     layer = me.uv_layers.new(name="uv")

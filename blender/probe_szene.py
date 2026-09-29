@@ -29,35 +29,9 @@ mfigur.pose(fig, POSEN[pose_name])
 mwelt.baue_klippe(tex, kante=int(env("MOIN_KANTE", "2")), tiefe=int(env("MOIN_TIEFE", "20")), gegenseite=env("MOIN_GEGENSEITE", "1") == "1")
 mwelt.wolken(tex)
 
-# Himmel: kräftiges Cyan-Blau, nach unten heller (Stilbuch 7.2)
-world = bpy.data.worlds.new("himmel")
-scene.world = world
-world.use_nodes = True
-nt = world.node_tree
-bg = nt.nodes["Background"]
-sky = nt.nodes.new("ShaderNodeTexGradient")
-coord = nt.nodes.new("ShaderNodeTexCoord")
-mapping = nt.nodes.new("ShaderNodeMapping")
-mapping.inputs["Rotation"].default_value = (0, math.radians(-90), 0)
-ramp = nt.nodes.new("ShaderNodeValToRGB")
-ramp.color_ramp.elements[0].position = 0.5
-ramp.color_ramp.elements[0].color = (0.62, 0.80, 1.0, 1)  # Horizont = Dunstfarbe (nahtloser Übergang)
-ramp.color_ramp.elements[1].position = 0.75
-ramp.color_ramp.elements[1].color = (0.08, 0.38, 1.0, 1)
-nt.links.new(coord.outputs["Generated"], mapping.inputs["Vector"])
-nt.links.new(mapping.outputs["Vector"], sky.inputs["Vector"])
-nt.links.new(sky.outputs["Fac"], ramp.inputs["Fac"])
-nt.links.new(ramp.outputs["Color"], bg.inputs["Color"])
-bg.inputs["Strength"].default_value = float(env("MOIN_HIMMEL", "1.2"))
-
-# Sonne von vorn und von der Themenseite, Winkel 4°
-sonne = bpy.data.lights.new("sonne", "SUN")
-sonne.energy = float(env("MOIN_SONNE", "4.5"))
-sonne.angle = math.radians(4)
-sonne.color = (1.0, 0.95, 0.86)
-so = bpy.data.objects.new("sonne", sonne)
-scene.collection.objects.link(so)
-so.rotation_euler = (math.radians(46), 0, math.radians(38))
+# Himmel mit Wolken und Sonne (Stilbuch 6/7.2)
+from moin import himmel as mhimmel  # noqa: E402
+mhimmel.baue(scene, env("MOIN_HIMMEL_ART", "tag"))
 
 # Randlicht hinten auf der abgewandten Seite
 rand = bpy.data.lights.new("rand", "AREA")
