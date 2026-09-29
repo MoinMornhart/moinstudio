@@ -191,8 +191,10 @@ export function begrenzeWinkel(w: Record<string, unknown>): Record<string, unkno
  * Kopfgröße (Anteil der Bildhöhe): Claudes Schätzung, aber so groß, dass die Figur (etwa 2,2 Kopfbreiten breit) die
  * entfernte Person weitgehend abdeckt. Höchstens +15 % (die Personenbreite enthält oft den ausgestreckten Arm).
  */
-export function kopfAnteil(geschaetzt: number | undefined, person: { box?: Box }): number {
-  const basis = Math.min(0.7, Math.max(0.15, geschaetzt || 0.35))
+export function kopfAnteil(geschaetzt: number | undefined, person: { box?: Box; hoehe?: number }): number {
+  // Untergrenze aus der erkannten Person: ein Minecraft-Kopf ist ein Viertel der Figurhöhe (ein Mensch ~⅐), bei einer
+  // ganz sichtbaren Person muss der Kopf also größer sein als ihr echter, damit der Körper sie abdeckt
+  const basis = Math.min(0.7, Math.max(0.15, geschaetzt || 0.35, (person.hoehe ?? 0) * 0.25))
   const b = person.box
   const ausBreite = b ? ((b[2] - b[0]) * 1280) / 2.2 / 720 : 0
   return Math.min(0.6, Math.max(basis, Math.min(ausBreite, basis * 1.15)))
@@ -222,10 +224,26 @@ export function freundePlaetze(a: Pick<VorlagenAnalyse, 'kopf' | 'kopf_anteil' |
   })
 }
 
+/** Deckt die Figur weniger als 55 % der entfernten Person ab, wird sie um 20 % größer (höchstens Kopf 70 % der Bildhöhe). */
+export function groesserBeiLuecke(kopfAnteil: number, deckung: number | undefined): number {
+  if (deckung === undefined || deckung >= 0.55) return kopfAnteil
+  // Fläche wächst mit dem Quadrat der Größe: Faktor √(0,65 / Deckung), mindestens 1,2, höchstens 1,6
+  const faktor = Math.min(1.6, Math.max(1.2, Math.sqrt(0.65 / Math.max(deckung, 0.01))))
+  return Math.min(0.7, Math.round(kopfAnteil * faktor * 1000) / 1000)
+}
+
 /** Argumente für vorlage_titel.py aus der Analyse (neue Form mit Farbe, ältere Kästen weiter unterstützt). */
+/**
+ * Titel, die wirklich über der Person liegen: gültige Farbe und höchstens ein Drittel der Bildfläche. Riesige Logos
+ * (z. B. das goldene „007“ hinter Bond) sind Hintergrund – die dürfen weder entfernt noch über die Figur gelegt werden.
+ */
+export function echteTitel(a: Pick<VorlagenAnalyse, 'titel'>): { box: Box; farbe: string }[] {
+  return (a.titel ?? []).filter((t) => t.box?.length === 4 && /^#[0-9a-f]{6}$/i.test(t.farbe) && (t.box[2] - t.box[0]) * (t.box[3] - t.box[1]) <= 0.33)
+}
+
 export function titelArgumente(a: Pick<VorlagenAnalyse, 'titel' | 'titel_boxen' | 'logo_boxen'>): string[] {
   return [
-    ...(a.titel ?? []).filter((t) => t.box?.length === 4 && /^#[0-9a-f]{6}$/i.test(t.farbe)).map((t) => `farbe=${t.farbe}:${t.box.join(',')}`),
+    ...echteTitel(a).map((t) => `farbe=${t.farbe}:${t.box.join(',')}`),
     ...(a.titel_boxen ?? []).map((b) => b.join(',')),
     ...(a.logo_boxen ?? []).map((b) => `logo:${b.join(',')}`)
   ]
@@ -254,8 +272,10 @@ ${beispiele}
   (ohne Hand), suchwort
   (englisch, ein bis zwei Wörter, z. B. "pistol", "sword", "controller", "camera") und hand ("r" = die im Bild linke
   Hand der Person, "l" = die im Bild rechte)
-- titel: alle Titel, Schriftzüge und Logos im Bild als Liste {box: [x0, y0, x1, y1], farbe: "#rrggbb"} – die Farbe
-  ist die Farbe der Buchstaben selbst (z. B. "#111111" für schwarze, "#ffffff" für weiße Schrift); je Farbe ein Eintrag
+- titel: nur Titel, Schriftzüge und Logos, die VOR der Person liegen oder sie teilweise überdecken, als Liste
+  {box: [x0, y0, x1, y1], farbe: "#rrggbb"} – die Farbe ist die der Buchstaben selbst (z. B. "#111111" für schwarze,
+  "#ffffff" für weiße Schrift); je Farbe ein Eintrag. Große Logos oder Buchstaben im Hintergrund HINTER der Person
+  (z. B. ein riesiges „007“, vor dem sie steht) gehören nicht dazu – sonst leere Liste
 ${freunde.length ? `- weitere: Philip bringt ${freunde.join(' und ')} mit. Sind weitere Personen im Bild, gib sie hier an (die wichtigsten
   zuerst, höchstens ${freunde.length}): kopf, kopf_anteil, pose oder winkel, ansicht, blick wie oben – sie werden durch die Freunde ersetzt
 ` : ''}${wunsch ? `\nPhilip wünscht zusätzlich: „${wunsch}“ – berücksichtige das bei Pose, Mimik und Gegenstand.\n` : ''}
@@ -287,9 +307,9 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   ctx.progress(25, 'Entferne die Person aus der Vorlage …')
   const extra = a.gegenstand?.box ? [a.gegenstand.box.join(',')] : []
   const ersetzt = Math.min(p.freunde?.length ?? 0, a.weitere?.length ?? 0)
-  await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra, `--personen=${1 + ersetzt}`], c, { ...process.env, MOIN_LAMA: lamaPfad(p.pyDir) })
+  await lauf(python, [join(p.blenderDir, 'freistellen.py'), vorlage, p.ausgabe, ...extra, `--personen=${1 + ersetzt}`, ...echteTitel(a).map((t) => `--titel=${t.farbe}:${t.box.join(',')}`)], c, { ...process.env, MOIN_LAMA: lamaPfad(p.pyDir) })
 
-  const person = JSON.parse(await readFile(join(p.ausgabe, 'person.json'), 'utf8').catch(() => '{}')) as { box?: Box }
+  const person = JSON.parse(await readFile(join(p.ausgabe, 'person.json'), 'utf8').catch(() => '{}')) as { box?: Box; hoehe?: number }
   let requisit: string | null = null
   if (a.gegenstand?.suchwort) {
     ctx.progress(40, `Suche ein echtes 3D-Modell: ${a.gegenstand.suchwort} …`)
@@ -312,16 +332,29 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     ...(typeof a.blick === 'number' ? { blick: Math.max(-90, Math.min(90, a.blick)) } : {}),
     requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: 10 } : undefined,
     ...(p.freunde?.length ? { freunde: freundePlaetze(a, p.freunde) } : {}),
+    maske: join(p.ausgabe, 'maske.png'),
     samples: p.blender.samples,
     geraet: p.blender.geraet
   }
   const render = join(p.ausgabe, 'render.png')
+  // Vorabprüfung (schnell, ohne Render): deckt die Figur die entfernte Person genug ab? Sonst bleibt deren aufgefüllter
+  // Umriss als „Geist“ sichtbar – dann wird die Figur größer (höchstens dreimal, Kopf bleibt im Bild)
+  for (let versuch = 0; versuch < 3; versuch++) {
+    await writeFile(join(p.ausgabe, 'pruefung.json'), JSON.stringify({ ...spec, nur_pruefen: true }, null, 1))
+    await runBlender({ exe: p.blender.exe, mesa: p.blender.mesa, script: join(p.blenderDir, 'render_vorlage.py'), args: [join(p.ausgabe, 'pruefung.json'), render, join(p.ausgabe, 'pruefung.bericht.json')] }, c)
+    const pruefung = JSON.parse(await readFile(join(p.ausgabe, 'pruefung.bericht.json'), 'utf8').catch(() => '{}')) as { deckung?: number }
+    const neu = groesserBeiLuecke(spec.kopf_anteil, pruefung.deckung)
+    if (neu === spec.kopf_anteil) break
+    ctx.progress(50 + versuch * 3, `Figur deckt die alte Person nur zu ${Math.round((pruefung.deckung ?? 0) * 100)} % ab – größer …`)
+    spec.kopf_anteil = neu
+  }
   await writeFile(join(p.ausgabe, 'spec.json'), JSON.stringify(spec, null, 1))
   const { code } = await runBlender(
     { exe: p.blender.exe, mesa: p.blender.mesa, script: join(p.blenderDir, 'render_vorlage.py'), args: [join(p.ausgabe, 'spec.json'), render, join(p.ausgabe, 'bericht.json')] },
     c
   )
-  const bericht = JSON.parse(await readFile(join(p.ausgabe, 'bericht.json'), 'utf8').catch(() => '{}')) as { fehler?: string }
+  const bericht = JSON.parse(await readFile(join(p.ausgabe, 'bericht.json'), 'utf8').catch(() => '{}')) as { fehler?: string; deckung?: number }
+  const warnungen = bericht.deckung !== undefined && bericht.deckung < 0.45 ? [`Deine Figur deckt die alte Person nur zu ${Math.round(bericht.deckung * 100)} % ab – schreib unten z. B. „Figur größer“.`] : []
   let bild: string | null = code === 0 && !bericht.fehler ? render : null
   const boxen = titelArgumente(a)
   if (bild && boxen.length) {
@@ -339,7 +372,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
         warum: requisit ? `Mit echtem 3D-Modell (${a.gegenstand?.suchwort}) von Poly Haven` : a.inhalt ?? '',
         bild,
         szene: join(p.ausgabe, 'spec.json'),
-        warnungen: [],
+        warnungen,
         ...(bild ? {} : { fehler: bericht.fehler ?? `Blender Exit ${code}` })
       }
     ]

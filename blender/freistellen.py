@@ -39,7 +39,7 @@ def lama(arr, maske, groesse=512):
         return None
 
 
-def main(vorlage, ordner, dazu=(), personen=1):
+def main(vorlage, ordner, dazu=(), personen=1, titel=()):
     os.makedirs(ordner, exist_ok=True)
     bild = Image.open(vorlage).convert("RGB")
     w, h = bild.size
@@ -80,15 +80,25 @@ def main(vorlage, ordner, dazu=(), personen=1):
         rx, ry = 0.04 * (x_1 - x_0) + 0.015, 0.06 * (y_1 - y_0) + 0.02
         groesser[max(0, int((y_0 - ry) * h)):int((y_1 + ry) * h), max(0, int((x_0 - rx) * w)):int((x_1 + rx) * w)] = 255
     arr = cv2.cvtColor(np.array(bild), cv2.COLOR_RGB2BGR)
-    gefuellt = lama(arr, groesser) if os.path.exists(LAMA) else None
+    # Titel ganz mit entfernen: sonst bleiben halbe Buchstaben im Auffüllbereich, die sich später mit dem
+    # wiederhergestellten Titel mischen (zerstückeltes „F“). vorlage_titel.py legt ihn danach vollständig wieder auf.
+    loch = groesser.copy()
+    if titel:
+        from vorlage_titel import maske_farbe
+
+        for farbe, box in titel:
+            schrift, _ = maske_farbe(arr, box, farbe)
+            # samt Schlagschatten (liegt einige Pixel versetzt neben der Schrift)
+            loch = np.maximum(loch, cv2.dilate((schrift > 0.2).astype(np.uint8) * 255, np.ones((17, 17), np.uint8)))
+    gefuellt = lama(arr, loch) if os.path.exists(LAMA) else None
     if gefuellt is None:
         # Rückfall ohne Modell: OpenCV füllt weich (verwaschen, aber immer verfügbar)
         klein = cv2.resize(arr, (w // 2, h // 2))
-        mk = cv2.resize(groesser, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST)
+        mk = cv2.resize(loch, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST)
         gefuellt = cv2.inpaint(klein, mk, 21, cv2.INPAINT_TELEA)
         gefuellt = cv2.resize(gefuellt, (w, h))
         gefuellt = cv2.GaussianBlur(gefuellt, (0, 0), 3)
-    rand = cv2.GaussianBlur(groesser.astype(np.float32) / 255, (0, 0), 6)[..., None]
+    rand = cv2.GaussianBlur(loch.astype(np.float32) / 255, (0, 0), 6)[..., None]
     ergebnis = (arr * (1 - rand) + gefuellt * rand).astype(np.uint8)
     cv2.imwrite(os.path.join(ordner, "hintergrund.png"), ergebnis)
     cv2.imwrite(os.path.join(ordner, "maske.png"), groesser)
@@ -100,4 +110,5 @@ def main(vorlage, ordner, dazu=(), personen=1):
 
 if __name__ == "__main__":
     personen = next((int(a.split("=")[1]) for a in sys.argv[3:] if a.startswith("--personen=")), 1)
-    main(sys.argv[1], sys.argv[2], [tuple(float(z) for z in a.split(",")) for a in sys.argv[3:] if not a.startswith("--")], personen)
+    titel = [(a[len("--titel="):].split(":")[0], [float(z) for z in a.split(":")[1].split(",")]) for a in sys.argv[3:] if a.startswith("--titel=")]
+    main(sys.argv[1], sys.argv[2], [tuple(float(z) for z in a.split(",")) for a in sys.argv[3:] if not a.startswith("--")], personen, titel)

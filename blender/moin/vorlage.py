@@ -89,6 +89,34 @@ def _ziele(fig, p, seite, punkt):
     return {"waffe": waffe, "stuetze": stuetze}
 
 
+def _deckung(scene, cam, maske_pfad, raster=(64, 36)):
+    """Wie viel der entfernten Person verdecken die Figuren (Philip, Freunde, Gegenstand)? Sichtstrahlen durch ein
+    Punktraster der Personenmaske; Treffer auf etwas anderes als die Hintergrundfläche zählen als verdeckt. Liegt der
+    Wert niedrig, bleibt der aufgefüllte Umriss der alten Person sichtbar („Geist“)."""
+    import numpy as np
+
+    img = bpy.data.images.load(maske_pfad, check_existing=True)
+    w, h = img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    maske = px.reshape(h, w, 4)[::-1, :, 0] > 0.5  # Zeile 0 = oben
+    tiefe = bpy.context.evaluated_depsgraph_get()
+    von = cam.matrix_world.translation
+    rahmen = [cam.matrix_world @ e for e in cam.data.view_frame(scene=scene)]  # oben rechts, unten rechts, unten links, oben links
+    punkte = gedeckt = 0
+    for j in range(raster[1]):
+        for i in range(raster[0]):
+            u, v = (i + 0.5) / raster[0], (j + 0.5) / raster[1]
+            if not maske[int(v * h), int(u * w)]:
+                continue
+            punkte += 1
+            ziel = rahmen[3] + (rahmen[0] - rahmen[3]) * u + (rahmen[2] - rahmen[3]) * v
+            ok, _, _, _, ob, _ = scene.ray_cast(tiefe, von, (ziel - von).normalized())
+            if ok and ob is not None and ob.name != "hintergrund":
+                gedeckt += 1
+    return round(gedeckt / punkte, 3) if punkte else 1.0
+
+
 def baue_vorlage(spec, ausgabe, bericht=None):
     """spec: {hintergrund, skin, slim, pose, mimik, kopf: [u, v], kopf_anteil, blick, kopf_drehung,
     requisit: {gltf, knoten, hand: r|l, laenge_px}, licht_seite: rechts|links, samples, geraet}"""
@@ -136,9 +164,10 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         ecken = [world_to_camera_view(scene, cam, e) for e in fig.kopf_ecken()]
         if all(0.01 < e.x < 0.99 and 0.02 < e.y < 0.99 for e in ecken):
             break
+    kopf_faktor = faktor  # für den Bericht: wie stark die Figur für „Kopf im Bild“ verkleinert wurde
     _bildflaeche(spec["hintergrund"], cam, abstand * 6, helligkeit=spec.get("hintergrund_hell", 1.0))
 
-    info = {}
+    info = {"kopf_faktor": kopf_faktor}
     r = spec.get("requisit")
     if spec.get("ziel"):
         # Worauf die Person zielt oder zeigt ([u, v] im Bild): den Arm mit dem Gegenstand genau dorthin richten.
@@ -216,6 +245,10 @@ def baue_vorlage(spec, ausgabe, bericht=None):
 
     ecken = [world_to_camera_view(scene, cam, c) for c in fig.kopf_ecken()]
     info["kopf_box"] = [min(e.x for e in ecken), 1 - max(e.y for e in ecken), max(e.x for e in ecken), 1 - min(e.y for e in ecken)]
+    if spec.get("maske") and os.path.exists(spec["maske"]):
+        info["deckung"] = _deckung(scene, cam, spec["maske"])
+    if spec.get("nur_pruefen"):
+        ausgabe = None  # Vorabprüfung: nur messen, nicht rendern
     if ausgabe:
         scene.render.filepath = ausgabe
         bpy.ops.render.render(write_still=True)

@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Behoben
+- Spiele-Vorlage mit großem Logo im Hintergrund (z. B. das goldene „007“ hinter Bond): das Logo wurde als Titel behandelt, teilweise entfernt und golden über die Figur gelegt – jetzt gelten nur Schriften vor der Person als Titel, riesige Logos werden nie angefasst.
+- Spiele-Vorlage: Titel über der Person werden vor dem Auffüllen ganz entfernt und danach vollständig wiederhergestellt (kein zerstückeltes „F“ mehr).
+- Spiele-Vorlage: Vorabprüfung per Sichtstrahlen, ob die Figur die entfernte Person abdeckt – sonst wird sie passend größer (kein „Geist“ der alten Person); Mindestgröße aus der erkannten Person; Hinweis, falls trotzdem eine Lücke bleibt.
+
 ## [0.13.0] - 2026-09-29
 
 > Mit Claude verbinden per Knopf
