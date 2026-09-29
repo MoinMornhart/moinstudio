@@ -91,8 +91,7 @@ def in_die_hand(item, figur, seite, kamera, winkel=40.0):
     """Richtet ein gehaltenes Item nach Stilbuch 4 aus: Griff in der Faust von `figur` (Arm `seite` = "r"/"l"),
     Fläche zur Kamera, Klinge `winkel` Grad über der Bildhorizontalen, Spitze vom Gesicht weg."""
     bpy.context.view_layer.update()
-    arm = figur.teile[f"arm_{seite}"]
-    hand = arm.matrix_world @ Vector((0, 0, -5.2 * PX))
+    hand = figur.hand(seite)  # folgt dem gebeugten Ellbogen
     cam = kamera.matrix_world.to_3x3()
     rechts, oben, vor = cam @ Vector((1, 0, 0)), cam @ Vector((0, 1, 0)), cam @ Vector((0, 0, -1))
     # Spitze vom Gesicht weg: liegt der Kopf im Bild links von der Hand, zeigt die Klinge nach rechts oben

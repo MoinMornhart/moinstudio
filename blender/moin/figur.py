@@ -27,6 +27,37 @@ TEILE = {
 }
 
 
+# Glieder mit Gelenk in der Mitte (Ellbogen, Knie); das Mesh eines Glieds hat seinen Ursprung genau dort
+GLIEDER = ("arm_r", "arm_l", "bein_r", "bein_l")
+UEBERGANG = 2.0  # halbe Breite des weichen Übergangs am Gelenk in Pixeln
+
+
+def _beuge_matrix(glied, grad, anteil=1.0):
+    """Drehung des unteren Glied-Teils um das Gelenk: Arme beugen den Unterarm nach vorn (−Y), Beine den Unterschenkel
+    nach hinten (+Y), wie echte Ellbogen und Knie. Drehachse ist die Innenkante (Armbeuge vorn, Kniekehle hinten):
+    so staucht und faltet sich innen nichts, außen dehnt sich das Glied nur leicht."""
+    richtung = -1 if glied.startswith("arm") else 1
+    innen = Vector((0, 2 * PX * richtung, 0))
+    dreh = Matrix.Rotation(math.radians(grad * anteil * richtung), 4, "X")
+    return Matrix.Translation(innen) @ dreh @ Matrix.Translation(-innen)
+
+
+def _beuge(figur, glied, grad):
+    """Verformt beide Ebenen eines Glieds: unterhalb des Gelenks gedreht, im Übergang weich verteilt."""
+    figur.beugung[glied] = grad
+    for name in (glied, f"{glied}.2"):
+        ob = figur.teile.get(name)
+        if ob is None:
+            continue
+        ruhe = figur.ruhe[name]
+        for v, r in zip(ob.data.vertices, ruhe):
+            z = r.z / PX
+            anteil = min(1.0, max(0.0, (UEBERGANG - z) / (2 * UEBERGANG)))
+            anteil = anteil * anteil * (3 - 2 * anteil)
+            v.co = _beuge_matrix(glied, grad, anteil) @ r if grad else r
+        ob.data.update()
+
+
 def _box_rects(u, v, w, h, d):
     """Box-UV-Bereiche (x, y, breite, höhe) im Bild, y von oben."""
     return {
@@ -80,15 +111,22 @@ def _material(name, image, overlay):
     return mat
 
 
-def _mesh(name, rects, dims, tex_w, tex_h, inflate, mat):
+def _mesh(name, rects, dims, tex_w, tex_h, inflate, mat, teilung=1):
+    """`teilung`: Seitenflächen in so viele Reihen teilen (Arme/Beine: 1 Reihe je Pixel), damit sie sich am Gelenk
+    weich biegen lassen."""
     w, h, d = dims
     verts, faces, uvs = [], [], []
     for face, corners in _faces(w, h, d, inflate).items():
         rx, ry, rw, rh = rects[face]
-        base = len(verts)
-        verts.extend([Vector(c) * PX for c in corners])
-        faces.append((base, base + 1, base + 2, base + 3))
-        uvs.extend([(rx, ry + rh), (rx + rw, ry + rh), (rx + rw, ry), (rx, ry)])
+        n = teilung if face in ("vorn", "hinten", "rechts", "links") else 1
+        bl, br, tr, tl = (Vector(c) for c in corners)
+        for k in range(n):
+            t0, t1 = k / n, (k + 1) / n
+            base = len(verts)
+            verts.extend([bl.lerp(tl, t0) * PX, br.lerp(tr, t0) * PX, br.lerp(tr, t1) * PX, bl.lerp(tl, t1) * PX])
+            faces.append((base, base + 1, base + 2, base + 3))
+            y0, y1 = ry + rh * (1 - t0), ry + rh * (1 - t1)
+            uvs.extend([(rx, y0), (rx + rw, y0), (rx + rw, y1), (rx, y1)])
     me = bpy.data.meshes.new(name)
     me.from_pydata([tuple(v) for v in verts], [], faces)
     layer = me.uv_layers.new(name="uv")
@@ -119,6 +157,15 @@ class Figur:
         self.gelenke = gelenke
         self.teile = teile
         self.slim = slim
+        # Ruheform der Glieder (für Ellbogen/Knie) und aktuelle Beugung in Grad
+        self.ruhe = {n: [v.co.copy() for v in ob.data.vertices] for n, ob in teile.items() if n.split(".")[0] in GLIEDER}
+        self.beugung = {g: 0.0 for g in GLIEDER}
+
+    def hand(self, seite):
+        """Weltposition der Faust – folgt dem gebeugten Unterarm."""
+        bpy.context.view_layer.update()
+        arm = self.teile[f"arm_{seite}"]
+        return arm.matrix_world @ (_beuge_matrix(f"arm_{seite}", self.beugung[f"arm_{seite}"]) @ Vector((0, 0, -5.2 * PX)))
 
     def kopf_punkte(self):
         """Oberkante und Unterkante der Kopfmitte in Weltkoordinaten (für die Kamera-Rahmung)."""
@@ -193,7 +240,7 @@ def baue_figur(name, skin_path, slim=None, fase=True, collection=None):
             if ebene == 1 and alt and teil != "kopf":
                 continue
             rects = _box_rects(uv[0], uv[1], *dims)
-            me = _mesh(f"{name}.{teil}.{ebene}", rects, dims, tex_w, tex_h, blow, m)
+            me = _mesh(f"{name}.{teil}.{ebene}", rects, dims, tex_w, tex_h, blow, m, teilung=dims[1] * 2 if teil in GLIEDER else 1)
             ob = bpy.data.objects.new(me.name, me)
             col.objects.link(ob)
             ob.parent = gelenke[teil]
@@ -206,7 +253,9 @@ def baue_figur(name, skin_path, slim=None, fase=True, collection=None):
                     bev = ob.modifiers.new("Fase", "BEVEL")
                     bev.width = 0.2 * PX  # Stilbuch: feine helle Kante an jeder Würfelkante
                     bev.segments = 2
-                    bev.limit_method = "NONE"
+                    # nur echte Würfelkanten (90°), nicht die leicht geknickten Reihen am gebeugten Gelenk
+                    bev.limit_method = "ANGLE"
+                    bev.angle_limit = math.radians(60)
                     bev.harden_normals = True
                     for poly in me.polygons:
                         poly.use_smooth = True
@@ -233,8 +282,8 @@ def pose(figur, p):
     Drehrichtung überall: positiv = nach +X, also zum Thema, das rechts im Bild steht (steht die Figur rechts, spiegelt die Szene).
     kopf: {drehen, nicken, neigen}  – nicken positiv = nach unten, neigen positiv = Kopf zur +X-Schulter
     koerper: {drehen, vor, neigen}   – vor = nach vorn beugen
-    arm_r/arm_l: {heben, seitlich, drehen}
-    bein_r/bein_l: {vor, seitlich}  – vor positiv = Bein nach vorn
+    arm_r/arm_l: {heben, seitlich, drehen, beugen}  – beugen = Ellbogen, 0 = gestreckt, 90 = rechter Winkel nach vorn
+    bein_r/bein_l: {vor, seitlich, beugen}  – vor positiv = Bein nach vorn; beugen = Knie (Unterschenkel nach hinten)
     blick: Grad, um den sich die ganze Figur um die Hochachse dreht (0 = schaut nach −Y, −90 = nach −X, 90 = nach +X)
     kippen: ganze Figur um die Füße nach hinten kippen (Taumeln, Sturz)
     """
@@ -254,4 +303,6 @@ def pose(figur, p):
         b = p.get(f"bein_{seite}", {})
         s = -1 if seite == "r" else 1
         g[f"bein_{seite}"].rotation_euler = Euler((math.radians(-b.get("vor", 0)), math.radians(-b.get("seitlich", 0) * s * -1), 0), "XYZ")
+        _beuge(figur, f"arm_{seite}", a.get("beugen", 0))
+        _beuge(figur, f"bein_{seite}", b.get("beugen", 0))
     bpy.context.view_layer.update()
