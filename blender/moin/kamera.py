@@ -50,6 +50,10 @@ def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_
     if gesicht is not None:
         d = gesicht.dot((pos - kopf).normalized())
         fehler += (d - math.cos(math.radians(PROFIL_GRAD))) ** 2 * 3 + (10 if d < 0.2 else 0)
+        # Das Gesicht schaut zur Bildmitte (zum Thema), nie aus dem Bild hinaus
+        rechts = cam.matrix_world.to_3x3() @ Vector((1, 0, 0))
+        zur_mitte = gesicht.dot(rechts) * (1 if seite == "links" else -1)
+        fehler += 6 if zur_mitte < 0.05 else 0
     return fehler, (round(pk.x, 2), round(pk.y, 2)), (round(pt.x, 2), round(pt.y, 2)), round(po.y - pu.y, 2)
 
 
@@ -62,7 +66,7 @@ def _rand_strafe(scene, cam, ecken, rand=0.03):
     return strafe
 
 
-def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None):
+def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None, still=False):
     """Sucht Brennweite, Position und Blickrichtung. `seite`: wo die Figur im Bild steht (das Thema gegenüber).
     `gesicht`: Blickrichtung des Kopfes (Weltvektor); die Kamera sieht das Gesicht im Dreiviertelprofil, nie von
     hinten. `erlaubt(pos)`: optionale Vorgabe, wo die Kamera stehen darf (z. B. über dem Abgrund).
@@ -92,12 +96,13 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
                     ziel = kopf + richtung * (i * 0.2)
                     r = _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht)
                     if r and kopf_ecken:
-                        r = (r[0] + 4.0 * _rand_strafe(scene, cam, kopf_ecken),) + tuple(r[1:])
+                        r = (r[0] + 25.0 * _rand_strafe(scene, cam, kopf_ecken),) + tuple(r[1:])
                     if r and (beste is None or r[0] < beste[0]):
                         beste = (r[0], cam.matrix_world.copy(), linse, r[1], r[2], r[3], az_deg, m["hoehe"] + dh)
     cam.data.lens = beste[2]
     cam.matrix_world = beste[1]
-    print("MOIN_RAHMEN linse", beste[2], "kopf", beste[3], "thema", beste[4], "kopfanteil", beste[5], "azimut", beste[6], "hoehe", beste[7])
+    if not still:
+        print("MOIN_RAHMEN linse", beste[2], "kopf", beste[3], "thema", beste[4], "kopfanteil", beste[5], "azimut", beste[6], "hoehe", beste[7])
     cam.data.dof.use_dof = True
     cam.data.dof.focus_distance = (kopf - cam.matrix_world.translation).length
     bpy.context.view_layer.update()

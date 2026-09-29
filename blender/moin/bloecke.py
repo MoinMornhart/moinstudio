@@ -49,6 +49,16 @@ ARTEN = {
     "obsidian": {"alle": ("obsidian", None)},
     "bedrock": {"alle": ("bedrock", None)},
     "tnt": {"oben": ("tnt_top", None), "unten": ("tnt_bottom", None), "seite": ("tnt_side", None)},
+    # Dorf
+    "glass": {"alle": ("glass", None), "durchsichtig": True},
+    "dirt_path": {"oben": ("dirt_path_top", None), "unten": ("dirt", None), "seite": ("dirt_path_side", None)},
+    "hay_block": {"oben": ("hay_block_top", None), "unten": ("hay_block_top", None), "seite": ("hay_block_side", None)},
+    "farmland": {"oben": ("farmland_moist", None), "unten": ("dirt", None), "seite": ("dirt", None)},
+    "spruce_planks": {"alle": ("spruce_planks", None)},
+    "spruce_log": {"oben": ("spruce_log_top", None), "unten": ("spruce_log_top", None), "seite": ("spruce_log", None)},
+    "stripped_oak_log": {"oben": ("oak_log_top", None), "unten": ("oak_log_top", None), "seite": ("stripped_oak_log", None)},
+    "white_wool": {"alle": ("white_wool", None)},
+    "smooth_stone": {"alle": ("smooth_stone", None)},
     # Höhle
     "coal_ore": {"alle": ("coal_ore", None)},
     "iron_ore": {"alle": ("iron_ore", None)},

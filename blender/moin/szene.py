@@ -2,7 +2,7 @@
 
 Beschreibung (alle Längen in Blöcken, Winkel in Grad):
 {
-  "welt": {"art": "wiese" | "klippe" | "meeresklippe" | "schlucht" | "hoehle" | "nether", "kante": 0, "tiefe": 20, "seed": 7,
+  "welt": {"art": "wiese" | "klippe" | "meeresklippe" | "schlucht" | "dorf" | "hoehle" | "nether", "kante": 0, "tiefe": 20, "seed": 7,
            "grund": "lava" | "water" | null},
   "himmel": "tag" | "abend" | "nacht",
   "figuren": [{"id": "ich", "skin": "<pfad>", "slim": null, "pose": "zeigen", "posen_korrektur": {…},
@@ -53,12 +53,14 @@ def _welt(w, texturen):
         return mwelt.baue_klippe(texturen, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=False)
     if art in ("klippe", "schlucht"):
         return mwelt.baue_klippe(texturen, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=True)
+    if art == "dorf":
+        return mwelt.baue_dorf(texturen, seed=seed, haeuser=w.get("haeuser", 5))
     if art in mwelt.RAUM_ARTEN:
         # geschlossener Raum: dunkler bzw. roter Dunst statt Himmelsblau
         bloecke.DUNST.update({"hoehle": {"farbe": (0.015, 0.02, 0.03), "halbwert": 70.0},
                               "nether": {"farbe": (0.30, 0.05, 0.02), "halbwert": 45.0}}[art])
         return mwelt.baue_raum(texturen, art, seed=seed, grund=w.get("grund", "lava"))
-    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, {', '.join(mwelt.RAUM_ARTEN)})")
+    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, dorf, {', '.join(mwelt.RAUM_ARTEN)})")
 
 
 def _randlicht(scene, figur, cam, seite="links", staerke=650):
@@ -147,7 +149,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         x, y = f.get("position", (0, 0))
         fig.wurzel.location = (x * BLOCK, y * BLOCK, 0)
         p = _mische(POSEN[f.get("pose", "neutral")], f.get("posen_korrektur"))
-        p["blick"] = f.get("blick", p.get("blick", 0))
+        blick = f.get("blick", p.get("blick", 0))
+        p["blick"] = 0 if blick == "auto" else blick
         mfigur.pose(fig, p)
         figuren.append((f, fig))
     haupt = figuren[0][1]
@@ -181,9 +184,23 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     thema = Vector([c * BLOCK for c in k.get("thema", (8, 6, 0))])
     kante = szene.get("welt", {}).get("kante", 0)
     erlaubt = (lambda pos: pos.x > (kante + 2.5) * BLOCK) if k.get("ueber_abgrund") else None
-    fehler = mkamera.rahme(scene, cam, oben, unten, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
-                           gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt,
-                           kopf_ecken=haupt.kopf_ecken())
+
+    def rahmen(still=False):
+        o, u = haupt.kopf_punkte()
+        return mkamera.rahme(scene, cam, o, u, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
+                             gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=haupt.kopf_ecken(), still=still)
+
+    if szene["figuren"][0].get("blick") == "auto":
+        # Wie ein Thumbnail-Künstler: die Figur so drehen, dass Gesicht (Dreiviertelprofil) und Thema zusammen passen
+        versuche = []
+        for grad in range(-45, 91, 15):
+            haupt.wurzel.rotation_euler.z = math.radians(grad)
+            versuche.append((rahmen(still=True), grad))
+        beste_grad = min(versuche)[1]
+        haupt.wurzel.rotation_euler.z = math.radians(beste_grad)
+        print("MOIN_BLICK", beste_grad)
+    fehler = rahmen()
+    oben, unten = haupt.kopf_punkte()
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)
     _randlicht(scene, haupt, cam, k.get("seite", "links"), r.get("randlicht", 650))
@@ -228,7 +245,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     # Warnungen für die Selbstprüfung: Wichtiges muss im Bild sein
     warnungen = []
     for fid, f in info["figuren"].items():
-        if fid == szene["figuren"][0]["id"] and _im_bild(f["kopf_box"]) < 0.98:
+        if fid == szene["figuren"][0]["id"] and (_im_bild(f["kopf_box"]) < 0.999 or min(f["kopf_box"][0], f["kopf_box"][1]) < 0.01 or max(f["kopf_box"][2], f["kopf_box"][3]) > 0.99):
             warnungen.append(f"Kopf von {fid} am Bildrand angeschnitten")
         elif _im_bild(f["kopf_box"]) < 0.6:
             warnungen.append(f"Kopf von {fid} kaum sichtbar")

@@ -235,6 +235,115 @@ def dunst(von, bis, dichte=0.035, farbe=(0.62, 0.78, 1.0), collection=None):
     return ob
 
 
+def _oberflaeche(welt, x, y):
+    return max((z for z in range(-12, 24) if welt.get((x, y, z)) in ("grass_block", "dirt_path", "farmland")), default=0)
+
+
+def _ebne(welt, x0, x1, y0, y1, hoehe, oben="grass_block"):
+    """Fläche einebnen: Oberfläche auf `hoehe`, darüber frei, darunter Erde."""
+    for x in range(x0, x1):
+        for y in range(y0, y1):
+            for z in range(hoehe + 1, hoehe + 12):
+                welt.pop((x, y, z), None)
+            welt[(x, y, hoehe)] = oben
+            for z in range(hoehe - 3, hoehe):
+                welt.setdefault((x, y, z), "dirt")
+
+
+def haus(welt, x0, y0, breite, tiefe, rnd, tuer_seite="vorn"):
+    """Dorfhaus wie in der Ebenen-Siedlung: Bruchstein-Sockel, Stamm-Ecken, Bretterwände, Glasfenster, Tür,
+    gestuftes Fichtendach. Grundfläche ab (x0, y0), eingeebnet."""
+    boden = max(_oberflaeche(welt, x, y) for x in range(x0, x0 + breite) for y in range(y0, y0 + tiefe))
+    _ebne(welt, x0 - 1, x0 + breite + 1, y0 - 1, y0 + tiefe + 1, boden)
+    wand = 4
+    for x in range(x0, x0 + breite):
+        for y in range(y0, y0 + tiefe):
+            rand_x, rand_y = x in (x0, x0 + breite - 1), y in (y0, y0 + tiefe - 1)
+            welt[(x, y, boden)] = "cobblestone"
+            if not (rand_x or rand_y):
+                welt[(x, y, boden + 1)] = "oak_planks"  # Fußboden
+                continue
+            for dz in range(1, wand + 1):
+                z = boden + dz
+                if rand_x and rand_y:
+                    art = "oak_log"
+                elif dz == 1:
+                    art = "cobblestone"
+                elif dz in (2, 3) and ((rand_x and (y - y0) % 3 == 1) or (rand_y and (x - x0) % 3 == 1)):
+                    art = "glass"
+                else:
+                    art = "oak_planks"
+                welt[(x, y, z)] = art
+    # Tür (zwei Blöcke frei) in der Mitte der Vorderseite (−Y, zur Kamera)
+    tx = x0 + breite // 2
+    ty = y0 if tuer_seite == "vorn" else y0 + tiefe - 1
+    for dz in (1, 2):
+        welt.pop((tx, ty, boden + dz), None)
+    welt[(tx, ty - 1 if tuer_seite == "vorn" else ty + 1, boden)] = "dirt_path"
+    # Dach: Stufen über die Breite (First entlang Y)
+    for stufe in range((breite + 3) // 2):
+        z = boden + wand + 1 + stufe
+        for x in (x0 - 1 + stufe, x0 + breite - stufe):
+            for y in range(y0 - 1, y0 + tiefe + 1):
+                welt[(x, y, z)] = "spruce_planks"
+        if x0 - 1 + stufe >= x0 + breite - stufe - 1:
+            break
+        # Giebel zwischen den Stufen
+        for x in range(x0 + stufe, x0 + breite - stufe):
+            for y in (y0, y0 + tiefe - 1):
+                if z <= boden + wand + (breite + 1) // 2:
+                    welt[(x, y, z)] = "oak_planks"
+    return boden
+
+
+def dorf(seed=7, haeuser=5):
+    """Ebenen-Dorf: Wiese, Häuser mit Wegen, Weizenfeld mit Wasserrinne, Heuballen, Brunnen.
+    Die Figur steht bei (0, 0) auf freiem Gras; das Dorf liegt vor allem auf der Themenseite (+X) und dahinter."""
+    rnd = random.Random(seed)
+    welt = klippe(seed=seed, kante=200, tiefe=6, gegenseite=True)
+    # Bäume weg, wo das Dorf steht
+    for p in [p for p, a in welt.items() if a in ("oak_log", "oak_leaves") and 2 < p[0] < 34 and 2 < p[1] < 40]:
+        welt.pop(p)
+    pflanzen = []
+    # Hauptweg entlang Y, Querwege zu den Häusern
+    weg_x = 9
+    for y in range(-4, 44):
+        for x in (weg_x, weg_x + 1):
+            z = _oberflaeche(welt, x, y)
+            _ebne(welt, x, x + 1, y, y + 1, z, oben="dirt_path")
+    plaetze = [(3, 6, 5, 5), (13, 4, 6, 5), (13, 14, 5, 6), (2, 16, 6, 5), (14, 25, 7, 5), (3, 28, 5, 5), (22, 10, 5, 5)]
+    for x0, y0, b, t in plaetze[:haeuser]:
+        haus(welt, x0, y0, b, t, rnd)
+    # Brunnen am Weg
+    bz = _oberflaeche(welt, weg_x - 2, 12)
+    for dx in range(-1, 2):
+        for dy in range(-1, 2):
+            p = (weg_x - 2 + dx, 12 + dy)
+            welt[(p[0], p[1], bz + 1)] = "water" if (dx, dy) == (0, 0) else "cobblestone"
+    # Weizenfeld mit Wasserrinne
+    fx, fy = 22, 20
+    fz = _oberflaeche(welt, fx, fy)
+    for x in range(fx, fx + 9):
+        for y in range(fy, fy + 7):
+            wasser = x == fx + 4
+            _ebne(welt, x, x + 1, y, y + 1, fz, oben="water" if wasser else "farmland")
+            if not wasser:
+                pflanzen.append((x, y, fz + 1, "wheat_stage7"))
+    # Heuballen
+    for x, y in ((12, 11), (12, 12), (21, 18)):
+        z = _oberflaeche(welt, x, y)
+        welt[(x, y, z + 1)] = "hay_block"
+    return welt, pflanzen
+
+
+def baue_dorf(texturen_ordner, **kw):
+    tex = bloecke.Texturen(texturen_ordner)
+    raster, felder = dorf(**kw)
+    ob = bloecke.baue(raster, tex, "dorf")
+    bloecke.baue_pflanzen(bepflanzen(raster) + felder, tex)
+    return ob
+
+
 RAUM_ARTEN = {
     # Boden/Wand, Tiefe (ab z −4), Erze mit Häufigkeit, Decken-Leuchtblock, Bodenflecken
     "hoehle": {"stein": "stone", "tief": "deepslate", "erze": (("coal_ore", 0.035), ("iron_ore", 0.015), ("gold_ore", 0.004),
