@@ -7,7 +7,8 @@ import { IPC, type SetupChecks } from '@shared/app'
 import { findClaudeCli } from '../claude/cli'
 import { cleanClaudeEnv } from '../claude/env'
 import type { SettingsStore } from '../data/settings'
-import { claudeDesktopInstalled, detectAdobe } from './detect'
+import { claudeDesktopInstalled } from './detect'
+import { findeAdobe } from '../adobe/erkennung'
 
 /** Offizielle Seiten für fehlende Programme (Claude Code richtet „Mit Claude verbinden“ auch selbst ein). */
 const LINKS: Record<string, string> = {
@@ -22,7 +23,7 @@ export function registerSetupIpc(settings: SettingsStore, forceCompleted: boolea
     return done !== false
   })
   ipcMain.handle(IPC.setupChecks, async (): Promise<SetupChecks> => {
-    const [desktop, adobe] = await Promise.all([claudeDesktopInstalled(), detectAdobe()])
+    const [desktop, adobe] = await Promise.all([claudeDesktopInstalled(), findeAdobe()])
     return { claudeDesktop: desktop, adobe: adobe.map((a) => ({ id: a.id, name: a.name })) }
   })
   ipcMain.handle(IPC.openLink, async (_e, key: unknown) => {

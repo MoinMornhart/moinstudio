@@ -100,7 +100,8 @@ export const IPC = {
   planungClaudeStand: 'planung:claude-stand',
   planungRhythmusSetzen: 'planung:rhythmus-setzen',
   /** Ereignis: Karten im Datenordner haben sich geändert */
-  planungGeaendert: 'planung:geaendert'
+  planungGeaendert: 'planung:geaendert',
+  adobeStatus: 'adobe:status'
 } as const
 
 /** Planung (ROADMAP 7.2/7.3): Spalten des Boards in fester Reihenfolge */
@@ -144,6 +145,12 @@ export interface PlanungThumbStand {
   auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
   varianten: { titel: string; pfad: string; url: string }[]
 }
+/** Adobe-Erkennung (ROADMAP 8.2, ungetestet) */
+export interface AdobeStatus {
+  programme: { id: 'premiere' | 'photoshop' | 'aftereffects'; name: string; jahr: string | null; version: string | null; beta: boolean; pfad: string }[]
+  gesucht: string
+}
+
 /** Planung mit Claude (ROADMAP 7.6) */
 export type PlanungClaudeArt = 'ideen' | 'titel' | 'woche'
 export type PlanungClaudeErgebnis =
@@ -454,6 +461,8 @@ export interface MoinApi {
   /** Claude: Ideen (kanal, wunsch), Titel (karte), Wochenplan; liefert die Auftrags-ID */
   planungClaude(art: PlanungClaudeArt, o?: { kanal?: string; wunsch?: string; karte?: string }): Promise<string>
   planungClaudeStand(auftrag: string): Promise<PlanungClaudeStand | null>
+  /** Adobe (ROADMAP M8, ungetestet); neu = erneut suchen */
+  adobeStatus(neu?: boolean): Promise<AdobeStatus>
   onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>

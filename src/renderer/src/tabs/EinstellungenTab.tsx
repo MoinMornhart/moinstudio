@@ -6,6 +6,7 @@ import { DataDirCard } from '../components/DataDirCard'
 import { ToolsCard } from '../components/ToolsCard'
 import { HardwareCard } from '../components/HardwareCard'
 import { ClaudeCard } from '../components/ClaudeCard'
+import { AdobeCard } from '../components/AdobeCard'
 
 function AutostartSwitch(): React.JSX.Element {
   const [state, setState] = useState<AutostartState | null>(null)
@@ -94,9 +95,7 @@ export function EinstellungenTab({ info }: { info: AppInfo | null }): React.JSX.
         <Card title="Start">
           <AutostartSwitch />
         </Card>
-        <Card title="Adobe" badge="ungetestet">
-          <p className="muted">Nicht erkannt – MoinStudio läuft im Modus ohne Adobe.</p>
-        </Card>
+        <AdobeCard />
       </div>
     </>
   )

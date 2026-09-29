@@ -13,6 +13,7 @@ import { JobQueue } from './queue'
 import { registerThumbnailIpc } from '../thumbnail/ipc'
 import { registerSchnittIpc } from '../schnitt/ipc'
 import { registerPlanungIpc } from '../planung/ipc'
+import { registerAdobeIpc } from '../adobe/ipc'
 
 /**
  * Legt die Warteschlange an, registriert Job-Arten und IPC. Fundament (Neustart 28.09.): nur der Probe-Render als
@@ -31,6 +32,7 @@ export function setupJobs(
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
   const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
   const { starteImport, starteWunsch } = schnitt
+  registerAdobeIpc()
   const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport })
 
   const enqueueProbe = async (): Promise<string> => {
