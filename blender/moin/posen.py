@@ -20,8 +20,9 @@ POSEN = {
     "schwert": {
         "koerper": {"drehen": 15},
         "kopf": {"drehen": 8, "nicken": 3, "neigen": 16},
-        "arm_r": {"heben": 60, "seitlich": -5, "drehen": 25},
-        "arm_l": {"heben": 30, "seitlich": 12},
+        # Waffenhand auf der Themenseite (+X), damit die Klinge in die freie Bildhälfte zeigt
+        "arm_l": {"heben": 62, "seitlich": 8, "drehen": 10},
+        "arm_r": {"heben": 28, "seitlich": 14},
     },
     # 7 Neutral frontal: Arme 10–25° seitlich, 10–20° nach vorn, Beine gerade
     "neutral": {

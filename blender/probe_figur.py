@@ -12,6 +12,7 @@ from mathutils import Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moin import figur as mfigur  # noqa: E402
 from moin.posen import POSEN  # noqa: E402
+from moin import items as mitems  # noqa: E402
 
 args = sys.argv[sys.argv.index("--") + 1:]
 skin, out, pose_name = args[0], args[1], args[2]
@@ -82,6 +83,11 @@ cam.rotation_euler = (ziel - cam.location).to_track_quat("-Z", "Y").to_euler()
 cam_data.dof.use_dof = True
 cam_data.dof.focus_distance = (kopf - cam.location).length
 cam_data.dof.aperture_fstop = 2.8
+
+# gehaltenes Item (Stilbuch 4), erst nach der Kamera ausrichten
+if os.environ.get("MOIN_ITEM"):
+    it = mitems.baue_item(os.environ["MOIN_ITEM"], os.environ["MOIN_TEX"])
+    mitems.in_die_hand(it, fig, os.environ.get("MOIN_HAND", "r"), cam)
 
 # Render: Cycles, AgX mit mittelhohem Kontrast
 scene.render.engine = "CYCLES"
