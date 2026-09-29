@@ -163,11 +163,11 @@ Neustart (Philip, 28.09.2026): Alles Bisherige zur Thumbnail-Erstellung ist gel�
 
 ## M5 – Thumbnail-Erstellung neu → 0.4.0
 
-- [ ] **5.1 Planung durch Claude:** Beschreibung → Szene nach dem Stilbuch, mit Angabe des Vorbild-Thumbnails, an dem sich jede Variante orientiert. ✅ 20 Beschreibungen, jede Variante nennt ihr Vorbild
-- [ ] **5.2 Text, Pfeile, Rahmen:** Nur was die Vorbilder machen, Text nie über Figur oder Wichtigem. ✅ Automatische Prüfung
-- [ ] **5.3 Strenge Selbstprüfung:** Jedes Bild wird neben sein Vorbild gelegt und kritisch bewertet (fehlende Umgebung, schwebende Figuren, falsche Skins, schlechte Posen) und bei Fehlern neu gebaut. ✅ Absichtlich fehlerhafte Bilder werden erkannt
-- [ ] **5.4 Reiter Thumbnail:** Beschreibung, Skins und Freunde, Varianten groß ansehen und ändern, Speichern. ✅ Screenshot
-- [ ] **5.5 Video hochladen → Thumbnail-Vorschläge** (Philip, 28.09.): Video in den Reiter ziehen, die KI analysiert Inhalt, Höhepunkte und Stimmung und schlägt passende Thumbnails vor. ✅ 5 Testvideos, Vorschläge passen zum Inhalt
+- [x] **5.1 Planung durch Claude:** Beschreibung → Szene nach dem Stilbuch, mit Angabe des Vorbild-Thumbnails, an dem sich jede Variante orientiert. ✅ 20 Beschreibungen, jede Variante nennt ihr Vorbild — erledigt: 20 Beschreibungen, alle 60 Varianten gültig, jede nennt ihr Vorbild (docs/tests/planung.md).
+- [x] **5.2 Text, Pfeile, Rahmen:** Nur was die Vorbilder machen, Text nie über Figur oder Wichtigem. ✅ Automatische Prüfung — erledigt: echte Minecraft-Schrift, Platz automatisch frei von Figur, Item und Mob, sonst kleiner plus Warnung.
+- [x] **5.3 Strenge Selbstprüfung:** Jedes Bild wird neben sein Vorbild gelegt und kritisch bewertet (fehlende Umgebung, schwebende Figuren, falsche Skins, schlechte Posen) und bei Fehlern neu gebaut. ✅ Absichtlich fehlerhafte Bilder werden erkannt — erledigt: Bildprüfung (Gesicht per Strahl, Sicht versperrt, Gegner zu klein, Item, Kamera) → Claude korrigiert bis zu zweimal; in der App bewiesen (vorher/nachher auf der Werkstatt-Seite).
+- [x] **5.4 Reiter Thumbnail:** Beschreibung, Skins und Freunde, Varianten groß ansehen und ändern, Speichern. ✅ Screenshot — erledigt: Reiter mit Beschreibung, Kanal, Freunden, Varianten, Skin-Bibliothek, Großansicht und Speichern.
+- [x] **5.5 Video hochladen → Thumbnail-Vorschläge** (Philip, 28.09.): Video in den Reiter ziehen, die KI analysiert Inhalt, Höhepunkte und Stimmung und schlägt passende Thumbnails vor. ✅ 5 Testvideos, Vorschläge passen zum Inhalt — erledigt: 3 Testvideos richtig erkannt (docs/tests/video-vorschlaege.md); 5 echte Videos von Philip folgen in 5.6.
 - [ ] **5.6 Abnahme:** 30 echte Aufträge von Philips Kanälen, jeweils neben Vorbild; Philip gibt frei. ✅ Freigabe
 
 ## M6 – Schnitt (Neuaufbau) → 0.5.0

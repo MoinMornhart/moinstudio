@@ -9,13 +9,37 @@ function fehlerText(err: unknown): string {
   return err instanceof Error ? err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(err)
 }
 
-/** Skin-Bild (ganze Textur, pixelscharf) */
+/** Gesicht aus dem Skin (Kopf vorn 8×8 bei 8,8 plus Hut-Ebene bei 40,8), pixelscharf vergrößert */
 function SkinBild({ id, klein }: { id: string; klein?: boolean }): React.JSX.Element {
   const [src, setSrc] = useState<string | null>(null)
   useEffect(() => {
-    void window.moin.thumbSkinBild(id).then(setSrc)
+    let aktiv = true
+    void window.moin.thumbSkinBild(id).then((daten) => {
+      if (!daten || !aktiv) return
+      const img = new Image()
+      img.onload = () => {
+        const c = document.createElement('canvas')
+        c.width = c.height = 64
+        const g = c.getContext('2d')
+        if (!g) return
+        g.imageSmoothingEnabled = false
+        const s = img.width / 64 // HD-Skins (128, 256 …)
+        g.drawImage(img, 8 * s, 8 * s, 8 * s, 8 * s, 0, 0, 64, 64)
+        g.drawImage(img, 40 * s, 8 * s, 8 * s, 8 * s, 0, 0, 64, 64)
+        if (aktiv) setSrc(c.toDataURL())
+      }
+      img.src = daten
+    })
+    return () => {
+      aktiv = false
+    }
   }, [id])
-  return src ? <img src={src} alt="" style={klein ? undefined : { width: 96, height: 96 }} /> : <span className="muted small">…</span>
+  const groesse = klein ? 22 : 72
+  return src ? (
+    <img src={src} alt="" style={{ width: groesse, height: groesse, imageRendering: 'pixelated', borderRadius: klein ? '50%' : 6 }} />
+  ) : (
+    <span className="muted small">…</span>
+  )
 }
 
 function Skins({ skins, setSkins }: { skins: ThumbSkin[]; setSkins: (s: ThumbSkin[]) => void }): React.JSX.Element {
