@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Planung: Speicher für Planungskarten im Datenordner, eine Datei pro Karte. Gleichzeitige Änderungen auf PC und Laptop werden Feld für Feld zusammengeführt, statt sich zu überschreiben (ROADMAP 7.2).
+
 ## [0.21.1] - 2026-09-29
 
 > Plan für die Planung
