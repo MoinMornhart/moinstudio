@@ -129,7 +129,8 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
       await writeFile(`${pfad}.szene.json`, JSON.stringify(szene, null, 1))
       const { code, output } = await renderAufruf('render_szene.py', [`${pfad}.szene.json`, mc.textures, `${pfad}.png`, `${pfad}.bericht.json`])
       const bericht = JSON.parse(await readFile(`${pfad}.bericht.json`, 'utf8').catch(() => '{}')) as { warnungen?: string[]; fehler?: string }
-      if (code !== 0 || bericht.fehler) {
+      // MOIN_BILD_OK: Bild und Bericht sind fertig; scheitert danach nur die Maske für Photoshop, zählt das nicht
+      if ((code !== 0 && !output.includes('MOIN_BILD_OK')) || bericht.fehler) {
         renderFehler = bericht.fehler ?? `Blender Exit ${code}: ${output.trim().split(ZEILENUMBRUCH).slice(-1)[0]}`
         break
       }

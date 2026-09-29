@@ -192,6 +192,13 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
                   <button className="btn small" onClick={() => void window.moin.thumbSpeichern(auftrag.id, i).then(setGespeichert)}>
                     Speichern …
                   </button>
+                  <button
+                    className="btn small"
+                    title="Mit getrennten Ebenen (Hintergrund, Figuren, Text) zum Nachbessern in Photoshop – noch nicht mit Photoshop getestet"
+                    onClick={() => void window.moin.thumbPhotoshop(auftrag.id, i).then((r) => r && setGespeichert(`${r.datei} (Ebenen: ${r.ebenen.join(', ')})`))}
+                  >
+                    Für Photoshop (ungetestet) …
+                  </button>
                 </div>
               )}
               {x.bild && (

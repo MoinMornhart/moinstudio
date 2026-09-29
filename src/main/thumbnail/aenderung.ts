@@ -114,7 +114,8 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
   if (p.art === 'thumbnail') {
     const mc = await sichereMcAssets(p.datenOrdner, { onProgress: (t) => ctx.progress(null, t) })
     const r = await blender('render_szene.py', [`${ziel}.szene.json`, mc.textures, `${ziel}.roh.png`, `${ziel}.bericht.json`])
-    if (r.code === 0) {
+    // MOIN_BILD_OK: Bild fertig, nur die Maske für Photoshop ist gescheitert
+    if (r.code === 0 || r.output.includes('MOIN_BILD_OK')) {
       bild = `${ziel}.roh.png`
       if (Array.isArray(texte) && texte.length) {
         ctx.progress(85, 'Text setzen …')

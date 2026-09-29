@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Thumbnail für Photoshop (ungetestet): Knopf „Für Photoshop“ an jeder Variante speichert eine PSD mit den Ebenen Hintergrund, Figuren (freigestellt) und Text. Übereinander ergeben sie genau das fertige Thumbnail. Blender rendert dafür zusätzlich eine schnelle Figurenmaske (ROADMAP 8.4).
+
 ## [0.27.0] - 2026-09-29
 
 > Schnitt für Premiere (ungetestet)

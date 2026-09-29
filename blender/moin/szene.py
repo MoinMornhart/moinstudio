@@ -521,4 +521,37 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     if bericht:
         with open(bericht, "w", encoding="utf-8") as fh:
             json.dump(info, fh, ensure_ascii=False, indent=1)
+    if ausgabe and r.get("maske", True):
+        # Bild und Bericht sind fertig. Stürzt der Workbench-Render ohne OpenGL ab, fehlt nur die Maske.
+        print("MOIN_BILD_OK", ausgabe, flush=True)
+        vorne = [fig.wurzel for f, fig in figuren] + [mob.wurzel for m, mob in mobs] + list(gehalten.values())
+        _maske(scene, vorne, os.path.splitext(ausgabe)[0] + ".maske.png")
     return info
+
+
+def _maske(scene, vorne, pfad):
+    """Figuren, Mobs und gehaltene Items weiß, alles andere schwarz, Himmel durchsichtig (ROADMAP 8.4: Ebenen für
+    Photoshop). Workbench statt Cycles, dauert nur Sekunden; gleiche Kamera, also deckungsgleich mit dem Bild."""
+    wichtig = set()
+    for ob in vorne:
+        wichtig.add(ob)
+        wichtig.update(ob.children_recursive)
+    for ob in bpy.data.objects:
+        ob.color = (1.0, 1.0, 1.0, 1.0) if ob in wichtig else (0.0, 0.0, 0.0, 1.0)
+    scene.render.engine = "BLENDER_WORKBENCH"
+    scene.display.shading.light = "FLAT"
+    scene.display.shading.color_type = "OBJECT"
+    scene.display.render_aa = "8"
+    scene.render.film_transparent = True
+    scene.render.use_compositing = False
+    scene.render.image_settings.color_mode = "RGBA"
+    try:
+        scene.view_settings.view_transform = "Standard"
+        scene.view_settings.look = "None"
+    except TypeError:
+        pass
+    scene.view_settings.exposure = 0.0
+    if scene.camera:
+        scene.camera.data.dof.use_dof = False
+    scene.render.filepath = pfad
+    bpy.ops.render.render(write_still=True)

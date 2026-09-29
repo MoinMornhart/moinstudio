@@ -102,7 +102,8 @@ export const IPC = {
   /** Ereignis: Karten im Datenordner haben sich geändert */
   planungGeaendert: 'planung:geaendert',
   adobeStatus: 'adobe:status',
-  schnittPremiere: 'schnitt:premiere'
+  schnittPremiere: 'schnitt:premiere',
+  thumbPhotoshop: 'thumb:photoshop'
 } as const
 
 /** Planung (ROADMAP 7.2/7.3): Spalten des Boards in fester Reihenfolge */
@@ -466,6 +467,8 @@ export interface MoinApi {
   adobeStatus(neu?: boolean): Promise<AdobeStatus>
   /** Sequenz für Premiere (FCP7-XML) und Untertitel (SRT) schreiben, ungetestet */
   schnittPremiere(id: string): Promise<{ xml: string; srt: string | null }>
+  /** Variante als Photoshop-Datei mit Ebenen (Speichern-Dialog), ungetestet */
+  thumbPhotoshop(jobId: string, index: number): Promise<{ datei: string; ebenen: string[] } | null>
   onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>

@@ -123,6 +123,7 @@ const api: MoinApi = {
   planungClaudeStand: (auftrag: string) => ipcRenderer.invoke(IPC.planungClaudeStand, auftrag),
   adobeStatus: (neu?: boolean) => ipcRenderer.invoke(IPC.adobeStatus, neu),
   schnittPremiere: (id: string) => ipcRenderer.invoke(IPC.schnittPremiere, id),
+  thumbPhotoshop: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbPhotoshop, jobId, index),
   planungRhythmusSetzen: (rhythmus: Parameters<MoinApi['planungRhythmusSetzen']>[0]) => ipcRenderer.invoke(IPC.planungRhythmusSetzen, rhythmus),
   onPlanungGeaendert(handler: () => void) {
     const listener = (): void => handler()
