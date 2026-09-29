@@ -47,6 +47,18 @@ POSEN = {
         "arm_r": {"heben": 22, "seitlich": 24},
         "arm_l": {"heben": 12, "seitlich": 30},
     },
+    # 21 Fallen/Taumeln an der Kante: Körper 15–25° nach hinten gekippt, beide Arme 120–160° hoch und gespreizt,
+    # ein Bein angehoben (große Geste nur hier erlaubt, Stilbuch 3.2)
+    "taumeln": {
+        "kippen": 20,
+        "koerper": {"vor": -8, "neigen": 6},
+        "kopf": {"nicken": -14, "neigen": -8},
+        # Arme weit seitlich, damit das Gesicht frei bleibt (Abnahme-Checkliste)
+        "arm_r": {"heben": 140, "seitlich": 72},
+        "arm_l": {"heben": 115, "seitlich": 80},
+        "bein_l": {"vor": 34},
+        "bein_r": {"vor": -4},
+    },
     # 14 Schreck: Hand vor dem Mund (Arm 110–130° hoch, nach innen)
     "schreck": {
         "kopf": {"nicken": 7},

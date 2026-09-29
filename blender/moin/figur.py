@@ -215,9 +215,11 @@ def _arm_matrix(seite, heben, seitlich, drehen):
     """Stilbuch-Winkel → Rotation: `heben` 0 = hängt, 90 = nach vorn, 180 = nach oben; `seitlich` = vom Körper weg
     (positiv) bzw. zur Körpermitte (negativ); `drehen` = Drehung um die Hochachse, positiv = nach +X (zum Thema)."""
     s = -1 if seite == "r" else 1  # rechte Seite liegt bei −X
+    # Reihenfolge: erst seitlich abspreizen, dann nach vorn/oben heben – so bleibt „seitlich“ bei jeder Armhöhe
+    # „vom Körper weg“ (umgekehrt kippt ein hoch erhobener, abgespreizter Arm zur Körpermitte)
     return (Matrix.Rotation(math.radians(drehen), 4, "Z")
-            @ Matrix.Rotation(math.radians(seitlich * s * -1), 4, "Y")
-            @ Matrix.Rotation(math.radians(-heben), 4, "X"))
+            @ Matrix.Rotation(math.radians(-heben), 4, "X")
+            @ Matrix.Rotation(math.radians(seitlich * s * -1), 4, "Y"))
 
 
 def pose(figur, p):
@@ -227,10 +229,12 @@ def pose(figur, p):
     koerper: {drehen, vor, neigen}   – vor = nach vorn beugen
     arm_r/arm_l: {heben, seitlich, drehen}
     bein_r/bein_l: {vor, seitlich}  – vor positiv = Bein nach vorn
-    blick: Grad, um den sich die ganze Figur um die Hochachse dreht (0 = zur Kamera)
+    blick: Grad, um den sich die ganze Figur um die Hochachse dreht (0 = schaut nach −Y, −90 = nach −X, 90 = nach +X)
+    kippen: ganze Figur um die Füße nach hinten kippen (Taumeln, Sturz)
     """
     g = figur.gelenke
-    figur.wurzel.rotation_euler = Euler((0, 0, math.radians(p.get("blick", 0))), "XYZ")
+    # kippen: ganze Figur um die Füße nach hinten (positiv) bzw. vorn – für Taumeln/Sturz (Stilbuch Pose 21)
+    figur.wurzel.rotation_euler = Euler((math.radians(p.get("kippen", 0)), math.radians(p.get("kippen_seite", 0)), math.radians(p.get("blick", 0))), "XYZ")
     k = p.get("koerper", {})
     g["koerper"].rotation_euler = Euler((math.radians(-k.get("vor", 0)), math.radians(k.get("neigen", 0)), math.radians(k.get("drehen", 0))), "ZXY")
     h = p.get("kopf", {})

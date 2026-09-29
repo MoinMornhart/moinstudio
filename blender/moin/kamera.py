@@ -13,7 +13,7 @@ from mathutils import Matrix, Vector
 # Modi: Brennweite, Kopfanteil an der Bildhöhe, Kopf-Lage (u, v; 0,0 = unten links), Wunschlage des Themas,
 # Höhenwinkel (positiv = Kamera höher als der Kopf, schaut hinab)
 MODI = {
-    "nah": {"linse": 24, "kopf_anteil": 0.45, "kopf_uv": (0.27, 0.58), "thema_uv": (0.72, 0.45), "hoehe": 6},
+    "nah": {"linse": 24, "kopf_anteil": 0.42, "kopf_uv": (0.27, 0.58), "thema_uv": (0.72, 0.45), "hoehe": 10},
     "gefahr": {"linse": 24, "kopf_anteil": 0.32, "kopf_uv": (0.24, 0.62), "thema_uv": (0.70, 0.30), "hoehe": 18},
     "tiefe": {"linse": 22, "kopf_anteil": 0.13, "kopf_uv": (0.32, 0.72), "thema_uv": (0.60, 0.20), "hoehe": 42},
     "klippe": {"linse": 24, "kopf_anteil": 0.30, "kopf_uv": (0.26, 0.66), "thema_uv": (0.72, 0.30), "hoehe": 4},
