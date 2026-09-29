@@ -10,6 +10,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Gaming-Thumbnails im Bastian-Stil: Spielbild statt Original, Spielname als Logo in der Ecke gegenüber der Figur.
 
 ### Geändert
+- Tiere: liegende Körper nehmen Beine und Kopf nicht mehr mit (Schaf, Katze, Ozelot, Schildkröte); Ausrüstung wie Sattel und Taschen wird ausgeblendet; Zombiepferd, Skelettpferd, Esel und Maultier mit dem bewährten Pferdemodell und ihren Originaltexturen.
 - Reaction: erste Pose ist immer ohne Hände (Stilbuch 14.3), die zweite Variante bleibt auf Claudes Seite und schaut in die Kamera.
 
 ## [0.5.0] - 2026-09-29

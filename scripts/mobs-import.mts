@@ -83,6 +83,11 @@ const MOBS: Spec[] = [
   { key: 'chicken', geo: 'chicken.geo.json', texture: 'entity/chicken/chicken_temperate.png' },
   { key: 'bee', geo: 'bee.geo.json', texture: 'entity/bee/bee.png' },
   { key: 'horse', geo: 'horse_v3.geo.json', texture: 'entity/horse/horse_brown.png' },
+  // Pferdeverwandte: gleiches Modell, eigene Originaltextur (der automatische Import nutzt dafür ein älteres Modell)
+  { key: 'zombie_horse', geo: 'horse_v3.geo.json', texture: 'entity/horse/horse_zombie.png' },
+  { key: 'skeleton_horse', geo: 'horse_v3.geo.json', texture: 'entity/horse/horse_skeleton.png' },
+  { key: 'donkey', geo: 'horse_v3.geo.json', texture: 'entity/horse/donkey.png', hide: ['bag_l', 'bag_r', 'mule_ear_l', 'mule_ear_r'] },
+  { key: 'mule', geo: 'horse_v3.geo.json', texture: 'entity/horse/mule.png', hide: ['bag_l', 'bag_r', 'ear_l', 'ear_r'] },
   { key: 'ravager', geo: 'ravager.geo.json', texture: 'entity/illager/ravager.png' },
   { key: 'phantom', geo: 'phantom.geo.json', texture: 'entity/phantom.png' },
   { key: 'slime', geo: 'slime.geo.json', texture: 'entity/slime/slime.png' },

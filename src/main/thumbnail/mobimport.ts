@@ -236,11 +236,22 @@ export function baueDrache(vorlage: Part[]): Part[] {
 /** Alte Vierbeiner-Modelle (Eisbär, Schaf, Katze …): Der Körper ist hochkant modelliert und liegt im Spiel immer um
  * 90° gedreht (Java ModelQuadruped). Greift nur, wenn nach den Animationen noch nichts gedreht ist. */
 export function vierbeinerKoerper(parts: Part[]): void {
-  const beine = parts.filter((p) => /leg/.test(p.name) && p.boxes.length).length
+  const beine = parts.filter((p) => /leg/.test(p.name) && p.boxes.length)
   const koerper = parts.find((p) => p.name === 'body')
   const b = koerper?.boxes[0]
-  if (!koerper || !b || beine < 4 || koerper.rotation.some((r) => r !== 0)) return
-  if (b.size[1] > b.size[2] * 1.3) koerper.rotation = [90, 0, 0]
+  if (!koerper || !b || beine.length < 4) return
+  if (koerper.rotation.every((r) => r === 0) && b.size[1] > b.size[2] * 1.3) koerper.rotation = [90, 0, 0]
+  // Liegt der Körper (±90°), hängen Beine und Kopf im Spiel nicht an ihm – sonst würden sie mitkippen
+  if (Math.abs(Math.abs(koerper.rotation[0]) - 90) < 1)
+    for (const p of parts) if (p.parent === 'body' && (/leg|head|tail/.test(p.name))) p.parent = null
+}
+
+/** Ausrüstung und Varianten-Teile gehören nicht zum Grundmodell (Sattel, Taschen, Zaumzeug, Rüstung …). */
+export function ohneAusruestung(key: string, parts: Part[]): Part[] {
+  const weg = (n: string): boolean =>
+    /^(saddle|bag|bridle|rein|armor|chest|harness|mouth_saddle|head_saddle|headpiece)/.test(n) || (key !== 'mule' && /^mule_/.test(n)) || (key === 'mule' && /^ear\d$/.test(n))
+  const raus = new Set(parts.filter((p) => weg(p.name)).map((p) => p.name))
+  return parts.filter((p) => !raus.has(p.name) && !(p.parent && raus.has(p.parent)))
 }
 
 function pngGroesse(b: Buffer): [number, number] | null {
@@ -340,7 +351,7 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
       const groesse = pngGroesse(await readFile(lokalTex))
       const gewandelt = wandle(geo)
       const scale = gewandelt.scale
-      const parts = key === 'ender_dragon' ? baueDrache(gewandelt.parts) : gewandelt.parts
+      const parts = key === 'ender_dragon' ? baueDrache(gewandelt.parts) : ohneAusruestung(key, gewandelt.parts)
       // Grundhaltung: alle Animationen, die ohne Bedingung laufen (setup u. a.)
       const kurz = (d['animations'] as Record<string, string> | undefined) ?? {}
       const scripts = (d['scripts'] as { animate?: unknown[] } | undefined)?.animate ?? []
