@@ -61,20 +61,41 @@ def _welt(w, texturen, himmel="tag"):
     art = w.get("art", "wiese")
     bloecke.DUNST.update(farbe=mhimmel.VARIANTEN.get(himmel, {}).get("dunst", (0.42, 0.66, 1.0)), halbwert=160.0)
     seed = w.get("seed", 7)
+    aend = w.get("bloecke")  # frei gesetzte oder weggenommene Blöcke (Wand, Grube, Säulen …)
     if art == "wiese":
-        return mwelt.baue_klippe(texturen, seed=seed, kante=200, tiefe=6, gegenseite=True)
+        return mwelt.baue_klippe(texturen, aend, seed=seed, kante=200, tiefe=6, gegenseite=True)
     if art == "meeresklippe":
-        return mwelt.baue_klippe(texturen, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=False)
+        return mwelt.baue_klippe(texturen, aend, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=False)
     if art in ("klippe", "schlucht"):
-        return mwelt.baue_klippe(texturen, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=True)
+        return mwelt.baue_klippe(texturen, aend, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=True)
     if art == "dorf":
-        return mwelt.baue_dorf(texturen, seed=seed, haeuser=w.get("haeuser", 5))
+        return mwelt.baue_dorf(texturen, aend, seed=seed, haeuser=w.get("haeuser", 5))
+    if art in ("lavameer", "meer"):
+        if art == "lavameer":
+            bloecke.DUNST.update(farbe=(0.9, 0.35, 0.08), halbwert=90.0)
+        return mwelt.baue_meerwelt(texturen, "lava" if art == "lavameer" else "water", aend)
     if art in mwelt.RAUM_ARTEN:
         # geschlossener Raum: dunkler bzw. roter Dunst statt Himmelsblau
         bloecke.DUNST.update({"hoehle": {"farbe": (0.015, 0.02, 0.03), "halbwert": 70.0},
                               "nether": {"farbe": (0.30, 0.05, 0.02), "halbwert": 45.0}}[art])
-        return mwelt.baue_raum(texturen, art, seed=seed, grund=w.get("grund", "lava"))
-    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, dorf, {', '.join(mwelt.RAUM_ARTEN)})")
+        return mwelt.baue_raum(texturen, art, aend, seed=seed, grund=w.get("grund", "lava"))
+    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, dorf, lavameer, meer, "
+                     f"{', '.join(mwelt.RAUM_ARTEN)})")
+
+
+def _objekte(liste, texturen):
+    """Frei platzierte Einzelblöcke (fliegendes TNT, herumliegende Blöcke): {"block": "tnt", "position": [x, y, z],
+    "drehung": [rx, ry, rz], "groesse": 1}. Position in Blöcken (Mitte des Blocks), Drehung in Grad."""
+    import math as _m
+    tex = bloecke.Texturen(texturen)
+    for i, o in enumerate(liste or []):
+        halb = 0.5 * BLOCK
+        ob = bloecke.baue({(0, 0, 1): o["block"]}, tex, f"objekt{i}", versatz=(-halb, -halb, -halb))
+        x, y, z = o.get("position", (3, 3, 2))
+        ob.location = (x * BLOCK, y * BLOCK, z * BLOCK)
+        ob.rotation_euler = [_m.radians(g) for g in o.get("drehung", (0, 0, 0))]
+        s = o.get("groesse", 1.0)
+        ob.scale = (s, s, s)
 
 
 def _randlicht(scene, figur, cam, seite="links", staerke=650, farbe=(1.0, 1.0, 1.0)):
@@ -264,6 +285,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     scene.render.resolution_y = r.get("hoehe", 720)
 
     _welt(szene.get("welt", {}), texturen, szene.get("himmel", "tag"))
+    _objekte(szene.get("objekte"), texturen)
     mhimmel.baue(scene, szene.get("himmel", "tag"))
 
     figuren = []

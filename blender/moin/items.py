@@ -16,6 +16,8 @@ ITEM_PIXEL = 1.45 * 8 * PX / (16 * math.sqrt(2))
 
 def _bild(ordner, name):
     pfad = os.path.join(ordner, "item", f"{name}.png")
+    if not os.path.exists(pfad):  # manche Items (Fackel, Blumen) nutzen im Spiel die Blocktextur
+        pfad = os.path.join(ordner, "block", f"{name}.png")
     if not os.path.exists(pfad):
         raise FileNotFoundError(f"Item-Textur {name} fehlt in der Spieldatei ({pfad})")
     img = bpy.data.images.load(pfad, check_existing=True)

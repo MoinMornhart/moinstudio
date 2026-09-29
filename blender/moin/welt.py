@@ -336,9 +336,10 @@ def dorf(seed=7, haeuser=5):
     return welt, pflanzen
 
 
-def baue_dorf(texturen_ordner, **kw):
+def baue_dorf(texturen_ordner, aenderungen=None, **kw):
     tex = bloecke.Texturen(texturen_ordner)
     raster, felder = dorf(**kw)
+    aendern(raster, aenderungen)
     ob = bloecke.baue(raster, tex, "dorf")
     bloecke.baue_pflanzen(bepflanzen(raster) + felder, tex)
     return ob
@@ -437,17 +438,73 @@ def raumlicht(art, becken_ab=4, collection=None):
     return lichter
 
 
-def baue_raum(texturen_ordner, art="hoehle", **kw):
+def aendern(welt, liste):
+    """Blöcke setzen oder wegnehmen (jede Welt, aus der Szenenbeschreibung): [{"art": "bedrock" | "luft", "von": [x, y, z],
+    "bis": [x, y, z], "waende": "stone"}]. Beim Wegnehmen (Grube, Tunnel) bekommen die freigelegten Ränder und der Boden
+    Wände aus `waende`, damit nie ein Loch ins Leere entsteht."""
+    for e in liste or []:
+        art = e["art"]
+        (x0, y0, z0), (x1, y1, z1) = e["von"], e.get("bis", e["von"])
+        x0, x1 = sorted((int(x0), int(x1)))
+        y0, y1 = sorted((int(y0), int(y1)))
+        z0, z1 = sorted((int(z0), int(z1)))
+        if art != "luft" and art not in bloecke.ARTEN:
+            raise ValueError(f"Unbekannter Block „{art}“")
+        # Geländeoberkante je Spalte vor dem Graben: Wände nur bis dorthin, nie in die Luft darüber
+        oberkante = {}
+        if art == "luft":
+            for x in range(x0 - 1, x1 + 2):
+                for y in range(y0 - 1, y1 + 2):
+                    oberkante[(x, y)] = max((z for z in range(z0 - 2, z1 + 40) if (x, y, z) in welt), default=z0 - 2)
+        for x in range(x0, x1 + 1):
+            for y in range(y0, y1 + 1):
+                for z in range(z0, z1 + 1):
+                    if art == "luft":
+                        welt.pop((x, y, z), None)
+                    else:
+                        welt[(x, y, z)] = art
+        if art == "luft":
+            wand = e.get("waende", "stone")
+            for x in range(x0 - 1, x1 + 2):
+                for y in range(y0 - 1, y1 + 2):
+                    for z in range(z0 - 1, z1 + 1):
+                        innen = x0 <= x <= x1 and y0 <= y <= y1 and z >= z0
+                        if not innen and (x, y, z) not in welt and z <= oberkante[(x, y)]:
+                            welt[(x, y, z)] = wand
+    return welt
+
+
+def meerwelt(grund="lava", breite=(-30, 60), laenge=(-20, 70)):
+    """Offenes Meer aus Lava oder Wasser bis zum Horizont; die Figur steht auf einer kleinen Säule bei (0, 0)."""
+    welt = {}
+    for x in range(breite[0], breite[1]):
+        for y in range(laenge[0], laenge[1]):
+            welt[(x, y, -1)] = grund
+            welt[(x, y, -2)] = "netherrack" if grund == "lava" else "sand"
+    for x in (-1, 0):
+        for y in (-1, 0):
+            for z in range(-3, 1):
+                welt[(x, y, z)] = "dirt" if z < 0 else "grass_block"
+    return welt
+
+
+def baue_meerwelt(texturen_ordner, grund="lava", aenderungen=None, **kw):
     tex = bloecke.Texturen(texturen_ordner)
-    raster = raum(art, **kw)
+    raster = aendern(meerwelt(grund, **kw), aenderungen)
+    return bloecke.baue(raster, tex, "meerwelt")
+
+
+def baue_raum(texturen_ordner, art="hoehle", aenderungen=None, **kw):
+    tex = bloecke.Texturen(texturen_ordner)
+    raster = aendern(raum(art, **kw), aenderungen)
     ob = bloecke.baue(raster, tex, art)
     raumlicht(art, kw.get("becken_ab", 4))
     return ob
 
 
-def baue_klippe(texturen_ordner, **kw):
+def baue_klippe(texturen_ordner, aenderungen=None, **kw):
     tex = bloecke.Texturen(texturen_ordner)
-    raster = klippe(**kw)
+    raster = aendern(klippe(**kw), aenderungen)
     ob = bloecke.baue(raster, tex, "klippe")
     bloecke.baue_pflanzen(bepflanzen(raster), tex)
     kante, tiefe = kw.get("kante", 2), kw.get("tiefe", 20)
