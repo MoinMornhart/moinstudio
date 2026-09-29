@@ -20,6 +20,8 @@ export interface ReaktionPayload {
   gefuehl?: string
   /** eigenes Wort (optional), sonst schlägt Claude eins vor */
   wort?: string
+  /** Gaming-Video (Bastian-Stil): Bild ist ein Spielmotiv, Spielname kommt als Logo in die Ecke */
+  spiel?: string
   claudeCli: string
   blender: { exe: string; mesa: boolean; geraet: string; samples: number }
   blenderDir: string
@@ -31,13 +33,13 @@ export interface ReaktionPayload {
 export const GEFUEHLE: Record<string, { mimik: string; posen: string[] }> = {
   schockiert: { mimik: 'erschrocken', posen: ['neutral', 'schreck', 'zeigen'] },
   lachend: { mimik: 'froh', posen: ['neutral', 'jubeln', 'zeigen'] },
-  begeistert: { mimik: 'froh', posen: ['jubeln', 'neutral', 'zeigen'] },
+  begeistert: { mimik: 'froh', posen: ['neutral', 'jubeln', 'zeigen'] },
   wuetend: { mimik: 'wuetend', posen: ['neutral', 'zeigen', 'achselzucken'] },
   traurig: { mimik: 'traurig', posen: ['neutral', 'blick_runter', 'achselzucken'] },
   cringe: { mimik: 'skeptisch', posen: ['neutral', 'kopfkratzen', 'achselzucken'] },
   skeptisch: { mimik: 'skeptisch', posen: ['neutral', 'kopfkratzen', 'achselzucken'] },
   muede: { mimik: 'muede', posen: ['neutral', 'kopfkratzen'] },
-  neugierig: { mimik: 'neutral', posen: ['blick_zum_ding', 'zeigen', 'neutral'] }
+  neugierig: { mimik: 'neutral', posen: ['neutral', 'blick_zum_ding', 'zeigen'] }
 }
 
 /** Freie Worte („bin schockiert“, „lach mich tot“) auf ein Gefühl abbilden. */
@@ -84,7 +86,7 @@ export async function reaktionJob(p: ReaktionPayload, ctx: JobContext<{ claudeSe
   ctx.progress(5, 'Claude sieht sich das Original an …')
   const vorgabe = gefuehlAus(p.gefuehl)
   const prompt = `Du hilfst Philip (YouTube-Kanal ${p.kanal}) bei einem Reaction-Thumbnail im Stil von BastiGHGs Zweitkanal und Zarbex.
-Sieh dir das Thumbnail des Originalvideos an: ${original}
+${p.spiel ? `Es ist ein Gaming-Video über das Spiel „${p.spiel}“; das Bild ist ein Spielmotiv (kein fremdes Thumbnail).\n` : ''}Sieh dir das Bild an: ${original}
 Philip wird als sein Minecraft-Skin groß auf einer Bildhälfte stehen (Kopf etwa 60 % der Bildhöhe, auf Brusthöhe
 angeschnitten) und das Original füllt das Bild dahinter.
 
@@ -138,6 +140,7 @@ Antworte nur mit JSON nach dem Schema.`
       wort,
       schrift: 'C:/Windows/Fonts/ariblk.ttf',
       pfeil_ziel: pl.pfeil && a.wichtig?.length === 2 ? a.wichtig : undefined,
+      spiel: p.spiel,
       samples: p.blender.samples,
       geraet: p.blender.geraet
     }

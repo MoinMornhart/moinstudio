@@ -260,7 +260,7 @@ export interface MoinApi {
   thumbVideo(kanal: string, titel?: string): Promise<string | null>
   thumbVideoErgebnis(jobId: string): Promise<ThumbVideoErgebnis | null>
   /** Reaction-Thumbnail: Dateidialog fürs Original, dann Job; liefert die Job-ID oder null */
-  thumbReaktion(o: { gefuehl?: string; wort?: string; kanal: string }): Promise<string | null>
+  thumbReaktion(o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string }): Promise<string | null>
   /** Serien-Vorlagen */
   thumbVorlagen(): Promise<ThumbSerie[]>
 }

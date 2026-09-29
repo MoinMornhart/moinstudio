@@ -214,6 +214,12 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         ende = punkt(zu, max(0.35, zv - 0.06))
         _pfeil(start, ende, h_e * 0.03)
         info["pfeil"] = [zu, zv]
+    if spec.get("spiel"):
+        # Spielname als Logo in der unteren Ecke gegenüber der Figur, 12–20 % der Bildbreite (Stilbuch 14.7)
+        name = _textobjekt(spec["spiel"].upper(), spec.get("schrift"), h_e * 0.075, (1, 0.85, 0.2))
+        name.location = punkt(0.84 if seite == "links" else 0.16, 0.9)
+        name.rotation_euler = (math.radians(90), 0, 0)
+        info["spiel"] = spec["spiel"]
     if spec.get("logo") and os.path.exists(spec["logo"]):
         logo = _bildflaeche(spec["logo"], cam, ebene, name="logo", helligkeit=1.0)
         logo.scale = (0.16, 0.16, 0.16)

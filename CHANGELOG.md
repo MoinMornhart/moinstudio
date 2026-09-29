@@ -6,6 +6,12 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Gaming-Thumbnails im Bastian-Stil: Spielbild statt Original, Spielname als Logo in der Ecke gegenüber der Figur.
+
+### Geändert
+- Reaction: erste Pose ist immer ohne Hände (Stilbuch 14.3), die zweite Variante bleibt auf Claudes Seite und schaut in die Kamera.
+
 ## [0.5.0] - 2026-09-29
 
 > Alle Mobs und Blöcke (immer die neuesten), Enderdrache und End, Mimik und Gesten, Serien-Vorlagen und Reaction-Thumbnails.

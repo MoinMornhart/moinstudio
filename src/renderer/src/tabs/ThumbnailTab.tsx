@@ -243,6 +243,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const [videoTitel, setVideoTitel] = useState('')
   const [gefuehl, setGefuehl] = useState('')
   const [reaktionWort, setReaktionWort] = useState('')
+  const [spiel, setSpiel] = useState('')
   const [serien, setSerien] = useState<ThumbSerie[]>([])
   const [folge, setFolge] = useState<{ id: string; nr: number; wort?: string } | null>(null)
   useEffect(() => {
@@ -282,7 +283,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const reaktion = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni' })
+      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni', spiel })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -373,7 +374,7 @@ export function ThumbnailTab(): React.JSX.Element {
             </button>
           </div>
         </Card>
-        <Card title="Reaction-Thumbnail" badge="MoinMorni">
+        <Card title="Reaction- und Gaming-Thumbnail" badge="MoinMorni">
           <p className="muted small">
             Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt groß dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose.
           </p>
@@ -386,8 +387,9 @@ export function ThumbnailTab(): React.JSX.Element {
               ))}
             </select>
             <input className="input" placeholder="Wort (optional, z. B. KRASS)" value={reaktionWort} onChange={(e) => setReaktionWort(e.target.value)} />
+            <input className="input" placeholder="Spielname bei Gaming-Videos (optional)" value={spiel} onChange={(e) => setSpiel(e.target.value)} />
             <button className="btn primary" onClick={() => void reaktion()}>
-              Original-Thumbnail wählen …
+              {spiel.trim() ? 'Spielbild wählen …' : 'Original-Thumbnail wählen …'}
             </button>
           </div>
         </Card>
