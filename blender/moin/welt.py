@@ -102,7 +102,7 @@ def klippe(seed=7, kante=2, tiefe=20, grund="water", gegenseite=True, breite=(-2
     return welt
 
 
-def bepflanzen(welt, seed=3, frei_radius=2.0, dichte=0.42):
+def bepflanzen(welt, seed=3, frei_radius=2.0, dichte=0.28):
     """Gras und Blumen auf allen freien Grasblöcken (wie im Ebenen-Biom), um die Figur herum frei."""
     rnd = random.Random(seed)
     blumen = ["dandelion", "poppy", "cornflower", "oxeye_daisy", "azure_bluet"]

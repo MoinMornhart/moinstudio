@@ -6,6 +6,7 @@ Beschreibung (alle Längen in Blöcken, Winkel in Grad):
   "himmel": "tag" | "abend" | "nacht",
   "figuren": [{"id": "ich", "skin": "<pfad>", "slim": null, "pose": "zeigen", "posen_korrektur": {…},
                "position": [x, y], "blick": 0, "item": {"name": "diamond_sword", "hand": "l", "winkel": 40}}],
+  "mobs": [{"art": "zombie", "position": [x, y], "hoehe": 0, "blick": 0 | "<figur-id>", "groesse": 1, "pose": "stand" | "angriff"}],
   "kamera": {"modus": "nah", "seite": "links", "thema": [x, y, z], "ueber_abgrund": false},
   "render": {"breite": 1280, "hoehe": 720, "samples": 48, "blende": 4}
 }
@@ -24,6 +25,7 @@ from . import himmel as mhimmel
 from . import items as mitems
 from . import kamera as mkamera
 from . import look as mlook
+from . import mobs as mmobs
 from . import welt as mwelt
 from .bloecke import BLOCK
 from .posen import POSEN
@@ -90,6 +92,24 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     haupt = figuren[0][1]
     _randlicht(scene, haupt)
 
+    mobs = []
+    if szene.get("mobs"):
+        tab = mmobs.tabelle(szene.get("mob_tabelle"))
+        for i, m in enumerate(szene["mobs"]):
+            art = m["art"]
+            if art not in tab:
+                raise ValueError(f"Unbekannter Mob „{art}“ (bekannt: {', '.join(k for k in tab if not k.startswith('_'))})")
+            mob = mmobs.baue_mob(art, tab[art], texturen, groesse=m.get("groesse", 1.0), pose=m.get("pose", "stand"), name=f"{art}{i}")
+            x, y = m.get("position", (4, 2))
+            mob.wurzel.location = (x * BLOCK, y * BLOCK, m.get("hoehe", 0) * BLOCK)
+            blick = m.get("blick", 0)
+            if isinstance(blick, str):  # zu einer Figur schauen
+                ziel = next((fig for f, fig in figuren if f["id"] == blick), haupt).kopf_mitte()
+                d = ziel - mob.wurzel.location
+                blick = math.degrees(math.atan2(d.x, -d.y))
+            mob.wurzel.rotation_euler = (0, 0, math.radians(blick))
+            mobs.append((m, mob))
+
     k = szene.get("kamera", {})
     cam_data = bpy.data.cameras.new("kamera")
     cam = bpy.data.objects.new("kamera", cam_data)
@@ -130,6 +150,11 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     for f, fig in figuren:
         o, u = fig.kopf_punkte()
         info["figuren"][f["id"]] = {"kopf": _bildpunkt(scene, cam, (o + u) / 2), "kopf_oben": _bildpunkt(scene, cam, o), "kopf_unten": _bildpunkt(scene, cam, u)}
+    info["mobs"] = []
+    for m, mob in mobs:
+        pts = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+        xs = [_bildpunkt(scene, cam, p) for p in pts]
+        info["mobs"].append({"art": m["art"], "box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]})
     for fid, ob in gehalten.items():
         pts = [ob.matrix_world @ v.co for v in ob.data.vertices]
         xs = [_bildpunkt(scene, cam, p) for p in pts[:: max(1, len(pts) // 60)]]

@@ -21,6 +21,8 @@ extraResources:
     to: blender
     filter:
       - '**/*.py'
+  - from: resources/minecraft
+    to: minecraft
 
 asar: true
 

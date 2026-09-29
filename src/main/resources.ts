@@ -4,7 +4,8 @@ import { join } from 'node:path'
 /** Mitgelieferte Dateien: im Installer unter resources/<name> (electron-builder extraResources), sonst im Repo. */
 const DEV: Record<string, string> = {
   config: 'config',
-  blender: 'blender'
+  blender: 'blender',
+  minecraft: 'resources/minecraft'
 }
 
 export function resourceDir(name: keyof typeof DEV | string): string {

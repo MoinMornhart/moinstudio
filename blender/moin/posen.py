@@ -60,9 +60,12 @@ POSEN = {
         "bein_r": {"vor": -4},
     },
     # 14 Schreck: Hand vor dem Mund (Arm 110–130° hoch, nach innen)
-    "schreck": {
-        "kopf": {"nicken": 7},
-        "arm_r": {"heben": 120, "seitlich": -38},
-        "arm_l": {"heben": 12, "seitlich": 10},
+    "schreck": {  # zurückweichen, beide Hände neben dem Kopf – das Gesicht bleibt frei
+        "koerper": {"vor": -7},
+        "kopf": {"nicken": 4},
+        "arm_r": {"heben": 165, "seitlich": 22},
+        "arm_l": {"heben": 165, "seitlich": 22},
+        "bein_r": {"vor": -14},
+        "bein_l": {"vor": 10},
     },
 }
