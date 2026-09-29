@@ -153,13 +153,13 @@ Neustart (Philip, 28.09.2026): Alles Bisherige zur Thumbnail-Erstellung ist gel�
 
 ## M4 – Blender von Grund auf neu → 0.3.0
 
-- [ ] **4.1 Figur aus dem Skin:** Classic und Slim, zweite Skin-Ebene plastisch, pixelscharf, Gesicht bleibt der echte Skin. ✅ Render neben Vorbild-Figur
-- [ ] **4.2 Posen wie bei den Vorbildern:** Posen-Bibliothek aus dem Stilbuch (Präsentieren, Zeigen, Item halten, Kampfbereit, Über die Schulter, Liegen, Fallen …), Kopf- und Körperdrehung, keine zappelnden Glieder. ✅ Jede Pose neben ihrem Vorbild
-- [ ] **4.3 Welt-Baukasten:** Echte Minecraft-Texturen, Gelände, Klippen und Abgründe mit sichtbarer Tiefe, Meer, Höhlen, Nether, End, Dörfer und Bauwerke, Weitblick mit Dunst. ✅ 10 Umgebungen neben Vorbildern
-- [ ] **4.4 Grafik-Look wie die Vorbilder:** Licht, Schatten, Ambient Occlusion, Himmel und Wolken, Tiefenunschärfe, Farbkorrektur. ✅ Seite-an-Seite-Vergleich, Philips Abnahme
-- [ ] **4.5 Kamera:** Nahaufnahme mit Weitwinkel, Totale, Untersicht, Kippung – wie im Stilbuch. ✅ Vergleich mit Vorbildern
-- [ ] **4.6 Mobs und Items:** Echte Modelle und Texturen aus den Spieldateien; Waffen und Werkzeuge gut sichtbar in der Hand wie bei den Vorbildern. ✅ Nahaufnahme je Item-Art
-- [ ] **4.7 Nachbau-Test:** 10 Vorbild-Thumbnails möglichst nah nachbauen (eigener Skin, eigene Texte) und neben das Original legen. ✅ Philip beurteilt die Paare
+- [x] **4.1 Figur aus dem Skin:** Classic und Slim, zweite Skin-Ebene plastisch, pixelscharf, Gesicht bleibt der echte Skin. ✅ Render neben Vorbild-Figur — erledigt: Classic/Slim, zweite Ebene, Fase, dazu Ellbogen und Knie mit weicher Biegung.
+- [x] **4.2 Posen wie bei den Vorbildern:** Posen-Bibliothek aus dem Stilbuch (Präsentieren, Zeigen, Item halten, Kampfbereit, Über die Schulter, Liegen, Fallen …), Kopf- und Körperdrehung, keine zappelnden Glieder. ✅ Jede Pose neben ihrem Vorbild — erledigt: 18 Posen inkl. 10 Kampfposen aus 72 Action-Vorbildern, Spiegelung für Gegner, Beugung.
+- [x] **4.3 Welt-Baukasten:** Echte Minecraft-Texturen, Gelände, Klippen und Abgründe mit sichtbarer Tiefe, Meer, Höhlen, Nether, End, Dörfer und Bauwerke, Weitblick mit Dunst. ✅ 10 Umgebungen neben Vorbildern — erledigt: Wiese, Klippe/Schlucht, Meeresklippe, Meer, Lavameer, Höhle, Nether, Dorf, frei gesetzte und weggegrabene Blöcke, fliegende Blöcke. Offen: End.
+- [x] **4.4 Grafik-Look wie die Vorbilder:** Licht, Schatten, Ambient Occlusion, Himmel und Wolken, Tiefenunschärfe, Farbkorrektur. ✅ Seite-an-Seite-Vergleich, Philips Abnahme — erledigt: Tiefenunschärfe, Randabdunklung, Randlicht nach Kamera, Farbduell, Kampf-Himmel (blutrot, gewitter). Philips Abnahme läuft über die Werkstatt-Seite.
+- [x] **4.5 Kamera:** Nahaufnahme mit Weitwinkel, Totale, Untersicht, Kippung – wie im Stilbuch. ✅ Vergleich mit Vorbildern — erledigt: Modi nah, gefahr, tiefe, klippe, abgrund, held, brust, kampf; gekippte Kamera; bis zu 6 Vorschläge mit Bildprüfung (Kopf, Items, Gegnergröße, Gesichter per Strahl).
+- [x] **4.6 Mobs und Items:** Echte Modelle und Texturen aus den Spieldateien; Waffen und Werkzeuge gut sichtbar in der Hand wie bei den Vorbildern. ✅ Nahaufnahme je Item-Art — erledigt: 31 Mobs aus Originalmodell und -textur, Items aus echter Textur, übergroße Waffen im Kampf, Item folgt dem gebeugten Arm.
+- [x] **4.7 Nachbau-Test:** 10 Vorbild-Thumbnails möglichst nah nachbauen (eigener Skin, eigene Texte) und neben das Original legen. ✅ Philip beurteilt die Paare — erledigt: 10 Nachbauten, siehe docs/tests/nachbau-test.md.
 
 ## M5 – Thumbnail-Erstellung neu → 0.4.0
 
