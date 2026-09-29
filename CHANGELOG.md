@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Behoben
+- Spiele-Vorlage: Wo die Person war, füllt jetzt LaMa (lokales KI-Modell, Apache-2.0, CPU) echten Hintergrund auf statt einer verschmierten Fläche; Mündungsfeuer und Effekte werden mit entfernt.
+- Spiele-Vorlage: Zielt die Person auf etwas, richtet Blender den Arm mit dem Gegenstand automatisch genau dorthin.
+
 ## [0.9.0] - 2026-09-29
 
 > Änderungen unter jedem Thumbnail schreiben, Aufträge löschen, Spiele-Vorlage in der App, lebendiger Text, Reaction und Gaming getrennt
@@ -16,8 +20,6 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Spiele-Vorlagen und Änderungen erscheinen in der Auftragsliste.
 
 ### Behoben
-- Spiele-Vorlage: Wo die Person war, füllt jetzt LaMa (lokales KI-Modell, Apache-2.0, CPU) echten Hintergrund auf statt einer verschmierten Fläche; Mündungsfeuer und Effekte werden mit entfernt.
-- Spiele-Vorlage: Zielt die Person auf etwas, richtet Blender den Arm mit dem Gegenstand automatisch genau dorthin.
 - „Kein Bild“ bei Aufträgen im iCloud-Ordner: Bilder werden mehrfach gelesen und automatisch nachgeladen.
 
 ### Hinzugefügt
