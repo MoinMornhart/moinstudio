@@ -22,8 +22,8 @@ Die vollständige, abhakbare Masterliste. Es wird **immer nur ein Schritt** bear
 | M3 Vorbilder | → 0.2.0 | Thumbnails großer Minecraft-Kanäle sammeln, Stilbuch, Vergleichsgalerie | ⬜ |
 | M4 Blender neu | → 0.3.0 | Figur, Posen, Welt, Grafik-Look, Kamera, Mobs/Items, Nachbau-Test | ⬜ |
 | M5 Thumbnail neu | → 0.4.0 | Planung, Text, strenge Selbstprüfung, Reiter, Video-Upload mit Vorschlägen, Abnahme | ⬜ |
-| M6 Schnitt | ab 0.14.0 | Import, Transkript, Rohschnitt, Untertitel, Export, Stream-Highlights | 🔄 |
-| M7 Planung | → 0.6.0 | Boards, Kalender | ⬜ |
+| M6 Schnitt | 0.14.0–0.21.0 | Import, Transkript, Rohschnitt, Untertitel, Export, Stream-Highlights | 🔄 (Abnahme offen) |
+| M7 Planung | ab 0.22.0 | Board, Kalender, Verbindung zu Thumbnail und Schnitt, Ideen mit Claude | 🔄 |
 | M8 Adobe (ungetestet) | → 0.7.0 | Adobe-Anbindung | ⬜ |
 | M9 Stabil | **1.0.0** | Politur, Release | ⬜ |
 
@@ -187,9 +187,21 @@ Rohvideos bleiben, wo sie liegen; im Projekt stehen nur Pfad, Größe und Prüfs
 - [x] **6.8 Stream-Highlights und Shorts (MoinMorni):** Lange Streams → Höhepunkte (Lautstärkespitzen, Lachen, Transkript/Claude) → einzelne Clips und 9:16-Shorts mit Facecam-Layout. ✅ In einem langen Test-Stream werden die markierten Höhepunkte gefunden — erledigt: Test-Stream (98 s, Facecam, Explosion) → genau die beiden eingebauten Höhepunkte gefunden (Creeper-Panik 9/10, Diamanten 8/10), Facecam automatisch erkannt, Short 1080×1920 mit Facecam oben, Gameplay unten und Untertiteln Wort für Wort; gekürzte Pausen gelten auch in Clips.
 - [ ] **6.9 MCP und Abnahme:** ✓ MCP-Werkzeug `video_edit` für Claude Desktop (Projekte, Import, Schnitt ansehen, Änderung in Worten, Vorschau, Export, Highlights, Clips); offen: Abnahme mit Philips echten Videos. ✅ Freigabe.
 
-## M7 – Planung → 0.6.0
+## M7 – Planung
 
-- [ ] **7.1 Neu planen.**
+Ziel: Philip sieht auf einen Blick, **welches Video wo steht** (Idee → Aufnahme → Schnitt → Thumbnail → Upload → veröffentlicht)
+und **wann was hochgeladen wird**, getrennt für MoinMornhart und MoinMorni. Die Planung ist mit den anderen Reitern verbunden:
+Aus einer Karte entsteht mit einem Klick das Thumbnail oder das Schnitt-Projekt, und fertige Schritte schieben die Karte selbst weiter.
+Alles liegt im Datenordner (PC und Laptop teilen ihn über iCloud/OneDrive), eine Datei pro Karte, keine Cloud-Dienste und kein YouTube-Login.
+Grundlage: [Technik §10](docs/research/tech.md).
+
+- [x] **7.1 Neu planen.** ✅ Plan steht hier (29.09.2026, selbst geplant nach Philips Vorgabe „alles ohne mich“).
+- [ ] **7.2 Karten-Speicher:** eine JSON-Datei pro Karte in `planning/cards` (Titel, Kanal, Spalte, Reihenfolge als Bruchzahl, Termin, Notizen, Checkliste, Verknüpfungen zu Thumbnail/Schnitt, `rev`, `updatedAt`, `updatedBy`); atomar schreiben; Konfliktkopien (OneDrive „-GERÄT“, iCloud „ 2“) erkennen und zusammenführen (neueste Änderung je Feld); Ordner beobachten, damit Änderungen vom anderen Gerät sofort erscheinen. ✅ Unit-Tests für Speichern, Reihenfolge und Zusammenführen von Konflikten.
+- [ ] **7.3 Board:** Reiter „Planung“ mit Board je Kanal (Spalten Idee, Aufnahme, Schnitt, Thumbnail, Upload, Veröffentlicht); Karten anlegen, ziehen (auch zwischen Spalten), bearbeiten, löschen; Kartendetails mit Notizen, Checkliste und Termin. ✅ Karten per Ziehen verschieben, nach Neustart ist alles gleich; Aufnahme des Reiters.
+- [ ] **7.4 Kalender:** Monats- und Wochenansicht der Upload-Termine beider Kanäle; Termin per Ziehen verschieben; Upload-Rhythmus je Kanal (z. B. Mi und Sa 17 Uhr) mit Hinweis auf Lücken; Karten ohne Termin am Rand zum Einplanen. ✅ Termine erscheinen an den richtigen Tagen, Lücken im Rhythmus werden angezeigt.
+- [ ] **7.5 Verbindung zu Thumbnail und Schnitt:** Aus einer Karte „Thumbnail erstellen“ (Titel und Idee als Beschreibung) und „Rohvideo schneiden“; Karte zeigt Thumbnail-Bild und Schnitt-Stand; Karte rückt selbst weiter (Schnitt exportiert → Thumbnail, Thumbnail gewählt → Upload); Titel, Beschreibung und Kapitel aus dem Export landen in der Karte. ✅ Durchlauf Karte → Schnitt → Thumbnail → Upload mit einem Testvideo.
+- [ ] **7.6 Ideen und Titel mit Claude:** Ideenfinder je Kanal (aus bisherigen Karten, Serien und dem Stil großer Minecraft-Kanäle), Titelvorschläge für eine Karte, Wochenplan-Vorschlag („was nehme ich diese Woche auf“); über das Claude-Abo. ✅ 10 Ideen je Kanal, jede passt zum Kanal und ist keine Wiederholung.
+- [ ] **7.7 MCP und Abnahme:** MCP-Werkzeug `planning` für Claude Desktop (Karten auflisten, anlegen, verschieben, Termin setzen), mit Rückfall auf den Datenordner, wenn die App nicht läuft; Abnahme mit Philip. ✅ Freigabe.
 
 ## M8 – Adobe (ungetestet) → 0.7.0
 
