@@ -53,16 +53,22 @@ def _welt(w, texturen):
     raise ValueError(f"Unbekannte Welt-Art „{art}“")
 
 
-def _randlicht(scene, figur):
-    """Randlicht hinten auf der abgewandten Seite (Stilbuch 6: helle Kante an Kopf und Schulter)."""
+def _randlicht(scene, figur, cam, seite="links", staerke=650):
+    """Randlicht hinter der Figur, von der Kamera aus gesehen, leicht zur Außenseite versetzt
+    (Stilbuch 6: helle Kante an Kopf und Schulter, die die Figur vom Hintergrund löst)."""
     rand = bpy.data.lights.new("rand", "AREA")
-    rand.energy = 520
-    rand.size = 1.2
+    rand.energy = staerke
+    rand.size = 1.0
     ro = bpy.data.objects.new("rand", rand)
     scene.collection.objects.link(ro)
     ro.visible_camera = False
     kopf = figur.kopf_mitte()
-    ro.location = kopf + Vector((-1.8, 2.2, 1.0))
+    von_kamera = kopf - cam.matrix_world.translation
+    von_kamera.z = 0
+    von_kamera.normalize()
+    rechts = Vector((von_kamera.y, -von_kamera.x, 0))  # Bild-rechts aus Kamerasicht
+    aussen = -rechts if seite == "links" else rechts
+    ro.location = kopf + von_kamera * 2.2 + aussen * 1.3 + Vector((0, 0, 1.2))
     ro.rotation_euler = (kopf - ro.location).to_track_quat("-Z", "Y").to_euler()
 
 
@@ -107,7 +113,6 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         mfigur.pose(fig, p)
         figuren.append((f, fig))
     haupt = figuren[0][1]
-    _randlicht(scene, haupt)
 
     mobs = []
     if szene.get("mobs"):
@@ -141,6 +146,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
                            gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt)
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)
+    _randlicht(scene, haupt, cam, k.get("seite", "links"), r.get("randlicht", 650))
     mlook.gesichtslicht(scene, cam, (oben + unten) / 2, r.get("gesichtslicht", 10.0))
 
     gehalten = {}
