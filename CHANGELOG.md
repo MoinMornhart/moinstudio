@@ -6,6 +6,13 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Spiele-Vorlagen (erste Version): Person aus einem Spiele-Thumbnail automatisch entfernen und Hintergrund auffüllen, Philips Skin an ihrer Stelle mit Pose, Mimik und echtem 3D-Requisit (CC0, z. B. Pistole), Titel der Vorlage wird wieder obendrauf gelegt.
+- Neue Gesten: müde, winken, nachdenken, Panik, Siegerfaust, genervt sowie beidhändig mit Pistole zielen; Reaction-Gefühle nutzen sie.
+
+### Geändert
+- Mimik: kein gezeichneter Mund mehr, der Mund aus dem Skin bleibt (nur Lider und Augenringe).
+
 ## [0.6.0] - 2026-09-29
 
 > Gaming-Thumbnails mit Spielname, bessere Reaction-Posen, saubere Tiermodelle.

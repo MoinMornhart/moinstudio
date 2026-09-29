@@ -177,6 +177,15 @@ POSEN = {
         "bein_r": {"vor": 16, "seitlich": 8},
         "bein_l": {"vor": -16, "seitlich": 8},
     },
+    # Pistole beidhändig zielen (Shooter- und Agenten-Spiele, Spiele-Vorlagen): Waffenarm quer zum Thema gestreckt,
+    # zweite Hand stützt, Kopf bleibt zur Kamera
+    "pistole": {
+        "blick": 45,
+        "koerper": {"vor": 4},
+        "kopf": {"drehen": -34, "nicken": 4, "neigen": -4},
+        "arm_r": {"heben": 82, "seitlich": -4, "drehen": 6, "beugen": 4},
+        "arm_l": {"heben": 78, "seitlich": -14, "drehen": -18, "beugen": 30},
+    },
     # Gesten (Reactions und Stimmung, Philip 29.09.): Gesicht bleibt frei
     # Jubeln: beide Arme hoch, angewinkelt
     "jubeln": {
@@ -198,5 +207,49 @@ POSEN = {
         "koerper": {"neigen": -4},
         "arm_r": {"heben": 25, "seitlich": 38, "beugen": 75},
         "arm_l": {"heben": 25, "seitlich": 38, "beugen": 75},
+    },
+    # Müde: zusammengesackt, Kopf hängt schief nach vorn, Arme schlaff (dazu Mimik „muede“)
+    "muede": {
+        "kippen": -4,
+        "koerper": {"vor": 14, "neigen": 6},
+        "kopf": {"nicken": 16, "neigen": 14},
+        "arm_r": {"heben": 6, "seitlich": 6, "beugen": 8},
+        "arm_l": {"heben": 4, "seitlich": 4, "beugen": 6},
+        "bein_r": {"vor": 4, "beugen": 8},
+        "bein_l": {"vor": -2, "beugen": 12},
+    },
+    # Winken: ein Arm hoch zur Seite, Unterarm aufrecht
+    "winken": {
+        "kopf": {"neigen": 6},
+        "arm_l": {"heben": 110, "seitlich": 55, "drehen": 10, "beugen": 70},
+        "arm_r": {"heben": 8, "seitlich": 8, "beugen": 10},
+    },
+    # Nachdenken: Hand am Kinn (unter dem Mund), anderer Arm stützt den Ellbogen, Blick schräg nach oben
+    "nachdenken": {
+        "kopf": {"nicken": -10, "drehen": 14, "neigen": 8},
+        "arm_l": {"heben": 60, "seitlich": -18, "drehen": -20, "beugen": 115},
+        "arm_r": {"heben": 40, "seitlich": -30, "drehen": 30, "beugen": 90},
+    },
+    # Panik: beide Hände seitlich am Kopf (Gesicht bleibt frei), Kopf zurück
+    "panik": {
+        "koerper": {"vor": -6},
+        "kopf": {"nicken": -8},
+        "arm_r": {"heben": 150, "seitlich": 40, "drehen": 15, "beugen": 120},
+        "arm_l": {"heben": 150, "seitlich": 40, "drehen": 15, "beugen": 120},
+    },
+    # Siegesfaust: ein Arm angewinkelt hoch, Faust neben dem Kopf
+    "siegesfaust": {
+        "kopf": {"nicken": -6, "neigen": -6},
+        "koerper": {"neigen": -4},
+        "arm_l": {"heben": 125, "seitlich": 40, "beugen": 95},
+        "arm_r": {"heben": 14, "seitlich": 12, "beugen": 20},
+    },
+    # Genervt: Arme verschränkt, Kopf schief weg (dazu Mimik „skeptisch“)
+    "genervt": {
+        "kopf": {"neigen": -12, "drehen": -10, "nicken": 4},
+        "arm_r": {"heben": 78, "seitlich": -45, "beugen": 20},
+        "arm_l": {"heben": 74, "seitlich": -45, "beugen": 20},
+        "bein_r": {"seitlich": 6},
+        "bein_l": {"seitlich": 4},
     },
 }

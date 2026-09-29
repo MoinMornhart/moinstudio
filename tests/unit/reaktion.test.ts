@@ -13,8 +13,8 @@ describe('Reaction-Thumbnails (Stilbuch 14)', () => {
   it('wählt jedes Mal eine neue Pose', () => {
     const k = GEFUEHLE['schockiert']!.posen
     expect(naechstePose(k, [])).toBe('neutral')
-    expect(naechstePose(k, ['neutral'])).toBe('schreck')
-    expect(naechstePose(k, ['neutral', 'schreck'])).toBe('zeigen')
+    expect(naechstePose(k, ['neutral'])).toBe('panik')
+    expect(naechstePose(k, ['neutral', 'panik'])).toBe('schreck')
   })
 
   it('beginnt bei jedem Gefühl mit einer Pose ohne Hände (Stilbuch 14.3)', () => {

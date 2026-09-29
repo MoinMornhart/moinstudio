@@ -31,15 +31,15 @@ export interface ReaktionPayload {
 
 /** Mimik und passende Posen je Gefühl; die erste Pose ohne Hände ist Stilbuch-Standard (14.3). */
 export const GEFUEHLE: Record<string, { mimik: string; posen: string[] }> = {
-  schockiert: { mimik: 'erschrocken', posen: ['neutral', 'schreck', 'zeigen'] },
-  lachend: { mimik: 'froh', posen: ['neutral', 'jubeln', 'zeigen'] },
-  begeistert: { mimik: 'froh', posen: ['neutral', 'jubeln', 'zeigen'] },
-  wuetend: { mimik: 'wuetend', posen: ['neutral', 'zeigen', 'achselzucken'] },
-  traurig: { mimik: 'traurig', posen: ['neutral', 'blick_runter', 'achselzucken'] },
-  cringe: { mimik: 'skeptisch', posen: ['neutral', 'kopfkratzen', 'achselzucken'] },
-  skeptisch: { mimik: 'skeptisch', posen: ['neutral', 'kopfkratzen', 'achselzucken'] },
-  muede: { mimik: 'muede', posen: ['neutral', 'kopfkratzen'] },
-  neugierig: { mimik: 'neutral', posen: ['neutral', 'blick_zum_ding', 'zeigen'] }
+  schockiert: { mimik: 'erschrocken', posen: ['neutral', 'panik', 'schreck', 'zeigen'] },
+  lachend: { mimik: 'froh', posen: ['neutral', 'jubeln', 'zeigen', 'siegesfaust'] },
+  begeistert: { mimik: 'froh', posen: ['neutral', 'siegesfaust', 'jubeln', 'zeigen'] },
+  wuetend: { mimik: 'wuetend', posen: ['neutral', 'genervt', 'zeigen', 'achselzucken'] },
+  traurig: { mimik: 'traurig', posen: ['neutral', 'muede', 'blick_runter', 'achselzucken'] },
+  cringe: { mimik: 'skeptisch', posen: ['neutral', 'genervt', 'kopfkratzen', 'achselzucken'] },
+  skeptisch: { mimik: 'skeptisch', posen: ['neutral', 'nachdenken', 'genervt', 'kopfkratzen'] },
+  muede: { mimik: 'muede', posen: ['neutral', 'muede', 'kopfkratzen'] },
+  neugierig: { mimik: 'neutral', posen: ['neutral', 'nachdenken', 'blick_zum_ding', 'zeigen', 'winken'] }
 }
 
 /** Freie Worte („bin schockiert“, „lach mich tot“) auf ein Gefühl abbilden. */

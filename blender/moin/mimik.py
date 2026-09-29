@@ -4,7 +4,7 @@ Die Augen des Skins bleiben unverändert. Über die Gesichtsfläche kommt eine h
 (8×8 Unterpixel je Skin-Pixel) mit:
 - Oberlid in Hautfarbe mit gerader, schräger Kante (wütend: innen tiefer, traurig: außen tiefer, müde/skeptisch: halb zu)
 - weichen Augenringen (etwas dunklerer Hautton unter den Augen)
-- einem Mund im leichten Pixel-Stil (in Skin-Pixeln gesetzt: Lächeln, Grummeln, offen vor Schreck)
+- keinem gezeichneten Mund: der Mund aus dem Skin bleibt (Philip: „der sah echt gut aus“)
 Augenzeile, Augenspalten und Hautfarbe werden aus dem Skin selbst gelesen, damit es bei jedem Skin passt.
 """
 import bpy
@@ -71,8 +71,6 @@ def _textur(info, ausdruck, name):
     bild = [[(0, 0, 0, 0) for _ in range(n)] for _ in range(n)]  # [zeile von oben][spalte]
     haut = (*info["haut"], 1.0)
     schatten = tuple(v * 0.72 for v in info["haut"]) + (0.85,)
-    dunkel = tuple(v * 0.35 for v in info["haut"]) + (1.0,)
-    mund_farbe = (0.28, 0.08, 0.07, 1.0)
     z = info["zeile"]
 
     def setze(x, y, farbe):
@@ -106,42 +104,7 @@ def _textur(info, ausdruck, name):
                     staerke = 0.55 * (1 - (y - (z + 1) * UNTER) / (UNTER / 2))
                     setze(x, y, (*schatten[:3], staerke))
 
-    # Mund in Skin-Pixeln (leichter Pixel-Stil), zwei Zeilen unter den Augen, mittig
-    mz = min(7, z + 2)
-
-    def pixel(c, r, farbe):
-        for yy in range(r * UNTER, (r + 1) * UNTER):
-            for xx in range(c * UNTER, (c + 1) * UNTER):
-                setze(xx, yy, farbe)
-
-    def halb(c, r, farbe, oben=True):
-        y0 = r * UNTER + (0 if oben else UNTER // 2)
-        for yy in range(y0, y0 + UNTER // 2):
-            for xx in range(c * UNTER, (c + 1) * UNTER):
-                setze(xx, yy, farbe)
-
-    if ausdruck == "froh":
-        for c in (3, 4):
-            halb(c, mz, mund_farbe, oben=False)
-        halb(2, mz, mund_farbe, oben=True)
-        halb(5, mz, mund_farbe, oben=True)
-    elif ausdruck in ("wuetend", "traurig"):
-        for c in (3, 4):
-            halb(c, mz, mund_farbe, oben=True)
-        halb(2, mz, mund_farbe, oben=False)
-        halb(5, mz, mund_farbe, oben=False)
-    elif ausdruck == "erschrocken":
-        for c in (3, 4):
-            pixel(c, mz, dunkel)
-    elif ausdruck == "schreiend":
-        for c in (2, 3, 4, 5):
-            pixel(c, mz, dunkel)
-        if mz + 1 < 8:
-            for c in (3, 4):
-                pixel(c, mz + 1, dunkel)
-    elif ausdruck in ("muede", "skeptisch"):
-        for c in (3, 4, 5) if ausdruck == "skeptisch" else (3, 4):
-            halb(c, mz, mund_farbe, oben=True)
+    # Kein gezeichneter Mund (Philip, 29.09.): der Mund aus dem Skin bleibt, wie er ist.
 
     img = bpy.data.images.new(name, n, n, alpha=True)
     flach = []

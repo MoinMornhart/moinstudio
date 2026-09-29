@@ -1,0 +1,142 @@
+"""Spiele-Vorlagen (Philip, 27.09.): Philip in ein vorhandenes Spiele-Thumbnail setzen, genau an die Stelle der Person.
+
+Ablauf: freistellen.py entfernt die Person aus der Vorlage und füllt die Lücke (hintergrund.png, person.json).
+Diese Szene legt den aufgefüllten Hintergrund bildfüllend hinter die Kamera-Ebene, stellt Philips echten Skin so, dass
+der Kopf an der Stelle des Kopfes aus der Vorlage sitzt (gleiche Größe), setzt Pose, Mimik und ein Requisit aus einem
+glTF-Modell (z. B. Pistole) in die Hand. Licht: warmes Key-Licht von der Seite, aus der das Licht in der Vorlage kommt.
+Den Titel der Vorlage legt vorlage_titel.py danach wieder oben drauf.
+"""
+import math
+import os
+
+import bpy
+from mathutils import Matrix, Vector
+
+from . import figur as mfigur
+from . import look as mlook
+from . import mimik as mmimik
+from .posen import POSEN
+from .reaktion import _bildflaeche
+
+BREITE, HOEHE = 1280, 720
+
+
+def _requisit(pfad, knoten, laenge_m):
+    """glTF laden, nur die genannten Knoten behalten, auf `laenge_m` (längste Achse) skalieren. Gibt ein Leer-Objekt
+    zurück, dessen lokale Achsen gelten: +X = Lauf/Spitze, +Z = Oberseite, Ursprung = Griff."""
+    vorher = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=pfad)
+    neu = [o for o in bpy.data.objects if o not in vorher]
+    behalten = [o for o in neu if o.type == "MESH" and (not knoten or o.name in knoten)]
+    for o in neu:
+        if o not in behalten and o.type == "MESH":
+            bpy.data.objects.remove(o, do_unlink=True)
+    bpy.context.view_layer.update()
+    ecken = [o.matrix_world @ Vector(c) for o in behalten for c in o.bound_box]
+    lo = Vector((min(e.x for e in ecken), min(e.y for e in ecken), min(e.z for e in ecken)))
+    hi = Vector((max(e.x for e in ecken), max(e.y for e in ecken), max(e.z for e in ecken)))
+    faktor = laenge_m / max(hi - lo)
+    leer = bpy.data.objects.new("requisit", None)
+    bpy.context.scene.collection.objects.link(leer)
+    # Griff: hinteres Viertel, untere Hälfte (Pistolen, Schwerter mit Griff hinten unten)
+    griff = Vector((lo.x + 0.22 * (hi.x - lo.x), (lo.y + hi.y) / 2, lo.z + 0.3 * (hi.z - lo.z)))
+    for o in behalten:
+        mw = o.matrix_world.copy()
+        o.parent = leer
+        o.matrix_world = Matrix.Scale(faktor, 4) @ Matrix.Translation(-griff) @ mw
+    return leer
+
+
+def baue_vorlage(spec, ausgabe, bericht=None):
+    """spec: {hintergrund, skin, slim, pose, mimik, kopf: [u, v], kopf_anteil, blick, kopf_drehung,
+    requisit: {gltf, knoten, hand: r|l, laenge_px}, licht_seite: rechts|links, samples, geraet}"""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    scene = bpy.context.scene
+    scene.render.resolution_x, scene.render.resolution_y = BREITE, HOEHE
+    s = 1 if spec.get("licht_seite", "rechts") == "rechts" else -1
+
+    fig = mfigur.baue_figur("ich", spec["skin"], slim=spec.get("slim"))
+    p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in POSEN.get(spec.get("pose", "neutral"), POSEN["neutral"]).items()}
+    p["blick"] = spec.get("blick", p.get("blick", 0))
+    if "kopf_drehung" in spec:
+        p.setdefault("kopf", {})["drehen"] = spec["kopf_drehung"]
+    mfigur.pose(fig, p)
+    if spec.get("mimik"):
+        mmimik.setze_mimik(fig, spec["mimik"])
+
+    # Kamera: Kopf an der Stelle und in der Größe des Kopfes aus der Vorlage
+    cam_daten = bpy.data.cameras.new("kamera")
+    cam_daten.lens = spec.get("linse", 50)
+    cam = bpy.data.objects.new("kamera", cam_daten)
+    scene.collection.objects.link(cam)
+    scene.camera = cam
+    kopf = fig.kopf_mitte()
+    kopf_h = 8 * mfigur.PX * 1.06
+    vfov = 2 * math.atan(cam_daten.sensor_width * HOEHE / BREITE / 2 / cam_daten.lens)
+    abstand = kopf_h / spec.get("kopf_anteil", 0.4) / (2 * math.tan(vfov / 2))
+    breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
+    hoehe_m = breite_m * HOEHE / BREITE
+    u, v = spec.get("kopf", [0.5, 0.3])
+    cam.location = kopf + Vector((-(u - 0.5) * breite_m, -abstand, -(0.5 - v) * hoehe_m))
+    cam.rotation_euler = (math.radians(90), 0, 0)
+    bpy.context.view_layer.update()
+    _bildflaeche(spec["hintergrund"], cam, abstand * 6, helligkeit=spec.get("hintergrund_hell", 1.0))
+
+    info = {}
+    r = spec.get("requisit")
+    if r and os.path.exists(r["gltf"]):
+        seite = r.get("hand", "r")
+        teil = fig.teile[f"arm_{seite}"]
+        m = teil.matrix_world @ mfigur._beuge_matrix(f"arm_{seite}", fig.beugung[f"arm_{seite}"])
+        rot = m.to_3x3().normalized()
+        lauf = (rot @ Vector((0, 0, -1))).normalized()  # Unterarm-Richtung = Lauf
+        oben = (rot @ Vector((0, -1, 0)))  # Vorderseite des hängenden Arms = oben, wenn er nach vorn zeigt
+        oben = (oben - lauf * oben.dot(lauf)).normalized()
+        quer = oben.cross(lauf).normalized()
+        leer = _requisit(r["gltf"], r.get("knoten"), r.get("laenge_px", 9) * mfigur.PX)
+        leer.matrix_world = Matrix.Translation(fig.hand(seite) + lauf * 0.6 * mfigur.PX + oben * 0.8 * mfigur.PX) @ Matrix((lauf, quer, oben)).transposed().to_4x4()
+        info["requisit"] = r["gltf"]
+
+    # Licht wie in der Vorlage: warmes Key-Licht von der Lichtseite, kühle Füllung, helle Randkante
+    for name, ort, energie, groesse, farbe in (
+        ("key", Vector((s * 1.4, -1.3, 1.1)), 120, 1.6, (1.0, 0.86, 0.66)),
+        ("fuell", Vector((-s * 1.3, -1.2, 0.1)), 22, 2.2, (0.75, 0.82, 1.0)),
+        ("rand", Vector((s * 0.9, 1.2, 0.7)), 220, 0.7, (1.0, 0.9, 0.72)),
+    ):
+        l = bpy.data.lights.new(name, "AREA")
+        l.energy, l.size, l.color = energie, groesse, farbe
+        o = bpy.data.objects.new(name, l)
+        scene.collection.objects.link(o)
+        o.location = kopf + ort
+        o.rotation_euler = (kopf - o.location).to_track_quat("-Z", "Y").to_euler()
+        o.visible_camera = False
+    welt = bpy.data.worlds.new("welt")
+    scene.world = welt
+    welt.use_nodes = True
+    welt.node_tree.nodes["Background"].inputs["Color"].default_value = (0.35, 0.3, 0.25, 1)
+    welt.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.5
+
+    scene.render.engine = "CYCLES"
+    mlook.gpu_einrichten(scene, spec.get("geraet", "CPU"))
+    scene.cycles.samples = spec.get("samples", 64)
+    scene.cycles.use_denoising = True
+    scene.view_settings.view_transform = "Standard"
+    try:
+        scene.view_settings.look = "Medium High Contrast"
+    except TypeError:
+        pass
+    scene.view_settings.exposure = -0.1
+    bpy.context.view_layer.update()
+    from bpy_extras.object_utils import world_to_camera_view
+
+    ecken = [world_to_camera_view(scene, cam, c) for c in fig.kopf_ecken()]
+    info["kopf_box"] = [min(e.x for e in ecken), 1 - max(e.y for e in ecken), max(e.x for e in ecken), 1 - min(e.y for e in ecken)]
+    if ausgabe:
+        scene.render.filepath = ausgabe
+        bpy.ops.render.render(write_still=True)
+    if bericht:
+        import json
+
+        with open(bericht, "w", encoding="utf-8") as fh:
+            json.dump(info, fh, ensure_ascii=False, indent=1)
+    return info
