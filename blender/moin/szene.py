@@ -173,6 +173,29 @@ def _auf_den_boden(scene, fig, hoehe=None):
     bpy.context.view_layer.update()
 
 
+def _riesen_zurueck(haupt, mobs, thema):
+    """Riesige Mobs (Ghast, 10-fache Mobs) passen nur ins Bild, wenn sie weit genug hinten stehen – wie die
+    Riesenspinne bei Paluten. Ist ein Mob das Kamera-Thema und höher als 60 % seines Abstands zur Hauptfigur, wird er
+    auf der Linie Figur → Mob nach hinten geschoben, bis es passt."""
+    for i, (m, mob) in enumerate(mobs):
+        if not (thema == f"mob:{i}" or thema == m["art"]):
+            continue
+        bpy.context.view_layer.update()
+        punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+        hoehe = max(p.z for p in punkte) - min(0.0, min(p.z for p in punkte))
+        kopf = haupt.kopf_mitte()
+        weg = mob.wurzel.location - kopf
+        weg.z = 0
+        abstand = weg.length
+        noetig = hoehe / 0.6
+        if abstand < 1e-3 or abstand >= noetig:
+            continue
+        verschiebung = weg.normalized() * (noetig - abstand)
+        mob.wurzel.location += verschiebung
+        print("MOIN_RIESE", m["art"], "um", round(verschiebung.length, 1), "m nach hinten")
+    bpy.context.view_layer.update()
+
+
 def _im_bild(box):
     """Anteil einer Bildbox (x0, y0, x1, y1), der im Bild liegt."""
     x0, y0, x1, y1 = box
@@ -298,7 +321,10 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     if verdeckt > 0.12:
         warnungen.append(f"Etwas versperrt die Sicht ({int(verdeckt * 100)} % des Bildes liegen vor der Hauptfigur)")
     for m in info["mobs"]:
-        if _im_bild(m["box"]) < 0.5:
+        b = m["box"]
+        sichtbar = max(0.0, min(1, b[2]) - max(0, b[0])) * max(0.0, min(1, b[3]) - max(0, b[1]))
+        # sichtbar = zur Hälfte im Bild, oder (Riesenmob, angeschnitten wie bei den Vorbildern) füllt mindestens 12 % des Bildes
+        if _im_bild(b) < 0.5 and sichtbar < 0.12:
             warnungen.append(f"Mob {m['art']} kaum sichtbar")
     if fehler > 0.1:
         warnungen.append(f"Kamera trifft das Stilbuch nicht (Abweichung {fehler:.2f}) – Thema näher an die Figur legen")
@@ -353,6 +379,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             mobs.append((m, mob))
 
     k = szene.get("kamera", {})
+    _riesen_zurueck(haupt, mobs, k.get("thema"))
     cam_data = bpy.data.cameras.new("kamera")
     cam = bpy.data.objects.new("kamera", cam_data)
     scene.collection.objects.link(cam)
