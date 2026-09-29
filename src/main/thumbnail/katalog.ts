@@ -23,6 +23,7 @@ export const WELTEN: Katalog['welten'] = [
   { name: 'dorf', hinweis: 'Ebenen-Dorf mit Häusern, Wegen, Brunnen, Feld (Dorfbewohner als Mobs dazu)' },
   { name: 'lavameer', hinweis: 'Lavasee bis zum Horizont, Figur auf einer Erdsäule bei (0, 0); weitere Säulen über „bloecke“' },
   { name: 'meer', hinweis: 'Wasser bis zum Horizont, Figur auf einer Säule' },
+  { name: 'end', hinweis: 'Das End: Endstein-Insel mit Obsidiansäulen, dazu himmel end; Enderdrache als Mob ender_dragon (hoehe 6–12), Endkristalle ender_crystal' },
   { name: 'hoehle', hinweis: 'geschlossene Höhle mit Erzen und Lava- oder Wasserbecken auf der Themenseite' },
   { name: 'nether', hinweis: 'Nether mit Netherrack, Glowstone, Magma und Lavameer' }
 ]

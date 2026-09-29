@@ -70,6 +70,9 @@ def _welt(w, texturen, himmel="tag"):
         return mwelt.baue_klippe(texturen, aend, seed=seed, kante=w.get("kante", 0), tiefe=w.get("tiefe", 20), gegenseite=True)
     if art == "dorf":
         return mwelt.baue_dorf(texturen, aend, seed=seed, haeuser=w.get("haeuser", 5))
+    if art == "end":
+        bloecke.DUNST.update(farbe=(0.06, 0.03, 0.09), halbwert=120.0)
+        return mwelt.baue_endwelt(texturen, aend, seed=seed)
     if art in ("lavameer", "meer"):
         if art == "lavameer":
             bloecke.DUNST.update(farbe=(0.9, 0.35, 0.08), halbwert=90.0)
@@ -79,7 +82,7 @@ def _welt(w, texturen, himmel="tag"):
         bloecke.DUNST.update({"hoehle": {"farbe": (0.015, 0.02, 0.03), "halbwert": 70.0},
                               "nether": {"farbe": (0.30, 0.05, 0.02), "halbwert": 45.0}}[art])
         return mwelt.baue_raum(texturen, art, aend, seed=seed, grund=w.get("grund", "lava"))
-    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, dorf, lavameer, meer, "
+    raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, dorf, lavameer, meer, end, "
                      f"{', '.join(mwelt.RAUM_ARTEN)})")
 
 
@@ -263,7 +266,7 @@ def _sicht_versperrt(scene, cam, haupt, raster=12):
             unten = frame[2].lerp(frame[1], u)
             p = oben.lerp(unten, v)
             ok, ort, _, _, ob, _ = scene.ray_cast(tiefe, von, (p - von).normalized(), distance=grenze)
-            if ok and ob is not None and ob.name.split(".")[0] in ("klippe", "dorf", "meerwelt", "hoehle", "nether") or (ok and ob is not None and ob.name.startswith("objekt")):
+            if ok and ob is not None and ob.name.split(".")[0] in ("klippe", "dorf", "meerwelt", "endwelt", "hoehle", "nether") or (ok and ob is not None and ob.name.startswith("objekt")):
                 gesperrt += 1
     return gesperrt / (raster * raster)
 
@@ -455,6 +458,25 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         cam.rotation_mode = "XYZ"
         cam.matrix_world = cam.matrix_world @ mathutils_Matrix.Rotation(math.radians(neigung), 4, "Z")
         bpy.context.view_layer.update()
+    # Dunkle Himmel: das Thema-Mob (Drache, Enderman, Warden …) bekommt Fülllicht und eine helle Randkante,
+    # sonst verschwindet es vor dem Hintergrund
+    t_mob = k.get("thema")
+    if variante.get("gesicht") and isinstance(t_mob, str) and (t_mob.startswith("mob:") or any(m["art"] == t_mob for m, _ in mobs)):
+        mob = mobs[int(t_mob[4:])][1] if t_mob.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == t_mob)
+        punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+        mitte = sum(punkte, Vector()) / len(punkte)
+        groesse = max((p - mitte).length for p in punkte)
+        for nr, (richtung, energie, farbe) in enumerate(((cam.matrix_world.translation - mitte, 150, (1.0, 1.0, 1.0)), (mitte - cam.matrix_world.translation, 3000, variante.get("rand", (1, 1, 1))))):
+            l = bpy.data.lights.new(f"mob_licht{nr}", "AREA")
+            l.energy = energie * max(1.0, groesse / 3) ** 2
+            l.size = max(2.0, groesse)
+            l.color = farbe
+            lo = bpy.data.objects.new(l.name, l)
+            scene.collection.objects.link(lo)
+            lo.visible_camera = False
+            d = richtung.normalized()
+            lo.location = mitte + d * (groesse * 1.6) + Vector((0, 0, groesse * 0.6))
+            lo.rotation_euler = (mitte - lo.location).to_track_quat("-Z", "Y").to_euler()
     staerke = r.get("gesichtslicht", variante.get("gesicht", 10.0))
     mlook.gesichtslicht(scene, cam, (oben + unten) / 2, staerke)
     for f, fig in figuren[1:]:  # Gegner und Freunde: eigenes, schwächeres Gesichtslicht

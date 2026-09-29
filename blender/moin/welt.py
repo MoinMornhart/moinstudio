@@ -473,6 +473,44 @@ def aendern(welt, liste):
     return welt
 
 
+def endwelt(seed=7, radius=34, saeulen=8):
+    """Das End: schwebende Endstein-Insel mit welliger Oberfläche und Rand, Obsidiansäulen im Ring (wie um das
+    Ausgangsportal), die Figur steht bei (0, 0) nahe dem Inselrand auf der Kameraseite."""
+    rnd = random.Random(seed)
+    welle = _rauschen(seed, 8.0)
+    welt = {}
+    mx, my = 0, 14  # Inselmitte hinter der Figur
+    for x in range(mx - radius, mx + radius + 1):
+        for y in range(my - radius, my + radius + 1):
+            d = math.hypot(x - mx, y - my) + (welle(x, y) - 0.5) * 6
+            if d > radius:
+                continue
+            oben = 0 if math.hypot(x, y) < 4 else int(round((welle(x * 1.3, y) - 0.5) * 3))
+            dicke = int(3 + (1 - d / radius) * 18)  # Insel wird zur Mitte hin dicker (Unterseite sichtbar)
+            for z in range(oben - dicke, oben + 1):
+                welt[(x, y, z)] = "end_stone"
+    for i in range(saeulen):
+        w = i / saeulen * 2 * math.pi + 0.3
+        cx, cy = int(mx + math.cos(w) * radius * 0.7), int(my + math.sin(w) * radius * 0.7)
+        if math.hypot(cx, cy) < 8:
+            continue
+        r = rnd.choice((2, 2, 3))
+        hoehe = rnd.randint(18, 34)
+        for x in range(cx - r, cx + r + 1):
+            for y in range(cy - r, cy + r + 1):
+                if math.hypot(x - cx, y - cy) <= r + 0.3:
+                    for z in range(0, hoehe):
+                        welt[(x, y, z)] = "obsidian"
+        welt[(cx, cy, hoehe)] = "bedrock"
+    return welt
+
+
+def baue_endwelt(texturen_ordner, aenderungen=None, **kw):
+    tex = bloecke.Texturen(texturen_ordner)
+    raster = aendern(endwelt(**kw), aenderungen)
+    return bloecke.baue(raster, tex, "endwelt")
+
+
 def meerwelt(grund="lava", breite=(-30, 60), laenge=(-20, 70)):
     """Offenes Meer aus Lava oder Wasser bis zum Horizont; die Figur steht auf einer kleinen Säule bei (0, 0)."""
     welt = {}

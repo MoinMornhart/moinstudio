@@ -195,6 +195,44 @@ export function grundhaltung(parts: Part[], anim: Anim, ziel = false): void {
   }
 }
 
+/**
+ * Enderdrache: In den Daten nur ein Bausatz (je ein Hals-, Flügel-, Bein-Teil); im Spiel setzt der Code ihn zusammen
+ * (DragonModel/EnderDragonRenderer): 5 Halssegmente, Kopf mit Kiefer, 12 Schwanzsegmente, gespiegelte Flügel mit
+ * Spitzen, Beine mit Unterschenkel und Fuß. Lage nach dem Spielcode in Ruhe (Flügel leicht angehoben).
+ */
+export function baueDrache(vorlage: Part[]): Part[] {
+  const t = new Map(vorlage.map((p) => [p.name, p]))
+  const teile: Part[] = []
+  const kopie = (quelle: string, name: string, d: Vec, o: { spiegeln?: boolean; parent?: string | null; pivot?: Vec; rotation?: Vec } = {}): void => {
+    const p = t.get(quelle)
+    if (!p) return
+    const boxes = p.boxes.map((b) => {
+      let x = b.origin[0] + d[0]
+      if (o.spiegeln) x = -(x + b.size[0])
+      return { ...b, origin: [x, b.origin[1] + d[1], b.origin[2] + d[2]] as Vec, mirror: o.spiegeln ? !b.mirror : b.mirror }
+    })
+    const pv = o.pivot ?? ([p.pivot[0] + d[0], p.pivot[1] + d[1], p.pivot[2] + d[2]] as Vec)
+    teile.push({ name, parent: o.parent ?? null, pivot: o.spiegeln ? [-pv[0], pv[1], pv[2]] : pv, rotation: o.rotation ?? [0, 0, 0], boxes })
+  }
+  kopie('body', 'body', [0, 0, 0])
+  for (let i = 0; i < 5; i++) kopie('neck', `neck${i}`, [0, -10 + 2.5 * i, -13 - 10 * i])
+  kopie('head', 'head', [0, 2, -64])
+  kopie('jaw', 'jaw', [0, 2, -64])
+  for (let i = 0; i < 12; i++) kopie('neck', `tail${i}`, [0, -12 - 0.9 * i, 66 + 10 * i])
+  for (const [seite, sp] of [['r', false], ['l', true]] as const) {
+    const rz = -18 // gleiche Drehung: die gespiegelte Geometrie spiegelt die Neigung schon mit
+    kopie('wing', `wing_${seite}`, [0, 0, 0], { spiegeln: sp, pivot: [-12, 19, 2], rotation: [0, 0, rz] })
+    kopie('wingtip', `wingtip_${seite}`, [-12, -5, 0], { spiegeln: sp, parent: `wing_${seite}`, pivot: [-68, 19, 2], rotation: [0, 0, rz] })
+    kopie('frontleg', `frontleg_${seite}`, [0, 0, 0], { spiegeln: sp })
+    kopie('frontlegtip', `frontlegtip_${seite}`, [-12, -21, 3], { spiegeln: sp })
+    kopie('frontfoot', `frontfoot_${seite}`, [-12, -41, 3], { spiegeln: sp })
+    kopie('rearleg', `rearleg_${seite}`, [0, 0, 0], { spiegeln: sp })
+    kopie('rearlegtip', `rearlegtip_${seite}`, [-16, -14, 40], { spiegeln: sp })
+    kopie('rearfoot', `rearfoot_${seite}`, [-16, -45, 46], { spiegeln: sp })
+  }
+  return teile
+}
+
 /** Alte Vierbeiner-Modelle (Eisbär, Schaf, Katze …): Der Körper ist hochkant modelliert und liegt im Spiel immer um
  * 90° gedreht (Java ModelQuadruped). Greift nur, wenn nach den Animationen noch nichts gedreht ist. */
 export function vierbeinerKoerper(parts: Part[]): void {
@@ -300,7 +338,9 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
         await writeFile(lokalTex, Buffer.from(await res.arrayBuffer()))
       }
       const groesse = pngGroesse(await readFile(lokalTex))
-      const { parts, scale } = wandle(geo)
+      const gewandelt = wandle(geo)
+      const scale = gewandelt.scale
+      const parts = key === 'ender_dragon' ? baueDrache(gewandelt.parts) : gewandelt.parts
       // Grundhaltung: alle Animationen, die ohne Bedingung laufen (setup u. a.)
       const kurz = (d['animations'] as Record<string, string> | undefined) ?? {}
       const scripts = (d['scripts'] as { animate?: unknown[] } | undefined)?.animate ?? []
@@ -309,10 +349,10 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
       for (const k of Object.keys(kurz)) if (/setup/i.test(k) && !/baby/i.test(k)) namen.add(k) // oft nur über einen Controller aktiv
       for (const n of namen) {
         const voll = kurz[n]
-        if (!voll || !anims.has(voll)) continue
+        if (!voll || !anims.has(voll) || key === 'ender_dragon') continue
         grundhaltung(parts, anims.get(voll)!, (SONDERFAELLE[key]?.ziel ?? []).some((z) => voll.includes(z)))
       }
-      vierbeinerKoerper(parts)
+      if (key !== 'ender_dragon') vierbeinerKoerper(parts)
       for (const [teil, off] of Object.entries(SONDERFAELLE[key]?.versatz ?? {})) {
         const t = parts.find((x) => x.name === teil)
         if (t) for (const b of t.boxes) b.origin = [b.origin[0] + off[0], b.origin[1] + off[1], b.origin[2] + off[2]]
