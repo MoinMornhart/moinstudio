@@ -15,6 +15,7 @@ import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG } from '../tools/specs'
 import { z } from 'zod'
 import { thumbnailJob, type ThumbnailPayload, type ThumbnailVariante } from './job'
 import { ladeVorbilder } from './planung'
+import { reaktionJob, type ReaktionPayload } from './reaktion'
 import { videoVorschlaegeJob, type VideoPayload, type VideoVorschlag } from './video'
 
 /**
@@ -59,12 +60,53 @@ export function registerThumbnailIpc(
   hardware: HardwareController,
   tools: ToolManager,
   getWindow: () => BrowserWindow | undefined
-): { starteThumbnail: (start: ThumbStart) => Promise<string>; starteVideo: (video: string, kanal: string, titel?: string) => Promise<string> } {
+): {
+  starteThumbnail: (start: ThumbStart) => Promise<string>
+  starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
+  starteReaktion: (original: string, o: { gefuehl?: string; wort?: string; kanal?: string }) => Promise<string>
+} {
   queue.register('thumbnail', thumbnailJob)
   const vorlagen = async (): Promise<ThumbSerie[]> =>
     ((JSON.parse(await readFile(join(resourceDir('config'), 'vorlagen.json'), 'utf8')) as { serien?: ThumbSerie[] }).serien ?? [])
   ipcMain.handle(IPC.thumbVorlagen, () => vorlagen())
   queue.register('video-vorschlaege', videoVorschlaegeJob)
+  queue.register('reaktion', reaktionJob)
+
+  // Reaction-Thumbnail (Stilbuch 14): Original wählen, Claude wertet aus, Blender baut mit Philips Skin
+  const starteReaktion = async (original: string, o: { gefuehl?: string; wort?: string; kanal?: string }): Promise<string> => {
+    const dir = await datenOrdner(settings)
+    const ich = (await ladeSkins(dir)).find((x) => x.rolle === 'ich')
+    if (!ich) throw new Error('Bitte zuerst deinen eigenen Skin hochladen (Skins → „Mein Skin“).')
+    const profile = await hardware.profiles.load()
+    if (!profile) throw new Error('Bitte zuerst den Hardware-Test ausführen (Einstellungen).')
+    const config = ProfileStore.effective(profile)
+    const spec = [BLENDER_PRIMARY, BLENDER_FALLBACK].find((x) => x.version === config.blenderVersion)
+    const exe = spec ? await tools.exePath(spec) : null
+    if (!exe) throw new Error('Blender ist auf diesem Gerät nicht lauffähig oder nicht installiert.')
+    const cli = await findClaudeCli()
+    if (!cli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
+    const payload: ReaktionPayload = {
+      original,
+      skin: join(dir, 'skins', ich.datei),
+      slim: ich.slim,
+      kanal: o.kanal ?? 'MoinMorni',
+      gefuehl: o.gefuehl?.trim() || undefined,
+      wort: o.wort?.trim() || undefined,
+      claudeCli: cli,
+      blender: { exe, mesa: config.blenderMesa, geraet: config.final.engine === 'CYCLES' ? config.final.device : 'CPU', samples: Math.max(24, Math.min(64, config.final.samples)) },
+      blenderDir: resourceDir('blender'),
+      datenOrdner: dir,
+      ausgabe: join(dir, 'thumbnails', `reaktion-${randomUUID()}`)
+    }
+    return queue.enqueue('reaktion', `Reaction: ${basename(original)}`, payload)
+  }
+  ipcMain.handle(IPC.thumbReaktion, async (_e, raw: unknown) => {
+    const win = getWindow()
+    const opts = { title: 'Thumbnail des Originalvideos wählen', filters: [{ name: 'Bild', extensions: ['jpg', 'jpeg', 'png', 'webp'] }], properties: ['openFile' as const] }
+    const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    if (wahl.canceled || !wahl.filePaths[0]) return null
+    return starteReaktion(wahl.filePaths[0], (raw ?? {}) as { gefuehl?: string; wort?: string; kanal?: string })
+  })
 
   // Video hochladen → Vorschläge (ROADMAP 5.5)
   const starteVideo = async (video: string, kanal: unknown, titel?: unknown): Promise<string> => {
@@ -210,8 +252,8 @@ export function registerThumbnailIpc(
   ipcMain.handle(IPC.thumbAuftraege, (): ThumbAuftrag[] =>
     queue
       .state()
-      .jobs.filter((j) => j.kind === 'thumbnail' || j.kind === 'video-vorschlaege')
-      .map((j) => ({ id: j.id, art: j.kind === 'thumbnail' ? ('thumbnail' as const) : ('video' as const), titel: j.title, state: j.state, progress: j.progress, step: j.step, error: j.error ?? null, createdAt: j.createdAt }))
+      .jobs.filter((j) => j.kind === 'thumbnail' || j.kind === 'reaktion' || j.kind === 'video-vorschlaege')
+      .map((j) => ({ id: j.id, art: j.kind === 'video-vorschlaege' ? ('video' as const) : ('thumbnail' as const), titel: j.title, state: j.state, progress: j.progress, step: j.step, error: j.error ?? null, createdAt: j.createdAt }))
       .reverse()
   )
 
@@ -250,5 +292,5 @@ export function registerThumbnailIpc(
     shell.showItemInFolder(ziel.filePath)
     return ziel.filePath
   })
-  return { starteThumbnail, starteVideo }
+  return { starteThumbnail, starteVideo, starteReaktion }
 }

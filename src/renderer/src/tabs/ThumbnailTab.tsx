@@ -4,6 +4,7 @@ import { Card, PageHeader } from '../components/Panel'
 import { useJobs } from '../components/JobsWidget'
 
 const KANAELE = ['MoinMornhart', 'MoinMorni']
+const GEFUEHLE = ['', 'schockiert', 'lachend', 'begeistert', 'wütend', 'traurig', 'cringe', 'skeptisch', 'müde', 'neugierig']
 
 function fehlerText(err: unknown): string {
   return err instanceof Error ? err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(err)
@@ -240,6 +241,8 @@ export function ThumbnailTab(): React.JSX.Element {
   const [auftraege, setAuftraege] = useState<ThumbAuftrag[]>([])
   const [offen, setOffen] = useState<string | null>(null)
   const [videoTitel, setVideoTitel] = useState('')
+  const [gefuehl, setGefuehl] = useState('')
+  const [reaktionWort, setReaktionWort] = useState('')
   const [serien, setSerien] = useState<ThumbSerie[]>([])
   const [folge, setFolge] = useState<{ id: string; nr: number; wort?: string } | null>(null)
   useEffect(() => {
@@ -268,6 +271,18 @@ export function ThumbnailTab(): React.JSX.Element {
     setFehler(null)
     try {
       const id = await window.moin.thumbVideo(kanal, videoTitel)
+      if (id) {
+        setOffen(id)
+        ladeAuftraege()
+      }
+    } catch (err) {
+      setFehler(fehlerText(err))
+    }
+  }
+  const reaktion = async (): Promise<void> => {
+    setFehler(null)
+    try {
+      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni' })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -355,6 +370,24 @@ export function ThumbnailTab(): React.JSX.Element {
             <input className="input" placeholder="Videotitel (optional)" value={videoTitel} onChange={(e) => setVideoTitel(e.target.value)} />
             <button className="btn" onClick={() => void video()}>
               Video hochladen …
+            </button>
+          </div>
+        </Card>
+        <Card title="Reaction-Thumbnail" badge="MoinMorni">
+          <p className="muted small">
+            Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt groß dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose.
+          </p>
+          <div className="row wrap">
+            <select className="input" value={gefuehl} onChange={(e) => setGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
+              {GEFUEHLE.map((g) => (
+                <option key={g} value={g}>
+                  {g ? g[0]!.toUpperCase() + g.slice(1) : 'Gefühl: Claude wählt'}
+                </option>
+              ))}
+            </select>
+            <input className="input" placeholder="Wort (optional, z. B. KRASS)" value={reaktionWort} onChange={(e) => setReaktionWort(e.target.value)} />
+            <button className="btn primary" onClick={() => void reaktion()}>
+              Original-Thumbnail wählen …
             </button>
           </div>
         </Card>

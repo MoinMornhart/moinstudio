@@ -8,6 +8,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Hinzugefügt
 - Alle Mobs, immer die neuesten: automatischer Import aus Mojangs bedrock-samples-Vorschau bei jedem Auftrag (Geometrie, Texturen, Grundhaltung aus den setup-Animationen), derzeit 120 Figuren inklusive noch unveröffentlichter Mobs; die 31 geprüften Mobs behalten Vorrang.
+- Reaction-Thumbnails (Stilbuch 14, Vorbilder BastiGHGs Zweitkanal und Zarbex): Original hochladen, Claude erkennt das Wichtigste, wählt Seite, Wort und Gefühl; das Original füllt weich das Bild, Philips Skin kommt groß mit Mimik dazu, ein Wort und ein roter Pfeil; die Pose wechselt jedes Mal (Gedächtnis der letzten Posen); zwei Varianten.
 - Mimik (Philip): wütend, traurig, erschrocken, müde, skeptisch, froh, schreiend – Skin-Augen bleiben, dazu Lider mit schräger Kante, Augenringe und ein Mund im leichten Pixel-Stil; Augenzeile und Hautfarbe werden aus dem Skin gelesen. Neue Gesten: jubeln, kopfkratzen, achselzucken.
 - Serien-Vorlagen: „Minecraft durchspielen“ mit 8 Folgen (erste Nacht bis Enderdrache); die Folgennummer kommt als Serien-Merkmal in Minecraft-Schrift aufs Bild und weicht aus, wenn ihr Platz belegt ist.
 - Blöcke Netherportal (leuchtend, durchsichtig) und Netherziegel.

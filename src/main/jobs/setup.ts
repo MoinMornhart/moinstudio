@@ -22,11 +22,11 @@ export function setupJobs(
   hardware: HardwareController,
   settings: SettingsStore,
   getWindow: () => BrowserWindow | undefined
-): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo'] } {
+): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion'] } {
   const queue = new JobQueue(join(root, 'jobs'))
   queue.register('probe-render', probeRenderJob)
   registerJobsIpc(queue, getWindow)
-  const { starteThumbnail, starteVideo } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
+  const { starteThumbnail, starteVideo, starteReaktion } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()
@@ -55,5 +55,5 @@ export function setupJobs(
       return null
     }
   })
-  return { queue, enqueueProbe, starteThumbnail, starteVideo }
+  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion }
 }

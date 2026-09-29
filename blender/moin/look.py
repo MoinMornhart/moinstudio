@@ -104,3 +104,22 @@ def gesichtslicht(scene, cam, kopf, staerke=60.0):
     ob.location = von + Vector((0, 0, 0.45)) - richtung.normalized() * 0.2
     ob.rotation_euler = (kopf - ob.location).to_track_quat("-Z", "Y").to_euler()
     return ob
+
+
+def gpu_einrichten(scene, geraet="CPU"):
+    """Cycles auf der GPU aus dem Hardware-Test (OPTIX, CUDA, HIP, ONEAPI, METAL); sonst CPU (geht immer)."""
+    scene.cycles.device = "CPU"
+    if not geraet or geraet == "CPU":
+        return
+    try:
+        prefs = bpy.context.preferences.addons["cycles"].preferences
+        prefs.compute_device_type = geraet
+        prefs.refresh_devices() if hasattr(prefs, "refresh_devices") else prefs.get_devices()
+        gefunden = False
+        for d in prefs.devices:
+            d.use = d.type == geraet
+            gefunden = gefunden or d.use
+        if gefunden:
+            scene.cycles.device = "GPU"
+    except (TypeError, KeyError, AttributeError):
+        pass

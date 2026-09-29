@@ -27,7 +27,7 @@ registerClaudeIpc()
 registerMcpIpc(localRoot())
 // Im Screenshot-Modus den Assistenten nur zeigen, wenn er ausdrücklich aufgenommen werden soll
 registerSetupIpc(settings, !!screenshotDir && !process.argv.includes(SETUP_FLAG))
-const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
+const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
 
 // Fester Name für den Autostart-Eintrag (HKCU\...\Run). Ohne ihn leitet Electron den Namen
 // aus der AppUserModelId ab, und Setzen und Abfragen könnten verschiedene Einträge meinen.
@@ -130,6 +130,23 @@ if (toolsArg === 'install') {
       log(`fortgesetzt: ${jobs.get(id)?.state}`)
       const info = await jobs.waitFor(id)
       log(`Ende: ${info.state} ${info.error ?? ''} ${JSON.stringify(jobs.result(id) ?? {})}`)
+      app.exit(info.state === 'done' ? 0 : 1)
+    } catch (err) {
+      console.error(err)
+      app.exit(1)
+    }
+  })
+} else if (process.argv.some((a) => a.startsWith('--moin-reaktion='))) {
+  // Integrationstest Reaction (Stilbuch 14) ohne Dateidialog; optional --moin-gefuehl=… --moin-wort=…
+  const original = process.argv.find((a) => a.startsWith('--moin-reaktion='))!.slice('--moin-reaktion='.length)
+  const arg = (n: string): string | undefined => process.argv.find((a) => a.startsWith(`--moin-${n}=`))?.split('=').slice(1).join('=')
+  void app.whenReady().then(async () => {
+    await jobs.start()
+    try {
+      const id = await starteReaktion(original, { gefuehl: arg('gefuehl'), wort: arg('wort') })
+      const info = await jobs.waitFor(id)
+      console.log(`Ende: ${info.state} ${info.error ?? ''}`)
+      console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))
       app.exit(info.state === 'done' ? 0 : 1)
     } catch (err) {
       console.error(err)
