@@ -28,6 +28,9 @@ MODI = {
 # Dreiviertelprofil: Winkel zwischen Blickrichtung des Gesichts und Richtung zur Kamera (Stilbuch: 20–45°)
 PROFIL_GRAD = 32
 
+# nach rahme(): die besten verschiedenen Kamera-Vorschläge (Abweichung, Linse, Matrix, Azimut, Höhe)
+KANDIDATEN = []
+
 
 def _blick_matrix(pos, richtung):
     """Kameramatrix an `pos`, schaut entlang `richtung` (Hochachse bleibt oben)."""
@@ -68,13 +71,13 @@ def _rand_strafe(scene, cam, ecken, rand=0.03):
     return strafe
 
 
-def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None, still=False):
+def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None, still=False, anpassung=None):
     """Sucht Brennweite, Position und Blickrichtung. `seite`: wo die Figur im Bild steht (das Thema gegenüber).
     `gesicht`: Blickrichtung des Kopfes (Weltvektor); die Kamera sieht das Gesicht im Dreiviertelprofil, nie von
     hinten. `erlaubt(pos)`: optionale Vorgabe, wo die Kamera stehen darf (z. B. über dem Abgrund).
     `kopf_ecken`: Weltpunkte des Kopfes – der ganze Kopf muss im Bild bleiben (nie am Rand angeschnitten).
     Gibt die Abweichung (0 = perfekt) zurück."""
-    m = MODI[modus]
+    m = dict(MODI[modus], **(anpassung or {}))  # z. B. {"hoehe": 12} für mehr Aufsicht in einer Szene
     kopf_uv = m["kopf_uv"] if seite == "links" else (1 - m["kopf_uv"][0], m["kopf_uv"][1])
     thema_uv = m["thema_uv"] if seite == "links" else (1 - m["thema_uv"][0], m["thema_uv"][1])
     kopf = (kopf_oben + kopf_unten) / 2
@@ -83,6 +86,7 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
     gesicht = gesicht.normalized() if gesicht is not None else None
     sensor_h = cam.data.sensor_width * scene.render.resolution_y / scene.render.resolution_x
     beste = None
+    alle = []
     for linse in sorted({max(18, m["linse"] - 4), m["linse"], m["linse"] + 4}):
         cam.data.lens = linse
         vfov = 2 * math.atan(sensor_h / 2 / linse)
@@ -99,8 +103,23 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
                     r = _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht)
                     if r and kopf_ecken:
                         r = (r[0] + 25.0 * _rand_strafe(scene, cam, kopf_ecken),) + tuple(r[1:])
+                    if r:
+                        alle.append((r[0], linse, az_deg, m["hoehe"] + dh, i))
                     if r and (beste is None or r[0] < beste[0]):
                         beste = (r[0], cam.matrix_world.copy(), linse, r[1], r[2], r[3], az_deg, m["hoehe"] + dh)
+    # Weitere gute, deutlich verschiedene Vorschläge für die Bildprüfung (Schwert im Bild, Gesichter frei)
+    KANDIDATEN.clear()
+    for f, linse, az_deg, el_deg, i in sorted(alle):
+        if len(KANDIDATEN) >= 6 or f > beste[0] + 0.6:
+            break
+        if any(abs(az_deg - a) < 12 and abs(el_deg - e) < 4 for _, _, _, a, e in KANDIDATEN):
+            continue
+        cam.data.lens = linse
+        vfov = 2 * math.atan(sensor_h / 2 / linse)
+        abstand = kopf_h / m["kopf_anteil"] / (2 * math.tan(vfov / 2))
+        az, el = math.radians(az_deg), math.radians(el_deg)
+        pos = kopf + Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el))) * abstand
+        KANDIDATEN.append((f, linse, _blick_matrix(pos, kopf + richtung * (i * 0.2) - pos), az_deg, el_deg))
     cam.data.lens = beste[2]
     cam.matrix_world = beste[1]
     if not still:

@@ -8,7 +8,7 @@ Beschreibung (alle Längen in Blöcken, Winkel in Grad):
   "figuren": [{"id": "ich", "skin": "<pfad>", "slim": null, "pose": "zeigen", "posen_korrektur": {…},
                "position": [x, y], "blick": 0, "item": {"name": "diamond_sword", "hand": "l", "winkel": 40}}],
   "mobs": [{"art": "zombie", "position": [x, y], "hoehe": 0, "blick": 0 | "<figur-id>", "groesse": 1, "pose": "stand" | "angriff"}],
-  "kamera": {"modus": "nah", "seite": "links", "thema": [x, y, z], "ueber_abgrund": false},
+  "kamera": {"hoehe": 10 (optional, Grad), "linse": 24 (optional), "modus": "nah", "seite": "links", "thema": [x, y, z], "ueber_abgrund": false},
   "render": {"breite": 1280, "hoehe": 720, "samples": 48, "blende": 4}
 }
 Die erste Figur ist die Hauptfigur (Philip); die Kamera rahmt ihren Kopf.
@@ -151,6 +151,70 @@ def _bildpunkt(scene, cam, p):
     return [round(v.x, 3), round(1 - v.y, 3)]  # Bildkoordinaten: 0,0 oben links
 
 
+def _items_anhaengen(figuren, texturen, cam, k):
+    gehalten = {}
+    for f, fig in figuren:
+        it = f.get("item")
+        if it:
+            # Kampf: Waffen nah an der Kamera übergroß wie bei GommeHD (1,3–1,6-fach)
+            groesse = it.get("groesse", 1.4 if k.get("modus") == "kampf" else 1.0)
+            ob = mitems.baue_item(it["name"], texturen, pixel=mitems.ITEM_PIXEL * groesse)
+            mitems.in_die_hand(ob, fig, it.get("hand", "l"), cam, it.get("winkel", 40))
+            gehalten[f["id"]] = ob
+    bpy.context.view_layer.update()
+    return gehalten
+
+
+def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
+    """Bildbericht mit Warnungen für die Selbstprüfung: Köpfe, Items, Mobs im Bild, keine verdeckten Gesichter."""
+    info = {"kamera_abweichung": round(fehler, 4), "linse": cam.data.lens, "figuren": {}, "items": {}}
+    bpy.context.view_layer.update()
+    for f, fig in figuren:
+        o, u = fig.kopf_punkte()
+        ecken = [_bildpunkt(scene, cam, p) for p in fig.kopf_ecken()]
+        info["figuren"][f["id"]] = {"kopf": _bildpunkt(scene, cam, (o + u) / 2), "kopf_oben": _bildpunkt(scene, cam, o), "kopf_unten": _bildpunkt(scene, cam, u),
+                                    "kopf_box": [min(e[0] for e in ecken), min(e[1] for e in ecken), max(e[0] for e in ecken), max(e[1] for e in ecken)]}
+    info["mobs"] = []
+    for m, mob in mobs:
+        pts = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+        xs = [_bildpunkt(scene, cam, p) for p in pts]
+        info["mobs"].append({"art": m["art"], "box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]})
+    for fid, ob in gehalten.items():
+        pts = [ob.matrix_world @ v.co for v in ob.data.vertices]
+        xs = [_bildpunkt(scene, cam, p) for p in pts[:: max(1, len(pts) // 60)]]
+        info["items"][fid] = {"box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]}
+    # Warnungen für die Selbstprüfung: Wichtiges muss im Bild sein
+    warnungen = []
+    for fid, f in info["figuren"].items():
+        if fid == szene["figuren"][0]["id"] and (_im_bild(f["kopf_box"]) < 0.999 or min(f["kopf_box"][0], f["kopf_box"][1]) < 0.01 or max(f["kopf_box"][2], f["kopf_box"][3]) > 0.99):
+            warnungen.append(f"Kopf von {fid} am Bildrand angeschnitten")
+        elif _im_bild(f["kopf_box"]) < 0.6:
+            warnungen.append(f"Kopf von {fid} kaum sichtbar")
+        elif (szene.get("kamera", {}).get("modus") == "kampf" and fid != szene["figuren"][0]["id"]
+              and f["kopf_box"][3] - f["kopf_box"][1] < 0.14):
+            # Recherche: der Gegner füllt 45–70 % der Bildhöhe, sein Kopf also mindestens etwa 14 %
+            warnungen.append(f"Gegner {fid} zu klein im Bild")
+    for fid, it in info["items"].items():
+        if _im_bild(it["box"]) < 0.9:
+            warnungen.append(f"Item von {fid} kaum sichtbar ({int(_im_bild(it['box']) * 100)} % im Bild)")
+    def ueberlappung(a, b):
+        """Anteil von Box b, den Box a verdeckt."""
+        w = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+        h = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+        return w * h / max(1e-6, (b[2] - b[0]) * (b[3] - b[1]))
+    for fid, it in info["items"].items():
+        for aid, f in info["figuren"].items():
+            if ueberlappung(it["box"], f["kopf_box"]) > 0.25 and aid != fid:
+                warnungen.append(f"Item von {fid} verdeckt das Gesicht von {aid}")
+    for m in info["mobs"]:
+        if _im_bild(m["box"]) < 0.5:
+            warnungen.append(f"Mob {m['art']} kaum sichtbar")
+    if fehler > 0.1:
+        warnungen.append(f"Kamera trifft das Stilbuch nicht (Abweichung {fehler:.2f}) – Thema näher an die Figur legen")
+    info["warnungen"] = warnungen
+    return info
+
+
 def baue(szene, texturen, ausgabe=None, bericht=None):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
@@ -216,7 +280,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     def rahmen(still=False):
         o, u = haupt.kopf_punkte()
         return mkamera.rahme(scene, cam, o, u, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
-                             gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=haupt.kopf_ecken(), still=still)
+                             gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=haupt.kopf_ecken(), still=still,
+                             anpassung={n: k[n] for n in ("hoehe", "linse", "kopf_anteil") if n in k})
 
     if szene["figuren"][0].get("blick") == "auto":
         # Wie ein Thumbnail-Künstler: die Figur so drehen, dass Gesicht (Dreiviertelprofil) und Thema zusammen passen
@@ -228,6 +293,24 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         haupt.wurzel.rotation_euler.z = math.radians(beste_grad)
         print("MOIN_BLICK", beste_grad)
     fehler = rahmen()
+    neigung = k.get("neigung", 8) if k.get("modus") == "kampf" else 0
+    if any(f.get("item") for f in szene["figuren"]) or len(figuren) > 1:
+        # Bildprüfung je Kamera-Vorschlag: der mit den wenigsten Warnungen gewinnt (Schwert im Bild, Gesichter frei)
+        bewertet = []
+        for kf, linse, matrix, az, el in list(mkamera.KANDIDATEN):
+            cam_data.lens = linse
+            cam.matrix_world = matrix @ mathutils_Matrix.Rotation(math.radians(neigung), 4, "Z")
+            bpy.context.view_layer.update()
+            probe = _items_anhaengen(figuren, texturen, cam, k)
+            w = _messen(scene, cam, szene, figuren, mobs, probe, kf)["warnungen"]
+            for ob in probe.values():
+                bpy.data.objects.remove(ob, do_unlink=True)
+            bewertet.append((len([x for x in w if not x.startswith("Kamera")]) + kf, kf, linse, matrix, az, w))
+        if bewertet:
+            _, fehler, linse, matrix, az, w = min(bewertet, key=lambda x: x[0])
+            cam_data.lens = linse
+            cam.matrix_world = matrix
+            print("MOIN_KAMERA_WAHL azimut", az, "warnungen", len(w), "von", len(bewertet), "Vorschlägen")
     oben, unten = haupt.kopf_punkte()
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)
@@ -242,7 +325,6 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             farbe = (1.0, 0.22, 0.10) if dunkel else (1.0, 0.95, 0.9)
             _randlicht(scene, fig, cam, "rechts", r.get("randlicht", 650) * 0.8, farbe)
         # Kamera leicht kippen (Stilbuch-Recherche: 5–15° bei dynamischen Kampfbildern)
-        neigung = k.get("neigung", 8)
         cam.rotation_mode = "XYZ"
         cam.matrix_world = cam.matrix_world @ mathutils_Matrix.Rotation(math.radians(neigung), 4, "Z")
         bpy.context.view_layer.update()
@@ -252,15 +334,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         if variante.get("gesicht"):
             mlook.gesichtslicht(scene, cam, fig.kopf_mitte(), staerke * 0.6)
 
-    gehalten = {}
-    for f, fig in figuren:
-        it = f.get("item")
-        if it:
-            # Kampf: Waffen nah an der Kamera übergroß wie bei GommeHD (1,3–1,6-fach)
-            groesse = it.get("groesse", 1.4 if k.get("modus") == "kampf" else 1.0)
-            ob = mitems.baue_item(it["name"], texturen, pixel=mitems.ITEM_PIXEL * groesse)
-            mitems.in_die_hand(ob, fig, it.get("hand", "l"), cam, it.get("winkel", 40))
-            gehalten[f["id"]] = ob
+    gehalten = _items_anhaengen(figuren, texturen, cam, k)
 
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
@@ -274,47 +348,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     scene.view_settings.exposure = r.get("belichtung", -0.3)
     mlook.farbkorrektur(scene, r.get("saettigung", 1.08), r.get("kontrast", 1.06), r.get("vignette", 0.45))
 
-    info = {"kamera_abweichung": round(fehler, 4), "linse": cam_data.lens, "figuren": {}, "items": {}}
-    bpy.context.view_layer.update()
-    for f, fig in figuren:
-        o, u = fig.kopf_punkte()
-        ecken = [_bildpunkt(scene, cam, p) for p in fig.kopf_ecken()]
-        info["figuren"][f["id"]] = {"kopf": _bildpunkt(scene, cam, (o + u) / 2), "kopf_oben": _bildpunkt(scene, cam, o), "kopf_unten": _bildpunkt(scene, cam, u),
-                                    "kopf_box": [min(e[0] for e in ecken), min(e[1] for e in ecken), max(e[0] for e in ecken), max(e[1] for e in ecken)]}
-    info["mobs"] = []
-    for m, mob in mobs:
-        pts = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
-        xs = [_bildpunkt(scene, cam, p) for p in pts]
-        info["mobs"].append({"art": m["art"], "box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]})
-    for fid, ob in gehalten.items():
-        pts = [ob.matrix_world @ v.co for v in ob.data.vertices]
-        xs = [_bildpunkt(scene, cam, p) for p in pts[:: max(1, len(pts) // 60)]]
-        info["items"][fid] = {"box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]}
-    # Warnungen für die Selbstprüfung: Wichtiges muss im Bild sein
-    warnungen = []
-    for fid, f in info["figuren"].items():
-        if fid == szene["figuren"][0]["id"] and (_im_bild(f["kopf_box"]) < 0.999 or min(f["kopf_box"][0], f["kopf_box"][1]) < 0.01 or max(f["kopf_box"][2], f["kopf_box"][3]) > 0.99):
-            warnungen.append(f"Kopf von {fid} am Bildrand angeschnitten")
-        elif _im_bild(f["kopf_box"]) < 0.6:
-            warnungen.append(f"Kopf von {fid} kaum sichtbar")
-    for fid, it in info["items"].items():
-        if _im_bild(it["box"]) < 0.9:
-            warnungen.append(f"Item von {fid} kaum sichtbar ({int(_im_bild(it['box']) * 100)} % im Bild)")
-    def ueberlappung(a, b):
-        """Anteil von Box b, den Box a verdeckt."""
-        w = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
-        h = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
-        return w * h / max(1e-6, (b[2] - b[0]) * (b[3] - b[1]))
-    for fid, it in info["items"].items():
-        for aid, f in info["figuren"].items():
-            if ueberlappung(it["box"], f["kopf_box"]) > 0.25 and aid != fid:
-                warnungen.append(f"Item von {fid} verdeckt das Gesicht von {aid}")
-    for m in info["mobs"]:
-        if _im_bild(m["box"]) < 0.5:
-            warnungen.append(f"Mob {m['art']} kaum sichtbar")
-    if fehler > 0.1:
-        warnungen.append(f"Kamera trifft das Stilbuch nicht (Abweichung {fehler:.2f}) – Thema näher an die Figur legen")
-    info["warnungen"] = warnungen
+    info = _messen(scene, cam, szene, figuren, mobs, gehalten, fehler)
     if ausgabe:
         scene.render.filepath = ausgabe
         bpy.ops.render.render(write_still=True)
