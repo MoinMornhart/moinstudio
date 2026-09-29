@@ -14,6 +14,13 @@ VARIANTEN = {
               "sonne": 4.0, "sonne_farbe": (1.0, 0.62, 0.32), "sonne_hoehe": 12},
     "nacht": {"oben": (0.005, 0.01, 0.04), "horizont": (0.03, 0.05, 0.12), "wolken": (0.08, 0.09, 0.14), "staerke": 0.6,
               "sonne": 0.6, "sonne_farbe": (0.55, 0.65, 1.0), "sonne_hoehe": 40},
+    # Kampf-Stimmungen nach GommeHD „Minecraft Helden“: dunkler Himmel, farbiges Randlicht an den Figuren
+    "blutrot": {"oben": (0.02, 0.0, 0.004), "horizont": (0.30, 0.025, 0.02), "wolken": (0.20, 0.03, 0.03), "staerke": 0.9,
+                "sonne": 1.8, "sonne_farbe": (1.0, 0.62, 0.5), "sonne_hoehe": 30, "rand": (1.0, 0.22, 0.10), "gesicht": 30.0,
+                "dunst": (0.22, 0.03, 0.02)},
+    "gewitter": {"oben": (0.004, 0.008, 0.03), "horizont": (0.03, 0.06, 0.14), "wolken": (0.05, 0.07, 0.12), "staerke": 0.8,
+                 "sonne": 0.9, "sonne_farbe": (0.6, 0.72, 1.0), "sonne_hoehe": 45, "rand": (0.35, 0.6, 1.0), "gesicht": 30.0,
+                 "dunst": (0.03, 0.05, 0.10)},
 }
 
 

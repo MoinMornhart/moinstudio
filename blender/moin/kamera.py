@@ -21,7 +21,7 @@ MODI = {
     "abgrund": {"linse": 20, "kopf_anteil": 0.13, "kopf_uv": (0.40, 0.78), "thema_uv": (0.52, 0.16), "hoehe": 26},
     "held": {"linse": 22, "kopf_anteil": 0.34, "kopf_uv": (0.30, 0.66), "thema_uv": (0.72, 0.50), "hoehe": -8},
     # Kampf (GommeHD Helden): beide Gegner groß im Bild, Kamera leicht von unten, Gegner in der anderen Hälfte
-    "kampf": {"linse": 22, "kopf_anteil": 0.23, "kopf_uv": (0.30, 0.68), "thema_uv": (0.72, 0.58), "hoehe": 4},
+    "kampf": {"linse": 26, "kopf_anteil": 0.29, "kopf_uv": (0.30, 0.74), "thema_uv": (0.70, 0.66), "hoehe": -6},
     "brust": {"linse": 35, "kopf_anteil": 0.26, "kopf_uv": (0.30, 0.68), "thema_uv": (0.70, 0.45), "hoehe": 5},
 }
 

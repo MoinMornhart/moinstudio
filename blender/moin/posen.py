@@ -76,8 +76,8 @@ POSEN = {
         "koerper": {"vor": 20, "drehen": -28, "neigen": -8},
         "kopf": {"drehen": -38, "nicken": -4, "neigen": -10},
         "arm_l": {"heben": 100, "seitlich": 8, "drehen": 30},
-        # Schwertarm tief seitlich weg vom Körper (nicht nach hinten, sonst schneidet der Bildrand die Klinge ab)
-        "arm_r": {"heben": 18, "seitlich": 52, "drehen": -10},
+        # Schwertarm tief nach vorn zum Gegner: die Klinge zeigt zur Bildmitte (Recherche: Waffen treffen sich in der Mitte)
+        "arm_r": {"heben": 28, "seitlich": 30, "drehen": 30},
         "bein_r": {"vor": 38},
         "bein_l": {"vor": -46},
     },

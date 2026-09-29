@@ -19,7 +19,7 @@ import os
 
 import bpy
 from bpy_extras.object_utils import world_to_camera_view
-from mathutils import Vector
+from mathutils import Matrix as mathutils_Matrix, Vector
 
 from . import figur as mfigur
 from . import himmel as mhimmel
@@ -43,9 +43,9 @@ def _mische(basis, korrektur):
     return neu
 
 
-def _welt(w, texturen):
+def _welt(w, texturen, himmel="tag"):
     art = w.get("art", "wiese")
-    bloecke.DUNST.update(farbe=(0.42, 0.66, 1.0), halbwert=160.0)  # Himmelsdunst als Standard
+    bloecke.DUNST.update(farbe=mhimmel.VARIANTEN.get(himmel, {}).get("dunst", (0.42, 0.66, 1.0)), halbwert=160.0)
     seed = w.get("seed", 7)
     if art == "wiese":
         return mwelt.baue_klippe(texturen, seed=seed, kante=200, tiefe=6, gegenseite=True)
@@ -63,12 +63,13 @@ def _welt(w, texturen):
     raise ValueError(f"Unbekannte Welt-Art „{art}“ (bekannt: wiese, klippe, meeresklippe, schlucht, dorf, {', '.join(mwelt.RAUM_ARTEN)})")
 
 
-def _randlicht(scene, figur, cam, seite="links", staerke=650):
+def _randlicht(scene, figur, cam, seite="links", staerke=650, farbe=(1.0, 1.0, 1.0)):
     """Randlicht hinter der Figur, von der Kamera aus gesehen, leicht zur Außenseite versetzt
     (Stilbuch 6: helle Kante an Kopf und Schulter, die die Figur vom Hintergrund löst)."""
     rand = bpy.data.lights.new("rand", "AREA")
     rand.energy = staerke
     rand.size = 1.0
+    rand.color = farbe
     ro = bpy.data.objects.new("rand", rand)
     scene.collection.objects.link(ro)
     ro.visible_camera = False
@@ -117,7 +118,9 @@ def _boden_hoehe(scene, x, y, von=60.0, platz=2.0, nah_an=0.0):
             boeden.append(hz)
     if not boeden:
         return nah_an
-    return min(boeden, key=lambda b: abs(b - nah_an))
+    naechster = min(boeden, key=lambda b: abs(b - nah_an))
+    # über einem Abgrund (kein Boden in Reichweite): auf Höhe der Kante bleiben statt in die Tiefe zu fallen
+    return naechster if abs(naechster - nah_an) < 3.0 else nah_an
 
 
 def _auf_den_boden(scene, fig, hoehe=None):
@@ -155,7 +158,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     scene.render.resolution_x = r.get("breite", 1280)
     scene.render.resolution_y = r.get("hoehe", 720)
 
-    _welt(szene.get("welt", {}), texturen)
+    _welt(szene.get("welt", {}), texturen, szene.get("himmel", "tag"))
     mhimmel.baue(scene, szene.get("himmel", "tag"))
 
     figuren = []
@@ -207,7 +210,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     if k.get("modus") == "kampf":
         # Kampf: Kamera vor beiden Gegnern (Seite −Y), nie hinter einem von ihnen
         vorn = min(fig.kopf_mitte().y for f, fig in figuren) - 0.8
-        erlaubt = lambda pos: pos.y < vorn
+        links = haupt.kopf_mitte().x - 0.3  # nicht weit links: sonst verschwindet der Gegner hinter dem Helden
+        erlaubt = lambda pos: pos.y < vorn and pos.x > links
 
     def rahmen(still=False):
         o, u = haupt.kopf_punkte()
@@ -227,14 +231,34 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     oben, unten = haupt.kopf_punkte()
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)
-    _randlicht(scene, haupt, cam, k.get("seite", "links"), r.get("randlicht", 650))
-    mlook.gesichtslicht(scene, cam, (oben + unten) / 2, r.get("gesichtslicht", 10.0))
+    _randlicht(scene, haupt, cam, k.get("seite", "links"), r.get("randlicht", 650),
+               (0.3, 0.85, 1.0) if k.get("modus") == "kampf" and szene.get("himmel") in ("blutrot", "gewitter", "nacht")
+               else mhimmel.VARIANTEN.get(szene.get("himmel", "tag"), {}).get("rand", (1.0, 1.0, 1.0)))
+    variante = mhimmel.VARIANTEN.get(szene.get("himmel", "tag"), {})
+    if k.get("modus") == "kampf":
+        # Farbduell (GommeHD): Held mit kühlem, Gegner mit warmem Randlicht; bei Tag weißes Gegenlicht
+        dunkel = szene.get("himmel") in ("blutrot", "gewitter", "nacht")
+        for i, (f, fig) in enumerate(figuren[1:2]):
+            farbe = (1.0, 0.22, 0.10) if dunkel else (1.0, 0.95, 0.9)
+            _randlicht(scene, fig, cam, "rechts", r.get("randlicht", 650) * 0.8, farbe)
+        # Kamera leicht kippen (Stilbuch-Recherche: 5–15° bei dynamischen Kampfbildern)
+        neigung = k.get("neigung", 8)
+        cam.rotation_mode = "XYZ"
+        cam.matrix_world = cam.matrix_world @ mathutils_Matrix.Rotation(math.radians(neigung), 4, "Z")
+        bpy.context.view_layer.update()
+    staerke = r.get("gesichtslicht", variante.get("gesicht", 10.0))
+    mlook.gesichtslicht(scene, cam, (oben + unten) / 2, staerke)
+    for f, fig in figuren[1:]:  # Gegner und Freunde: eigenes, schwächeres Gesichtslicht
+        if variante.get("gesicht"):
+            mlook.gesichtslicht(scene, cam, fig.kopf_mitte(), staerke * 0.6)
 
     gehalten = {}
     for f, fig in figuren:
         it = f.get("item")
         if it:
-            ob = mitems.baue_item(it["name"], texturen)
+            # Kampf: Waffen nah an der Kamera übergroß wie bei GommeHD (1,3–1,6-fach)
+            groesse = it.get("groesse", 1.4 if k.get("modus") == "kampf" else 1.0)
+            ob = mitems.baue_item(it["name"], texturen, pixel=mitems.ITEM_PIXEL * groesse)
             mitems.in_die_hand(ob, fig, it.get("hand", "l"), cam, it.get("winkel", 40))
             gehalten[f["id"]] = ob
 
@@ -276,6 +300,15 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     for fid, it in info["items"].items():
         if _im_bild(it["box"]) < 0.9:
             warnungen.append(f"Item von {fid} kaum sichtbar ({int(_im_bild(it['box']) * 100)} % im Bild)")
+    def ueberlappung(a, b):
+        """Anteil von Box b, den Box a verdeckt."""
+        w = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+        h = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+        return w * h / max(1e-6, (b[2] - b[0]) * (b[3] - b[1]))
+    for fid, it in info["items"].items():
+        for aid, f in info["figuren"].items():
+            if ueberlappung(it["box"], f["kopf_box"]) > 0.25 and aid != fid:
+                warnungen.append(f"Item von {fid} verdeckt das Gesicht von {aid}")
     for m in info["mobs"]:
         if _im_bild(m["box"]) < 0.5:
             warnungen.append(f"Mob {m['art']} kaum sichtbar")
