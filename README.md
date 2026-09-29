@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.29.1** (2026-09-29): README und Aufräumen
 - **0.29.0** (2026-09-29): Adobe-Selbsttest
 - **0.28.0** (2026-09-29): Thumbnail für Photoshop (ungetestet)
 - **0.27.0** (2026-09-29): Schnitt für Premiere (ungetestet)
 - **0.26.0** (2026-09-29): Adobe-Erkennung (ungetestet)
-- **0.25.1** (2026-09-29): Plan für die Adobe-Anbindung
 <!-- CHANGELOG:END -->
 
 ## Installation

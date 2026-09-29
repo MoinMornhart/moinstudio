@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-09-29
+
+> README und Aufräumen
+
 ### Geändert
 
 - README mit dem aktuellen Stand aller drei Reiter, neuen Aufnahmen von Planung und Kalender und dem Adobe-Selbsttest (ROADMAP 9.1).
