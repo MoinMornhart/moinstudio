@@ -23,8 +23,8 @@ Die vollständige, abhakbare Masterliste. Es wird **immer nur ein Schritt** bear
 | M4 Blender neu | → 0.3.0 | Figur, Posen, Welt, Grafik-Look, Kamera, Mobs/Items, Nachbau-Test | ⬜ |
 | M5 Thumbnail neu | → 0.4.0 | Planung, Text, strenge Selbstprüfung, Reiter, Video-Upload mit Vorschlägen, Abnahme | ⬜ |
 | M6 Schnitt | 0.14.0–0.21.0 | Import, Transkript, Rohschnitt, Untertitel, Export, Stream-Highlights | 🔄 (Abnahme offen) |
-| M7 Planung | ab 0.22.0 | Board, Kalender, Verbindung zu Thumbnail und Schnitt, Ideen mit Claude | 🔄 |
-| M8 Adobe (ungetestet) | → 0.7.0 | Adobe-Anbindung | ⬜ |
+| M7 Planung | 0.22.0–0.25.0 | Board, Kalender, Verbindung zu Thumbnail und Schnitt, Ideen mit Claude | 🔄 (Abnahme offen) |
+| M8 Adobe (ungetestet) | ab 0.26.0 | Erkennung, Premiere-Sequenz (FCP7-XML), Photoshop-Datei mit Ebenen, Testpaket | 🔄 |
 | M9 Stabil | **1.0.0** | Politur, Release | ⬜ |
 
 ---
@@ -203,9 +203,22 @@ Grundlage: [Technik §10](docs/research/tech.md).
 - [x] **7.6 Ideen und Titel mit Claude:** Ideenfinder je Kanal (aus bisherigen Karten, Serien und dem Stil großer Minecraft-Kanäle), Titelvorschläge für eine Karte, Wochenplan-Vorschlag („was nehme ich diese Woche auf“); über das Claude-Abo. ✅ 10 Ideen je Kanal, jede passt zum Kanal und ist keine Wiederholung. — erledigt: je Kanal 10 passende Ideen ohne Wiederholung (MoinMorni erst nach Korrektur der Kanalregeln), Titel in 14 s, Wochenplan nur auf freie Termine des richtigen Kanals ([Bericht](docs/tests/planung-reiter.md)).
 - [ ] **7.7 MCP und Abnahme:** ✓ MCP-Werkzeug `planning` (auch ohne laufende App), offen: Abnahme mit Philip. MCP-Werkzeug `planning` für Claude Desktop (Karten auflisten, anlegen, verschieben, Termin setzen), mit Rückfall auf den Datenordner, wenn die App nicht läuft; Abnahme mit Philip. ✅ Freigabe.
 
-## M8 – Adobe (ungetestet) → 0.7.0
+## M8 – Adobe (ungetestet)
 
-- [ ] **8.1 Neu planen.**
+Ziel: Wer lieber in Adobe weiterarbeitet, bekommt die Ergebnisse von MoinStudio **fertig zum Weiterbearbeiten**.
+Der Rohschnitt geht als Sequenz nach Premiere, das Thumbnail als Photoshop-Datei mit Ebenen.
+MoinStudio braucht Adobe nie. Ohne Adobe ist nichts ausgegraut außer den Adobe-Knöpfen.
+Weg ohne Plugin und ohne Scripting, weil Premiere-ExtendScript ausläuft und UXP-Plugins nur mit installiertem Adobe entwickelt werden können: FCP7-XML für Premiere und PSD mit Ebenen für Photoshop.
+UXP-Plugins folgen erst, wenn die Abnahme auf einem Rechner mit Adobe gelaufen ist.
+Alles bleibt als **„ungetestet“** markiert, bis `tests/adobe/` auf einem Rechner mit Adobe erfolgreich war.
+Grundlage: [Adobe-Recherche](docs/research/adobe.md).
+
+- [x] **8.1 Neu planen.** ✅ Plan steht hier (29.09.2026, selbst geplant nach Philips Vorgabe „alles ohne mich“; auf diesem Rechner ist kein Adobe installiert).
+- [ ] **8.2 Erkennung:** Premiere, Photoshop und After Effects finden (Programmordner und Registry, Version aus der exe, Beta markieren); Anzeige in den Einstellungen mit Hinweis „ungetestet“. ✅ Unit-Tests mit nachgebauten Ordnern und Versionen.
+- [ ] **8.3 Premiere: Sequenz als FCP7-XML:** Aus dem Schnitt-Projekt eine Sequenz mit allen behaltenen Stücken aus dem Original, Zooms als Bewegungs-Keyframes, Kapitel als Sequenz-Marker, Untertitel als SRT daneben; Knopf „Für Premiere exportieren“ im Schnitt. ✅ XML gegen die FCP7-Struktur geprüft (Unit-Tests), Import in eine freie Software (z. B. Kdenlive/Shotcut, falls ohne Admin installierbar) oder Strukturvergleich; Premiere-Import in `tests/adobe/`.
+- [ ] **8.4 Photoshop: Thumbnail mit Ebenen:** Thumbnail als PSD mit getrennten Ebenen (Hintergrund, Figuren, Text), damit Philip in Photoshop nachbessern kann; Knopf „Als Photoshop-Datei speichern“. ✅ PSD mit Python öffnen und Ebenen prüfen; zusammengesetzt pixelgleich zum PNG.
+- [ ] **8.5 Adobe-Testpaket:** `tests/adobe/` mit Prüfskripten (Premiere: XML importieren, Sequenz und Marker zählen; Photoshop: PSD öffnen, Ebenen zählen) und einer Anleitung für den Rechner mit Adobe. ✅ Skripte laufen ohne Adobe sauber durch („übersprungen“).
+- [ ] **8.6 Abnahme auf einem Rechner mit Adobe** (Philip). ✅ `tests/adobe/` grün, erst dann entfällt „ungetestet“.
 
 ## M9 – Stabil → 1.0.0
 
