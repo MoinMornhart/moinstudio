@@ -94,9 +94,8 @@ function katalogText(k: Katalog): string {
     `Himmel: ${k.himmel.join(', ')}`,
     `Kamera-Modi: ${k.kameraModi.join(', ')}`,
     `Mobs: ${k.mobs.join(', ')}`,
-    k.bloecke.length > 120
-      ? `Blöcke für „bloecke“ und „objekte“: jede Minecraft-Block-ID der neuesten Version (${k.bloecke.length} Stück, z. B. ${k.bloecke.slice(0, 60).join(', ')} …); zum Graben: luft`
-      : `Blöcke für „bloecke“ und „objekte“: ${k.bloecke.join(', ')} (zum Graben: luft)`
+    // Vollständige Liste: sonst greift Claude zu ähnlichen Blöcken (oak_leaves statt cherry_leaves)
+    `Blöcke für „bloecke“ und „objekte“ (jede Block-ID des Spiels, ${k.bloecke.length} Stück; zum Graben: luft): ${k.bloecke.join(', ')}`
   ].join('\n')
 }
 
@@ -179,7 +178,7 @@ export function ernsteWarnungen(warnungen: string[]): string[] {
   return warnungen.filter((w) => {
     if (/^Kamera trifft/.test(w)) return Number(/Abweichung ([\d.]+)/.exec(w)?.[1] ?? 0) > 0.5
     if (/^Item .* kaum sichtbar/.test(w)) return Number(/\((\d+) %/.exec(w)?.[1] ?? 0) < 60
-    return /^(Gesicht|Etwas versperrt|Gegner|Mob|Kopf|Text)/.test(w)
+    return /^(Gesicht|Etwas versperrt|Gegner|Mob|Kopf|Text|Bild)/.test(w)
   })
 }
 

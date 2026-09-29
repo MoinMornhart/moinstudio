@@ -75,8 +75,13 @@ export async function ladeKatalog(blenderDir: string, mobTabelle: string, blockM
   }
 }
 
-/** Alle Block-IDs der Spieldatei (models/block/*.json), ohne Teilmodelle wie Treppenstufen-Varianten */
+/**
+ * Alle Block-IDs der Spieldatei. Maßgeblich sind die Blockstates (jede echte ID, auch gewachstes Kupfer oder
+ * pink_petals ohne gleichnamiges Modell); ohne Blockstates die Modelle ohne Teilmodelle wie Treppenstufen-Varianten.
+ */
 async function alleBloecke(ordner: string): Promise<string[]> {
+  const zustaende = await readdir(join(ordner, '..', '..', 'blockstates')).catch(() => [] as string[])
+  if (zustaende.length) return zustaende.filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).filter((n) => !/^(cave_|void_)?air$/.test(n))
   const dateien = await readdir(ordner).catch(() => [] as string[])
   return dateien
     .filter((f) => f.endsWith('.json'))

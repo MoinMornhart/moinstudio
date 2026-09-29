@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Behoben
+
+- Thumbnail bei ungewöhnlichen Beschreibungen (Freiform-Test): Claude kennt jetzt jede Block-ID des Spiels (aus den Blockstates, auch gewachstes Kupfer und Rosa Blütenblätter), typische Blöcke für Biome und Strukturen, freie Posen über `posen_korrektur` und Gegenstände als Item. Es gibt einen neuen Kamera-Modus „ganz“ für Orte und Körperhaltungen. Überstrahlte oder leere Bilder gelten als ernster Fehler und werden korrigiert. Genannte Mobs werden nicht mehr durch andere ersetzt.
+
 ## [0.29.1] - 2026-09-29
 
 > README und Aufräumen

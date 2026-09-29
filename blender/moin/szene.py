@@ -518,6 +518,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     if ausgabe:
         scene.render.filepath = ausgabe
         bpy.ops.render.render(write_still=True)
+        warnung = _bild_leer(ausgabe)
+        if warnung:
+            info.setdefault("warnungen", []).append(warnung)
     if bericht:
         with open(bericht, "w", encoding="utf-8") as fh:
             json.dump(info, fh, ensure_ascii=False, indent=1)
@@ -527,6 +530,27 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         vorne = [fig.wurzel for f, fig in figuren] + [mob.wurzel for m, mob in mobs] + list(gehalten.values())
         _maske(scene, vorne, os.path.splitext(ausgabe)[0] + ".maske.png")
     return info
+
+
+def _bild_leer(pfad):
+    """Freiform-Test: Kamera schaut auf eine helle Fläche oder ins Leere (weißes Bild, schwebende Figur). Dann ist das
+    Bild unbrauchbar, egal was die Geometrie sagt – ernste Warnung, Claude korrigiert die Szene."""
+    import numpy as np
+
+    try:
+        bild = bpy.data.images.load(pfad, check_existing=False)
+        w, h = bild.size
+        a = np.array(bild.pixels[:], dtype=np.float32).reshape(h, w, 4)[::4, ::4, :3]
+        bpy.data.images.remove(bild)
+    except Exception:  # Bild nicht lesbar: keine Aussage
+        return None
+    hell = (a.min(axis=2) > 0.9).mean()
+    gleich = (np.abs(a - np.median(a.reshape(-1, 3), axis=0)).max(axis=2) < 0.04).mean()
+    if hell > 0.35:
+        return f"Bild überstrahlt: {round(hell * 100)} % fast weiß – Kamera schaut auf eine helle Fläche oder ins Leere"
+    if gleich > 0.55:
+        return f"Bild fast leer: {round(gleich * 100)} % eine einzige Farbe – Umgebung fehlt"
+    return None
 
 
 def _maske(scene, vorne, pfad):

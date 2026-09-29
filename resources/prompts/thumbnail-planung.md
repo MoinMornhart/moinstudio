@@ -29,8 +29,20 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Minecraft-IDs (diamond_sword, netherite_axe, bow, lantern, flint_and_steel …).
 5. **Gegner rechts** bekommen `blick` −55 bis −75 und dieselben Kampfposen. Die Pose wird automatisch gespiegelt, und die
    Waffe gehört dann in `"hand": "l"`.
-6. **Echte Minecraft-Welt:** Nur Welten, Mobs und Blöcke aus dem Katalog. Orte, die es nicht als Welt gibt, baust du mit
-   `bloecke` (setzen oder mit `"luft"` graben) und `objekte` (fliegende Einzelblöcke) aus einer passenden Grundwelt.
+6. **Echte Minecraft-Welt, jeder Ort ist möglich:** Nur Welten, Mobs und Blöcke aus dem Katalog – aber der Katalog enthält
+   **jede Block-ID des Spiels**. Orte, die es nicht als Welt gibt (Biome, Strukturen, Dörfer, Spawn …), baust du mit
+   `bloecke` (setzen oder mit `"luft"` graben) und `objekte` (fliegende Einzelblöcke) aus einer passenden Grundwelt,
+   und zwar **mit den typischen Blöcken genau dieses Ortes**, gut sichtbar hinter Philip. Beispiele (keine Grenze):
+   Kirschblütenhain = cherry_log, cherry_leaves, pink_petals · End City = purpur_block, purpur_pillar, end_stone_bricks,
+   end_rod · Eisspitzen = packed_ice, blue_ice, snow_block · Pilzinsel = mycelium, red_mushroom_block, mushroom_stem ·
+   Ancient City/Deep Dark = deepslate_bricks, sculk, sculk_shrieker, sculk_sensor, soul_lantern · Portalraum =
+   end_portal_frame, stone_bricks, lava · Wüstentempel = sandstone, chiseled_sandstone, orange_terracotta, tnt,
+   stone_pressure_plate · Pale Garden = pale_oak_log, pale_oak_leaves, pale_moss_block, creaking_heart · Trial Chamber =
+   tuff_bricks, copper_block, trial_spawner, vault · Mangrovensumpf = mangrove_log, mangrove_roots, mud · Badlands =
+   terracotta, orange_terracotta, red_sand · Üppige Höhle = moss_block, azalea, flowering_azalea, cave_vines ·
+   Tropfsteinhöhle = dripstone_block, pointed_dripstone · Bastion = blackstone, polished_blackstone_bricks, gold_block.
+   Ein Ort, der im Bild nicht zu erkennen ist, ist ein Fehler. Genannte Mobs kommen genau so ins Bild (Creaking,
+   Mooshroom, Frosch, Schreiter …, siehe Mob-Liste) – nie durch einen anderen Mob ersetzen.
 7. **Himmel für die Stimmung:** tag oder abend für Abenteuer, nacht für Grusel, blutrot für harte Kämpfe, gewitter für
    dramatische Duelle.
 8. **Text sparsam** (Stilbuch: die meisten Vorbilder haben keinen). Wenn Text wirklich hilft, dann höchstens ein Eintrag
@@ -38,8 +50,21 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    sie ans Bild an (nur wenn es wirklich zählt, feste Farbe: weiss, gelb, gold, gruen, tuerkis, rot). Lage und leichte
    Schräglage wählt MoinStudio automatisch und zufällig an einer freien Stelle, nie über etwas Wichtigem. Sonst
    `"text": []`.
-9. **Kamera:** `kampf` bei zwei Kämpfern, `nah` bei Held plus Thema, `gefahr` oder `tiefe` für Abgründe und Gruben (mit
-   `hoehe` 20–40 für die Aufsicht), `held` für Heldenposen von unten.
+9. **Kamera:** `kampf` bei zwei Kämpfern, `nah` bei Held plus Thema (Reaktionen, Gesichter), `ganz` wenn ein
+   besonderer Ort oder eine Körperhaltung die Aussage ist (Yoga, Handstand, Klettern, Surfen, Reiten, Schlafen, Tanzen,
+   Balancieren – die ganze Figur und der Ort müssen zu sehen sein), `gefahr` oder `tiefe` für Abgründe und Gruben (mit
+   `hoehe` 20–40 für die Aufsicht), `held` für Heldenposen von unten. Die Kamera schaut nie auf eine leere helle Fläche:
+   hinter Philip steht immer erkennbare Umgebung.
+10. **Freie Posen:** Passt keine Katalog-Pose genau, nimm die ähnlichste und forme sie mit `posen_korrektur` (je Figur) zur
+   beschriebenen Haltung. Schlüssel: `kippen` (ganze Figur um die Füße, +90 = liegt auf dem Rücken, 180 = kopfüber für
+   Handstand – dann `hoehe` ≈ 1.8), `kippen_seite`, `koerper` {vor, neigen, drehen}, `kopf` {nicken, neigen, drehen},
+   `arm_r`/`arm_l` {heben (0 = hängt, 90 = waagrecht vor, 180 = gerade hoch), seitlich, drehen, beugen (Ellbogen)},
+   `bein_r`/`bein_l` {vor (90 = waagrecht nach vorn, z. B. Sitzen), seitlich, beugen (Knie)}. Winkel in Grad.
+   Beispiele: Yoga-Baum = neutral + {"arm_r": {"heben": 170}, "arm_l": {"heben": 170}, "bein_l": {"seitlich": 40, "beugen": 100}} ·
+   Sitzen = {"bein_r": {"vor": 90}, "bein_l": {"vor": 90}} mit `hoehe` 0.5 · Klettern = {"arm_r": {"heben": 160}, "arm_l": {"heben": 120}, "bein_l": {"vor": 60, "beugen": 70}}.
+11. **Gegenstände:** Alles, was kein Block ist (Boot, Bett, Elytra, Angel, Eimer, Kuchen, Eier …), hält Philip als `item`
+   mit der Minecraft-ID (oak_boat, red_bed, elytra, fishing_rod, water_bucket, cake, sniffer_egg …). Worauf Philip steht
+   oder was er trägt, baust du als Block (hay_block, ladder, carved_pumpkin als `objekt` genau auf Kopfhöhe z ≈ 1.6 …).
 
 # Koordinaten
 

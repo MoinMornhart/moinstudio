@@ -234,6 +234,24 @@ def _modell(ordner, name, tiefe=0):
     return tex, [name] + kette
 
 
+def _blockstate_modell(ordner, art):
+    """Name des ersten Modells im Blockstate (variants oder multipart), z. B. pink_petals → pink_petals_1."""
+    pfad = os.path.join(ordner, "..", "blockstates", f"{art}.json")
+    if not os.path.exists(pfad):
+        return None
+    import json as _json
+    with open(pfad, encoding="utf-8") as fh:
+        b = _json.load(fh)
+    if b.get("variants"):
+        v = next(iter(b["variants"].values()))
+    elif b.get("multipart"):
+        v = b["multipart"][0].get("apply")
+    else:
+        return None
+    v = v[0] if isinstance(v, list) else v
+    return (v or {}).get("model", "").split("/")[-1].replace("minecraft:", "") or None
+
+
 def art_info(art, texturen=None):
     """Block-Eintrag: aus ARTEN oder – für jeden anderen Block der Spieldatei – aus seinem Blockmodell abgeleitet
     (cube_all, cube_column, cube_bottom_top, orientable, cross …). So kennt MoinStudio alle Blöcke, auch neue."""
@@ -244,8 +262,11 @@ def art_info(art, texturen=None):
     if texturen is None:
         raise KeyError(art)
     tex, kette = {}, []
-    # Manche Blöcke haben nur Teilmodelle (Doppelpflanzen, Wachstumsstufen, Zustände)
-    for kandidat in (art, f"{art}_bottom", f"{art}_stage3", f"{art}_stage2", f"{art}_0", f"{art}_inventory", f"{art}_off", f"{art}_floor", f"{art}_ns"):
+    # Manche Blöcke haben nur Teilmodelle (Doppelpflanzen, Wachstumsstufen, Zustände) oder gar kein eigenes Modell
+    # (gewachstes Kupfer): dann das erste Modell aus dem Blockstate, sonst die ungewachste Fassung
+    for kandidat in (art, _blockstate_modell(texturen.ordner, art), art.removeprefix("waxed_"), f"{art}_bottom", f"{art}_stage3", f"{art}_stage2", f"{art}_0", f"{art}_1", f"{art}_inventory", f"{art}_off", f"{art}_floor", f"{art}_ns"):
+        if not kandidat:
+            continue
         tex, kette = _modell(texturen.ordner, kandidat)
         if kette:
             break

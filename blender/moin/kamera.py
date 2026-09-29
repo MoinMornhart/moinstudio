@@ -23,6 +23,9 @@ MODI = {
     # Kampf (GommeHD Helden): beide Gegner groß im Bild, Kamera leicht von unten, Gegner in der anderen Hälfte
     "kampf": {"linse": 26, "kopf_anteil": 0.29, "kopf_uv": (0.30, 0.74), "thema_uv": (0.70, 0.66), "hoehe": -6},
     "brust": {"linse": 35, "kopf_anteil": 0.26, "kopf_uv": (0.30, 0.68), "thema_uv": (0.70, 0.45), "hoehe": 5},
+    # Ganze Figur mit Umgebung (Freiform-Test): für besondere Orte und Körperhaltungen (Yoga, Handstand, Klettern, Surfen),
+    # damit Ort und Handlung zu sehen sind statt nur ein großer Kopf
+    "ganz": {"linse": 24, "kopf_anteil": 0.12, "kopf_uv": (0.30, 0.72), "thema_uv": (0.70, 0.42), "hoehe": 10},
 }
 
 # Dreiviertelprofil: Winkel zwischen Blickrichtung des Gesichts und Richtung zur Kamera (Stilbuch: 20–45°)
