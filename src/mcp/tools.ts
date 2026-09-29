@@ -4,11 +4,12 @@
  */
 import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 import type { PipeInfo } from '@shared/rpc'
 import { RpcClient } from '../main/rpc/pipe'
+import { PLANUNG_AKTIONEN, planungAktion, type PlanungArgs } from '../main/planung/aktionen'
 
 export const log = (...args: unknown[]): void => console.error('[moinstudio-mcp]', ...args)
 
@@ -61,6 +62,30 @@ async function connectApp(): Promise<RpcClient> {
   if (!client) throw new Error('MoinStudio konnte nicht gestartet werden. Bitte die App einmal manuell öffnen.')
   return client
 }
+
+/** Läuft die App schon? (ohne sie zu starten) */
+async function appLaeuft(): Promise<boolean> {
+  if (client?.connected) return true
+  const info = await readPipeInfo()
+  if (!info) return false
+  const c = new RpcClient(info)
+  try {
+    await c.connect(1500)
+    client = c
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Datenordner aus den App-Einstellungen (liegen neben pipe.json) – für die Planung ohne laufende App */
+async function datenOrdner(): Promise<string> {
+  const s = JSON.parse(await readFile(join(dirname(pipeFile()), 'settings.json'), 'utf8').catch(() => '{}')) as { dataDir?: string | null }
+  if (!s.dataDir) throw new Error('In MoinStudio ist noch kein Datenordner gewählt.')
+  return s.dataDir
+}
+
+const CLAUDE_AKTIONEN = new Set(['ideen', 'titel', 'wochenplan', 'ergebnis'])
 
 async function call<T = unknown>(method: string, params?: unknown): Promise<T> {
   return (await connectApp()).call<T>(method, params)
@@ -170,6 +195,40 @@ export function createServer(version: string): McpServer {
       try {
         const id = await call<string>('probe.render')
         return text({ jobId: id, hinweis: 'Mit job_get den Fortschritt abfragen, danach job_image für das Bild.' })
+      } catch (err) {
+        return fail(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'planning',
+    {
+      title: 'Videos planen',
+      description:
+        'Planung in MoinStudio: Board je Kanal (Spalten idee, aufnahme, schnitt, thumbnail, upload, veroeffentlicht) und Upload-Kalender. Aktionen: liste (optional kanal, spalte), kalender (von, bis als 2026-10-01; Termine, freie Upload-Termine laut Rhythmus, Karten ohne Termin), anlegen (kanal, titel, optional spalte, notizen, termin), aendern (karte, titel/notizen/termin/checkliste/spalte/kanal), verschieben (karte, spalte, optional index), loeschen (karte), rhythmus, rhythmus_setzen (rhythmus: {"MoinMornhart":[{"tag":3,"zeit":"17:00"}]} mit tag 0=So … 6=Sa), ideen (kanal, optional wunsch), titel (karte), wochenplan, ergebnis (auftrag – holt Ideen, Titel oder Wochenplan ab). Termine als 2026-10-03T17:00. Funktioniert auch, wenn MoinStudio geschlossen ist (außer ideen, titel, wochenplan).',
+      inputSchema: z.object({
+        aktion: z.enum(PLANUNG_AKTIONEN),
+        kanal: z.enum(['MoinMornhart', 'MoinMorni']).optional(),
+        spalte: z.enum(['idee', 'aufnahme', 'schnitt', 'thumbnail', 'upload', 'veroeffentlicht']).optional(),
+        karte: z.string().optional().describe('Karten-ID (aus liste)'),
+        titel: z.string().optional(),
+        notizen: z.string().optional(),
+        termin: z.string().nullable().optional().describe('2026-10-03T17:00, null entfernt den Termin'),
+        checkliste: z.array(z.object({ text: z.string(), erledigt: z.boolean() })).optional(),
+        index: z.number().int().optional().describe('Position in der Spalte (0 = oben)'),
+        von: z.string().optional(),
+        bis: z.string().optional(),
+        wunsch: z.string().optional().describe('nur ideen: z. B. „mit SimPell“'),
+        auftrag: z.string().optional().describe('nur ergebnis'),
+        rhythmus: z.record(z.string(), z.array(z.object({ tag: z.number().int(), zeit: z.string() }))).optional()
+      })
+    },
+    async (args) => {
+      try {
+        // Läuft die App, geht alles über sie (Oberfläche aktualisiert sich); sonst direkt im Datenordner
+        if (CLAUDE_AKTIONEN.has(args.aktion) || (await appLaeuft())) return text(await call('planung', args))
+        return text(await planungAktion(await datenOrdner(), args as PlanungArgs))
       } catch (err) {
         return fail(err)
       }

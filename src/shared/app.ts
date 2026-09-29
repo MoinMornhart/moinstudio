@@ -92,6 +92,12 @@ export const IPC = {
   planungVerschieben: 'planung:verschieben',
   planungLoeschen: 'planung:loeschen',
   planungRhythmus: 'planung:rhythmus',
+  planungSchneiden: 'planung:schneiden',
+  planungThumbnail: 'planung:thumbnail',
+  planungThumbVarianten: 'planung:thumb-varianten',
+  planungThumbWaehlen: 'planung:thumb-waehlen',
+  planungClaude: 'planung:claude',
+  planungClaudeStand: 'planung:claude-stand',
   planungRhythmusSetzen: 'planung:rhythmus-setzen',
   /** Ereignis: Karten im Datenordner haben sich geändert */
   planungGeaendert: 'planung:geaendert'
@@ -120,13 +126,36 @@ export interface PlanungKarte {
   checkliste: { text: string; erledigt: boolean }[]
   /** Upload-Termin als lokale Zeit „2026-10-03T17:00“ */
   termin: string | null
-  thumbnail: string | null
+  /** Thumbnail: Auftrag (nur auf dem startenden Gerät bekannt), Bild relativ zum Datenordner, von Philip gewählt? */
+  thumbnail: { auftrag: string | null; bild: string | null; gewaehlt: boolean } | null
+  /** ID des Schnitt-Projekts */
   schnitt: string | null
   youtube: { titel: string; beschreibung: string; kapitel: string } | null
   erstellt: string
   rev: number
   updatedAt: string
   updatedBy: string
+  /** Vorschaubild (moin-media://…), vom Hauptprozess ergänzt */
+  bildUrl?: string | null
+}
+/** Stand des Thumbnail-Auftrags einer Karte */
+export interface PlanungThumbStand {
+  /** null: Auftrag auf diesem Gerät unbekannt (z. B. auf dem anderen Gerät gestartet) */
+  auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
+  varianten: { titel: string; pfad: string; url: string }[]
+}
+/** Planung mit Claude (ROADMAP 7.6) */
+export type PlanungClaudeArt = 'ideen' | 'titel' | 'woche'
+export type PlanungClaudeErgebnis =
+  | { art: 'ideen'; ideen: { titel: string; idee: string; warum: string }[] }
+  | { art: 'titel'; titel: { titel: string; warum: string }[] }
+  | { art: 'woche'; woche: { plan: { karte: string; termin: string; grund: string }[]; aufnehmen: { karte: string; grund: string }[]; hinweis: string } }
+export interface PlanungClaudeStand {
+  state: string
+  progress: number | null
+  step: string
+  error: string | null
+  ergebnis: PlanungClaudeErgebnis | null
 }
 export type PlanungAenderung = Partial<Pick<PlanungKarte, 'kanal' | 'spalte' | 'titel' | 'notizen' | 'checkliste' | 'termin' | 'thumbnail' | 'schnitt' | 'youtube'>>
 
@@ -417,6 +446,14 @@ export interface MoinApi {
   /** Upload-Rhythmus je Kanal (ROADMAP 7.4) */
   planungRhythmus(): Promise<Rhythmus>
   planungRhythmusSetzen(rhythmus: Rhythmus): Promise<Rhythmus>
+  /** Verbindung zu Schnitt und Thumbnail (ROADMAP 7.5) */
+  planungSchneiden(id: string): Promise<PlanungKarte | null>
+  planungThumbnail(id: string): Promise<PlanungKarte>
+  planungThumbVarianten(id: string): Promise<PlanungThumbStand>
+  planungThumbWaehlen(id: string, pfad: string): Promise<PlanungKarte>
+  /** Claude: Ideen (kanal, wunsch), Titel (karte), Wochenplan; liefert die Auftrags-ID */
+  planungClaude(art: PlanungClaudeArt, o?: { kanal?: string; wunsch?: string; karte?: string }): Promise<string>
+  planungClaudeStand(auftrag: string): Promise<PlanungClaudeStand | null>
   onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>

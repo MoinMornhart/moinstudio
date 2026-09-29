@@ -10,6 +10,7 @@ import type { HardwareController } from '../hardware/controller'
 import { ProfileStore } from '../hardware/profile'
 import type { JobQueue } from '../jobs/queue'
 import { RpcServer } from './pipe'
+import { planungAktion, type PlanungArgs } from '../planung/aktionen'
 
 export function pipeInfoFile(): string {
   return join(app.getPath('userData'), 'pipe.json')
@@ -33,6 +34,8 @@ export interface AppRpcDeps {
   enqueueProbe: () => Promise<string>
   /** Schnitt (ROADMAP 6.9): gleiche Funktionen wie im Reiter */
   schnitt: { starteImport: (video: string, kanal?: string) => Promise<string>; aufruf: (kanal: string, ...a: unknown[]) => Promise<unknown> }
+  /** Planung (ROADMAP 7.7) */
+  planung: { aufruf: (kanal: string, ...a: unknown[]) => Promise<unknown>; daten: () => Promise<string> }
 }
 
 /** Startet den Pipe-Server der App und registriert die Methoden für den MCP-Server. */
@@ -83,6 +86,13 @@ export async function startAppRpc(deps: AppRpcDeps): Promise<RpcServer> {
     return { ...img, path: result.image }
   })
   rpc.handle('probe.render', () => deps.enqueueProbe())
+  // Planung aus Claude Desktop (ROADMAP 7.7): planning
+  rpc.handle('planung', async (p) =>
+    planungAktion(await deps.planung.daten(), (p ?? {}) as PlanungArgs, {
+      starte: async (art, o) => String(await deps.planung.aufruf(IPC.planungClaude, art, o)),
+      stand: (auftrag) => deps.planung.aufruf(IPC.planungClaudeStand, auftrag)
+    })
+  )
   // Schnitt aus Claude Desktop (ROADMAP 6.9): video_edit
   rpc.handle('schnitt', async (p) => {
     const { aktion, projekt, pfad, kanal, wunsch, auswahl } = (p ?? {}) as { aktion?: string; projekt?: string; pfad?: string; kanal?: string; wunsch?: string; auswahl?: unknown }

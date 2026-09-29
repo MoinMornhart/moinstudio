@@ -32,7 +32,8 @@ const KarteSchema = z.object({
   /** Upload-Termin als lokale Zeit „2026-10-03T17:00“ oder null */
   termin: z.string().nullable().default(null),
   /** Verknüpfungen zu den anderen Reitern (ROADMAP 7.5) */
-  thumbnail: z.string().nullable().default(null),
+  // Thumbnail-Auftrag (nur auf dem Gerät bekannt, das ihn gestartet hat) und Bild relativ zum Datenordner (überall sichtbar)
+  thumbnail: z.object({ auftrag: z.string().nullable(), bild: z.string().nullable(), gewaehlt: z.boolean() }).nullable().catch(null).default(null),
   schnitt: z.string().nullable().default(null),
   youtube: z.object({ titel: z.string(), beschreibung: z.string(), kapitel: z.string() }).nullable().default(null),
   erstellt: z.string(),

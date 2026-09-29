@@ -80,6 +80,18 @@ docs/            Architektur, Recherche, Testberichte
 
 Im Datenordner liegen nur Dateien, die sich gut synchronisieren lassen: JSON pro Objekt und atomare Schreibvorgänge, keine SQLite-Datenbank. Konfliktkopien von OneDrive (`name-GERÄT.json`) erkennt die App. Große Rohvideos bleiben am Aufnahmeort, im Projekt stehen nur Pfad und Hash.
 
+### Planung (ROADMAP M7)
+
+- **Karten:** `planning\cards\<id>.json`, eine Datei pro Karte (`src/main/planung/karten.ts`). Die Reihenfolge steht als Bruchzahl in der Karte. Jedes Feld merkt sich seine letzte Änderungszeit (`felder`). Konfliktkopien von OneDrive (`<id>-GERÄT.json`) und iCloud (`<id> 2.json`) werden beim Laden Feld für Feld zusammengeführt, dann aufgeräumt. Ein Datei-Beobachter meldet Änderungen vom anderen Gerät an die Oberfläche.
+- **Rhythmus:** `planning\rhythmus.json` mit den Upload-Wochentagen und Uhrzeiten je Kanal. Freie Termine berechnet `src/shared/kalender.ts`.
+- **Verbindungen:** `src/main/planung/verbindung.ts` beobachtet die Aufgabenliste.
+  - Import fertig: Die Karte rückt nach „Schnitt“.
+  - Export fertig: Titel, Beschreibung und Kapitel landen in der Karte, die Karte rückt nach „Thumbnail“.
+  - Thumbnail gewählt: Die Karte rückt nach „Upload“.
+  - Das Thumbnail-Bild wird relativ zum Datenordner gespeichert, damit es auf jedem Gerät sichtbar ist.
+- **Claude:** Aufträge `planung-claude` (Ideen, Titel, Wochenplan) laufen über das Abo mit festem JSON-Schema (`src/main/planung/ideen.ts`).
+- **Claude Desktop:** Das MCP-Werkzeug `planning` nutzt `src/main/planung/aktionen.ts`. Läuft die App nicht, arbeitet es direkt im Datenordner; nur Claude-Aufträge brauchen die App.
+
 ## 6. Adobe
 
 Die gesamte Adobe-Steuerung liegt im Modul `adobe/` hinter einer Schnittstelle (`detect()`, `connect()`, `premiere.*`, `photoshop.*`, `aftereffects.*`). Es gibt einen Dry-Run, der nur protokolliert, welche Befehle gesendet würden. Ohne erkannte Installation sind die Schalter „Adobe verwenden“ deaktiviert. Zukunftssicher ist UXP für Premiere Pro und Photoshop, ExtendScript nur noch für After Effects. Belege und Versionen: [research/adobe.md](research/adobe.md).

@@ -8,6 +8,7 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { HardwareBanner } from './components/HardwareCard'
 import { JobsWidget } from './components/JobsWidget'
 import { SetupWizard } from './components/SetupWizard'
+import { OEFFNE_EREIGNIS } from './navigation'
 
 export function App(): React.JSX.Element {
   const [tab, setTab] = useState<TabId>('thumbnail')
@@ -17,7 +18,14 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void window.moin.appInfo().then(setInfo)
     void window.moin.setupState().then(setSetupDone)
-    return window.moin.onSelectTab(setTab)
+    // Sprung aus einem anderen Reiter (z. B. Planungskarte → Schnitt-Projekt)
+    const sprung = (e: Event): void => setTab((e as CustomEvent<{ tab: TabId }>).detail.tab)
+    window.addEventListener(OEFFNE_EREIGNIS, sprung)
+    const aus = window.moin.onSelectTab(setTab)
+    return () => {
+      window.removeEventListener(OEFFNE_EREIGNIS, sprung)
+      aus()
+    }
   }, [])
 
   return (

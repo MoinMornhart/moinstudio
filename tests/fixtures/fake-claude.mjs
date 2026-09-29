@@ -13,6 +13,17 @@ process.stdin.on('end', () => {
     out({ type: 'result', subtype: 'error_during_execution', is_error: true, result: "You've hit your session limit · resets 3:45pm", session_id: sessionId })
     process.exit(1)
   }
+  if (input.includes('Ideen-Partner')) {
+    // Planung (ROADMAP 7.6): eine Idee wiederholt eine vorhandene Karte, eine wiederholt sich selbst
+    const ideen = [
+      { titel: 'Ich überlebe 100 Tage im Nether', idee: 'Schon als Karte da.', warum: 'x' },
+      { titel: 'Minecraft, aber jeder Block explodiert', idee: 'Jeder abgebaute Block wird zu TNT.', warum: 'Chaos' },
+      { titel: 'Jeder Block explodiert in Minecraft!', idee: 'Doppelt.', warum: 'x' },
+      { titel: 'Ich baue eine Falle für SimPell', idee: 'Falle im Dorf.', warum: 'Duell' }
+    ]
+    out({ type: 'result', subtype: 'success', is_error: false, result: '', structured_output: { ideen }, session_id: sessionId })
+    return
+  }
   if (input.includes('Thumbnail-Planer')) {
     // Planungsauftrag: beim ersten Mal ein Plan mit Fehler (unbekannte Pose), nach der Korrektur ein gültiger
     const korrigiert = input.includes('# Korrektur')

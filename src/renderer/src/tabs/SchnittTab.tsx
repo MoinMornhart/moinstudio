@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SchnittAbschnitt, SchnittExport, SchnittHighlight, SchnittListe, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
+import { abholen, OEFFNE_EREIGNIS } from '../navigation'
 
 /**
  * Schnitt-Reiter (ROADMAP 6.x): Rohvideo rein, fertiges Video raus. 6.2: Projekte, Import mit Vorschau, Wellenform
@@ -420,8 +421,16 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
 
 export function SchnittTab(): React.JSX.Element {
   const [projekte, setProjekte] = useState<SchnittProjekt[]>([])
-  const [offen, setOffen] = useState<string | null>(null)
+  const [offen, setOffen] = useState<string | null>(() => abholen('schnitt'))
   const [kanal, setKanal] = useState(KANAELE[0]!)
+  useEffect(() => {
+    const sprung = (e: Event): void => {
+      const d = (e as CustomEvent<{ tab: string; ziel?: string }>).detail
+      if (d.tab === 'schnitt' && abholen('schnitt')) setOffen(d.ziel ?? null)
+    }
+    window.addEventListener(OEFFNE_EREIGNIS, sprung)
+    return () => window.removeEventListener(OEFFNE_EREIGNIS, sprung)
+  }, [])
   const [fehler, setFehler] = useState<string | null>(null)
   const laden = useCallback(() => void window.moin.schnittProjekte().then(setProjekte, (e: unknown) => setFehler(String(e))), [])
   useEffect(laden, [laden])

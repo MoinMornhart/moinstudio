@@ -100,6 +100,7 @@ describe('MCP-Werkzeuge (offizieller Client ↔ Server, App nachgebaut)', () => 
     app.handle('status', () => ({ version: '9.9.9', dataDir: 'D:\\OneDrive\\MoinStudio' }))
     app.handle('probe.render', () => 'job123')
     app.handle('schnitt', (p) => ({ empfangen: p }))
+    app.handle('planung', (p) => ({ planung: p }))
     app.handle('jobs.image', () => ({ data: Buffer.from('fake').toString('base64'), mimeType: 'image/jpeg', width: 960, height: 540, path: 'C:\\x.png' }))
     await app.listen()
     await writeFile(join(dir, 'pipe.json'), JSON.stringify(app.info('9.9.9')))
@@ -121,7 +122,7 @@ describe('MCP-Werkzeuge (offizieller Client ↔ Server, App nachgebaut)', () => 
 
   it('listet die Werkzeuge mit Beschreibung', async () => {
     const { tools } = await client.listTools()
-    expect(tools.map((t) => t.name).sort()).toEqual(['job_control', 'job_get', 'job_image', 'jobs_list', 'render_probe', 'status', 'video_edit'])
+    expect(tools.map((t) => t.name).sort()).toEqual(['job_control', 'job_get', 'job_image', 'jobs_list', 'planning', 'render_probe', 'status', 'video_edit'])
     expect(tools.every((t) => (t.description ?? '').length > 10)).toBe(true)
   })
 
@@ -130,6 +131,12 @@ describe('MCP-Werkzeuge (offizieller Client ↔ Server, App nachgebaut)', () => 
     expect(JSON.stringify(res.content)).toContain('lass den Creeper drin')
     const falsch = await client.callTool({ name: 'video_edit', arguments: { aktion: 'gibtsnicht' } })
     expect(falsch.isError).toBe(true)
+  })
+
+  it('reicht Planungs-Aufträge an die laufende App weiter (planning)', async () => {
+    const res = await client.callTool({ name: 'planning', arguments: { aktion: 'anlegen', kanal: 'MoinMorni', titel: 'Chained Together' } })
+    expect(JSON.stringify(res.content)).toContain('Chained Together')
+    expect(JSON.stringify(res.content)).toContain('planung')
   })
 
   it('holt den Status über die Pipe aus der App', async () => {

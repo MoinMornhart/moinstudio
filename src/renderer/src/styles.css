@@ -431,3 +431,36 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .zeit-feld { width: 86px; flex: none; }
 .ok-text { color: #5fd38d; margin: 0; }
 .warn-text { color: #ffb347; }
+
+/* Planung: Verbindung zu Schnitt und Thumbnail (ROADMAP 7.5) */
+.kachel-bild { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 5px; display: block; }
+.karten-video { gap: 10px; }
+.video-zeile { display: flex; flex-direction: column; gap: 6px; background: var(--panel); border-radius: 8px; padding: 10px; }
+.video-zeile .input.small { width: auto; flex: 1; min-width: 0; }
+.thumb-wahl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.thumb-knopf { position: relative; padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer; overflow: hidden; }
+.thumb-knopf img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.thumb-knopf:hover { border-color: var(--muted); }
+.thumb-knopf.on { border-color: var(--accent); }
+.thumb-haken { position: absolute; top: 4px; right: 4px; background: var(--accent); color: #1a1206; border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.thumb-einzeln { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; }
+.yt-feld { display: flex; flex-direction: column; gap: 4px; }
+.yt-kopf { display: flex; justify-content: space-between; align-items: center; }
+.yt-text { margin: 0; white-space: pre-wrap; font: inherit; font-size: 12px; background: var(--bg-2); border-radius: 6px; padding: 8px; max-height: 140px; overflow-y: auto; }
+
+/* Planung mit Claude (ROADMAP 7.6) */
+.btn.on { outline: 1px solid var(--accent); }
+.spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; display: inline-block; animation: drehen 0.8s linear infinite; flex: none; }
+@keyframes drehen { to { transform: rotate(360deg); } }
+.claude-laeuft { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.ideen-finder { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+.ideen-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; margin-top: 12px; }
+.idee { display: flex; flex-direction: column; justify-content: space-between; gap: 8px; background: var(--panel); border-radius: 8px; padding: 10px; }
+.idee-text { display: flex; flex-direction: column; gap: 4px; }
+.idee .btn { align-self: flex-start; }
+.titel-vorschlag { display: flex; flex-direction: column; gap: 2px; text-align: left; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; padding: 7px 9px; cursor: pointer; }
+.titel-vorschlag:hover { border-color: var(--muted); }
+.titel-vorschlag.on { border-color: var(--accent); }
+.wochen-plan { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.plan-zeile { display: flex; flex-direction: column; gap: 3px; background: var(--panel); border-radius: 6px; padding: 7px 8px; }
+.plan-zeile .btn { align-self: flex-start; }

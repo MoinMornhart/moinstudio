@@ -31,7 +31,7 @@ export function setupJobs(
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
   const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
   const { starteImport, starteWunsch } = schnitt
-  const planung = registerPlanungIpc(settings, getWindow)
+  const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport })
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()

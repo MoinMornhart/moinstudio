@@ -15,6 +15,7 @@ import {
   type Rhythmus,
   type Wochentag
 } from '@shared/kalender'
+import { WochenPlaner } from './PlanungClaude'
 
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
 const KANAELE: { id: PlanungKanal; kurz: string; klasse: string }[] = [
@@ -176,6 +177,7 @@ export function PlanungKalender({
           <h3>Nächste 4 Wochen</h3>
           <LueckenText luecken={lueckenBald} rhythmusLeer={Object.values(rhythmusGezeigt).every((s) => s.length === 0)} />
         </section>
+        <WochenPlaner karten={karten} termin={(id, termin) => aendern(id, { termin })} />
         <section>
           <h3>Upload-Rhythmus</h3>
           <p className="muted small">Wann lädst du normalerweise hoch? Freie Termine erscheinen dann im Kalender.</p>

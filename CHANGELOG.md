@@ -6,6 +6,12 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Planung mit Schnitt und Thumbnail verbunden: aus einer Karte das Rohvideo schneiden oder ein Thumbnail erstellen, Variante direkt in der Karte wählen. Die Karte rückt nach Import, Export und Thumbnail-Wahl von selbst weiter und übernimmt Titel, Beschreibung und Kapitel aus dem Export (ROADMAP 7.5).
+- Ideen mit Claude: 10 Video-Ideen je Kanal (optional mit Wunsch), Titelvorschläge für eine Karte und ein Wochenplan, der Karten auf freie Upload-Termine verteilt (ROADMAP 7.6).
+- Planung aus Claude Desktop: neues MCP-Werkzeug `planning` (Karten auflisten, anlegen, ändern, verschieben, Kalender, Rhythmus, Ideen). Funktioniert auch, wenn MoinStudio geschlossen ist (ROADMAP 7.7).
+
 ## [0.24.0] - 2026-09-29
 
 > Planung: Kalender

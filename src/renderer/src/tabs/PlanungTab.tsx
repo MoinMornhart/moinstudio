@@ -3,6 +3,8 @@ import { PLANUNG_SPALTEN, type PlanungAenderung, type PlanungKanal, type Planung
 import type { Rhythmus } from '@shared/kalender'
 import { PageHeader } from '../components/Panel'
 import { PlanungKalender } from '../components/PlanungKalender'
+import { KartenVideo } from '../components/KartenVideo'
+import { IdeenFinder, TitelVorschlaege } from '../components/PlanungClaude'
 
 const KANAELE: { id: PlanungKanal; info: string }[] = [
   { id: 'MoinMornhart', info: 'Minecraft' },
@@ -36,6 +38,7 @@ export function PlanungTab(): React.JSX.Element {
   const [kanal, setKanal] = useState<PlanungKanal>('MoinMornhart')
   const [offen, setOffen] = useState<string | null>(null)
   const [ansicht, setAnsicht] = useState<'board' | 'kalender'>('board')
+  const [ideen, setIdeen] = useState(false)
   const [rhythmus, setRhythmus] = useState<Rhythmus>({})
 
   const laden = useCallback((): void => {
@@ -96,6 +99,12 @@ export function PlanungTab(): React.JSX.Element {
           ))}
         </div>
         )}
+        <span className="row" style={{ marginTop: 0 }}>
+        {ansicht === 'board' && (
+          <button className={`btn small${ideen ? ' on' : ''}`} onClick={() => setIdeen(!ideen)}>
+            {ideen ? 'Ideen ausblenden' : 'Ideen mit Claude'}
+          </button>
+        )}
         <span className="segment">
           <button className={ansicht === 'board' ? 'on' : ''} onClick={() => setAnsicht('board')}>
             Board
@@ -104,11 +113,19 @@ export function PlanungTab(): React.JSX.Element {
             Kalender
           </button>
         </span>
+        </span>
       </div>
+      {ansicht === 'board' && ideen && (
+        <IdeenFinder
+          key={kanal}
+          kanal={kanal}
+          uebernehmen={(titel, idee) => window.moin.planungNeu({ kanal, titel, spalte: 'idee', notizen: idee }).then((k) => setKarten((alt) => [...(alt ?? []), k]))}
+        />
+      )}
       {fehler && <p className="warn">{fehler}</p>}
       {karten && ansicht === 'board' && <Board karten={imKanal} oeffne={setOffen} verschieben={verschieben} neu={neu} />}
       {karten && ansicht === 'kalender' && <PlanungKalender karten={karten} rhythmus={rhythmus} setzeRhythmus={setzeRhythmus} oeffne={setOffen} aendern={aendern} />}
-      {offeneKarte && <KartenDetails key={offeneKarte.id} karte={offeneKarte} aendern={(a) => aendern(offeneKarte.id, a)} loeschen={() => loeschen(offeneKarte.id)} schliessen={() => setOffen(null)} />}
+      {offeneKarte && <KartenDetails key={offeneKarte.id} karte={offeneKarte} ersetze={ersetze} aendern={(a) => aendern(offeneKarte.id, a)} loeschen={() => loeschen(offeneKarte.id)} schliessen={() => setOffen(null)} />}
     </>
   )
 }
@@ -206,6 +223,7 @@ function Kachel({ karte, oeffne, ziehen }: { karte: PlanungKarte; oeffne: (id: s
       onDragEnd={() => ziehen(null)}
       onClick={() => oeffne(karte.id)}
     >
+      {karte.bildUrl && <img className="kachel-bild" src={karte.bildUrl} alt="" draggable={false} />}
       <span className="kachel-titel">{karte.titel}</span>
       {notiz && <span className="kachel-notiz">{notiz}</span>}
       {(karte.termin || karte.checkliste.length > 0) && (
@@ -259,11 +277,13 @@ function NeueKarte({ spalte, neu }: { spalte: PlanungSpalte; neu: (spalte: Planu
 
 function KartenDetails({
   karte,
+  ersetze,
   aendern,
   loeschen,
   schliessen
 }: {
   karte: PlanungKarte
+  ersetze: (k: PlanungKarte) => void
   aendern: (a: PlanungAenderung) => void
   loeschen: () => void
   schliessen: () => void
@@ -341,6 +361,10 @@ function KartenDetails({
             </span>
           </label>
         </div>
+
+        <TitelVorschlaege karte={karte} setze={(t) => aendern({ titel: t })} />
+
+        <KartenVideo karte={karte} ersetze={ersetze} aendern={aendern} />
 
         <label className="details-block">
           <span className="muted small">Notizen (Idee, Ablauf, Seed, Mitspieler …)</span>
