@@ -77,7 +77,7 @@ POSEN = {
         "kopf": {"drehen": -38, "nicken": -4, "neigen": -10},
         "arm_l": {"heben": 100, "seitlich": 8, "drehen": 30, "beugen": 28},
         # Schwertarm tief nach vorn zum Gegner: die Klinge zeigt zur Bildmitte (Recherche: Waffen treffen sich in der Mitte)
-        "arm_r": {"heben": 28, "seitlich": 30, "drehen": 30, "beugen": 30},
+        "arm_r": {"heben": 40, "seitlich": 30, "drehen": 30, "beugen": 30},
         "bein_r": {"vor": 38, "beugen": 38},
         "bein_l": {"vor": -46, "beugen": 18},
     },
@@ -121,5 +121,60 @@ POSEN = {
         "arm_r": {"heben": -48, "seitlich": 10, "beugen": 85},
         "bein_r": {"vor": -40, "beugen": 55},
         "bein_l": {"vor": 42, "beugen": 35},
+    },
+    # Aus der Action-Recherche (72 Thumbnails, Posen P3, P4, P5, P7, P9); Waffe weiter in der kameranahen rechten Hand
+    # Schwerter kreuzen (Face-off): Klinge schräg vor dem Körper zum Gegner, zweite Hand als Faust
+    "kreuzen": {
+        "kippen": -4,
+        "koerper": {"drehen": -30, "vor": 6},
+        "kopf": {"drehen": -28, "neigen": 4},
+        "arm_r": {"heben": 58, "seitlich": 12, "drehen": 30, "beugen": 30},
+        "arm_l": {"heben": 20, "seitlich": 14, "beugen": 70},
+        "bein_r": {"vor": 14, "seitlich": 6, "beugen": 15},
+        "bein_l": {"vor": -12, "seitlich": 6, "beugen": 10},
+    },
+    # Sprungangriff (in der Szene mit Höhe ~1 Block): Waffe hoch, Beine angezogen
+    "sprungangriff": {
+        "kippen": -18,
+        "kippen_seite": 6,
+        "koerper": {"drehen": -16, "vor": 16},
+        "kopf": {"drehen": -20, "nicken": 10},
+        # Ausnahme: Waffe im hinteren Arm (arm_l) hoch über dem Kopf – so steht sie mittig über der Figur und ragt
+        # nicht seitlich aus dem Bild; der vordere Arm greift zum Gegner (GommeHD Helden 2, Sprungangriff)
+        "arm_l": {"heben": 150, "seitlich": 14, "drehen": 20, "beugen": 50},
+        "arm_r": {"heben": 55, "seitlich": 34, "drehen": 25, "beugen": 35},
+        "bein_r": {"vor": 45, "seitlich": 8, "beugen": 70},
+        "bein_l": {"vor": -40, "seitlich": 12, "beugen": 50},
+    },
+    # Stoß: Klinge gerade nach vorn zum Gegner, zweiter Arm hinten zum Schwung
+    "stoss": {
+        "kippen": -12,
+        "koerper": {"drehen": -18, "vor": 16},
+        "kopf": {"drehen": -26, "nicken": 8},
+        "arm_r": {"heben": 68, "seitlich": 14, "drehen": 12, "beugen": 15},
+        "arm_l": {"heben": -28, "seitlich": 32, "drehen": -8, "beugen": 40},
+        "bein_r": {"vor": 34, "seitlich": 8, "beugen": 35},
+        "bein_l": {"vor": -32, "seitlich": 8, "beugen": 15},
+    },
+    # Weggeschleudert (X-Pose in der Luft, Höhe 1–2 Blöcke)
+    "weggeschleudert": {
+        "kippen": 38,
+        "kippen_seite": 16,
+        "koerper": {"vor": -10, "neigen": 8},
+        "kopf": {"nicken": -22, "neigen": 10},
+        "arm_r": {"heben": 128, "seitlich": 82, "beugen": 25},
+        "arm_l": {"heben": 150, "seitlich": 72, "beugen": 30},
+        "bein_r": {"vor": 24, "seitlich": 26, "beugen": 35},
+        "bein_l": {"vor": -20, "seitlich": 26, "beugen": 20},
+    },
+    # Bogen spannen: Bogenarm gestreckt zum Gegner, Zughand am Kinn
+    "bogen": {
+        "kippen": -4,
+        "koerper": {"drehen": -30, "vor": 4},
+        "kopf": {"drehen": -12, "neigen": 8},
+        "arm_r": {"heben": 90, "seitlich": 0, "drehen": 6, "beugen": 5},
+        "arm_l": {"heben": 88, "seitlich": -34, "drehen": 26, "beugen": 110},
+        "bein_r": {"vor": 16, "seitlich": 8},
+        "bein_l": {"vor": -16, "seitlich": 8},
     },
 }

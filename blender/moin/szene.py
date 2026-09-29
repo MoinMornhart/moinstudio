@@ -43,6 +43,20 @@ def _mische(basis, korrektur):
     return neu
 
 
+def _spiegeln(p):
+    """Pose seitenverkehrt: für Figuren, die nach −X schauen (Gegner rechts im Bild). Links und rechts tauschen,
+    Drehungen und seitliche Neigungen umkehren – so bleibt die Waffe in der kameranahen Hand."""
+    neu = {}
+    for k, v in p.items():
+        ziel = k.replace("_r", "_X").replace("_l", "_r").replace("_X", "_l") if k[-2:] in ("_r", "_l") else k
+        if isinstance(v, dict):
+            v = {n: (-w if n in ("drehen", "neigen") else w) for n, w in v.items()}
+        elif k == "kippen_seite":
+            v = -v
+        neu[ziel] = v
+    return neu
+
+
 def _welt(w, texturen, himmel="tag"):
     art = w.get("art", "wiese")
     bloecke.DUNST.update(farbe=mhimmel.VARIANTEN.get(himmel, {}).get("dunst", (0.42, 0.66, 1.0)), halbwert=160.0)
@@ -165,6 +179,31 @@ def _items_anhaengen(figuren, texturen, cam, k):
     return gehalten
 
 
+def _gesicht_sichtbar(scene, cam, fig, raster=5):
+    """Anteil der Gesichtsfläche, den die Kamera wirklich sieht: Strahlen auf ein Punktraster der Vorderseite des
+    Kopfes. Ein Punkt zählt, wenn das Gesicht zur Kamera zeigt und der Strahl zuerst den eigenen Kopf trifft."""
+    tiefe = bpy.context.evaluated_depsgraph_get()
+    kopf = fig.teile["kopf"]
+    mw = kopf.matrix_world
+    von = cam.matrix_world.translation
+    normale = (mw.to_3x3() @ Vector((0, -1, 0))).normalized()
+    treffer = 0
+    for a in range(raster):
+        for b in range(raster):
+            x = (-3.2 + 6.4 * a / (raster - 1)) * mfigur.PX
+            z = (-3.2 + 6.4 * b / (raster - 1)) * mfigur.PX
+            p = mw @ Vector((x, -4.05 * mfigur.PX, z))
+            zur_kamera = von - p
+            if normale.dot(zur_kamera) <= 0:
+                continue
+            richtung = (p - von)
+            abstand = richtung.length
+            ok, _, _, _, ob, _ = scene.ray_cast(tiefe, von, richtung.normalized(), distance=abstand + 0.05)
+            if ok and ob is not None and ob.name.startswith(f"{fig.name}.kopf"):
+                treffer += 1
+    return treffer / (raster * raster)
+
+
 def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     """Bildbericht mit Warnungen für die Selbstprüfung: Köpfe, Items, Mobs im Bild, keine verdeckten Gesichter."""
     info = {"kamera_abweichung": round(fehler, 4), "linse": cam.data.lens, "figuren": {}, "items": {}}
@@ -202,10 +241,12 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
         w = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
         h = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
         return w * h / max(1e-6, (b[2] - b[0]) * (b[3] - b[1]))
-    for fid, it in info["items"].items():
-        for aid, f in info["figuren"].items():
-            if ueberlappung(it["box"], f["kopf_box"]) > 0.25 and aid != fid:
-                warnungen.append(f"Item von {fid} verdeckt das Gesicht von {aid}")
+    # Echte Sichtprüfung: Strahlen von der Kamera auf das Gesicht – verdeckt ein Arm, ein Schwert oder ein Mob?
+    for i, (f, fig) in enumerate(figuren):
+        anteil = _gesicht_sichtbar(scene, cam, fig)
+        info["figuren"][f["id"]]["gesicht_sichtbar"] = round(anteil, 2)
+        if anteil < (0.75 if i == 0 else 0.5):
+            warnungen.append(f"Gesicht von {f['id']} verdeckt oder abgewandt ({int(anteil * 100)} % sichtbar)")
     for m in info["mobs"]:
         if _im_bild(m["box"]) < 0.5:
             warnungen.append(f"Mob {m['art']} kaum sichtbar")
@@ -232,6 +273,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         fig.wurzel.location = (x * BLOCK, y * BLOCK, 0)
         p = _mische(POSEN[f.get("pose", "neutral")], f.get("posen_korrektur"))
         blick = f.get("blick", p.get("blick", 0))
+        # Blick nach −X (Gegner rechts, schaut zum Helden): Pose spiegeln, damit Brust, Kopf und Waffe zur Kamera zeigen
+        if f.get("spiegeln", isinstance(blick, (int, float)) and blick < -30):
+            p = _spiegeln(p)
         p["blick"] = 0 if blick == "auto" else blick
         mfigur.pose(fig, p)
         _auf_den_boden(scene, fig, f.get("hoehe"))
