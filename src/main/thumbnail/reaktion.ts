@@ -45,12 +45,12 @@ export const GEFUEHLE: Record<string, { mimik: string; posen: string[] }> = {
 /** Freie Worte („bin schockiert“, „lach mich tot“) auf ein Gefühl abbilden. */
 export function gefuehlAus(text: string | undefined): string | null {
   if (!text) return null
-  const t = text.toLowerCase()
+  const t = text.toLowerCase().replace(/ae/g, 'ä').replace(/oe/g, 'ö').replace(/ue/g, 'ü')
   const regeln: [RegExp, string][] = [
     [/schock|entsetz|krass|omg|fassungslos/, 'schockiert'],
     [/lach|witzig|lustig|haha|lol/, 'lachend'],
     [/begeister|hype|geil|freu/, 'begeistert'],
-    [/wut|wütend|sauer|aggro/, 'wuetend'],
+    [/wut|wüt|sauer|aggro/, 'wuetend'],
     [/traurig|wein|schade/, 'traurig'],
     [/cringe|peinlich|fremdschäm/, 'cringe'],
     [/skeptisch|fake|zweifel|sus/, 'skeptisch'],
@@ -58,6 +58,16 @@ export function gefuehlAus(text: string | undefined): string | null {
     [/neugierig|spannend|was ist/, 'neugierig']
   ]
   return regeln.find(([re]) => re.test(t))?.[1] ?? null
+}
+
+/**
+ * Seite der Figur: immer gegenüber dem wichtigen Punkt, damit Pfeil und Inhalt nie hinter Philips Kopf liegen
+ * (Claudes Wahl gilt nur, wenn der Punkt genau in der Mitte liegt).
+ */
+export function seiteFuer(vorschlag: string | undefined, wichtig: number[] | undefined): 'links' | 'rechts' {
+  const u = wichtig?.length === 2 ? wichtig[0]! : undefined
+  if (u !== undefined && Math.abs(u - 0.5) > 0.04) return u > 0.5 ? 'links' : 'rechts'
+  return vorschlag === 'rechts' ? 'rechts' : 'links'
 }
 
 /** Nächste Pose: erste passende, die unter den letzten fünf nicht vorkam. */
@@ -109,7 +119,7 @@ Antworte nur mit JSON nach dem Schema.`
   const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { inhalt?: string; wichtig?: number[]; seite?: string; wort?: string; gefuehl?: string }
   const gefuehl = vorgabe ?? (a.gefuehl && GEFUEHLE[a.gefuehl] ? a.gefuehl : 'schockiert')
   const g = GEFUEHLE[gefuehl]!
-  const seite = a.seite === 'rechts' ? 'rechts' : 'links'
+  const seite = seiteFuer(a.seite, a.wichtig)
   const wort = (p.wort ?? a.wort ?? '').toUpperCase().slice(0, 12)
 
   // Posen-Gedächtnis: jedes Mal eine neue Pose

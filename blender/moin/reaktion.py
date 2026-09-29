@@ -18,6 +18,7 @@ from mathutils import Vector
 from . import figur as mfigur
 from . import look as mlook
 from . import mimik as mmimik
+from . import szene as mszene
 from .posen import POSEN
 
 BREITE, HOEHE = 1280, 720
@@ -141,36 +142,83 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     s = -1 if seite == "links" else 1  # Figur bei −X (links) oder +X (rechts); Inhalt auf der anderen Seite
 
     fig = mfigur.baue_figur("ich", spec["skin"], slim=spec.get("slim"))
-    p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in POSEN.get(spec.get("pose", "neutral"), POSEN["neutral"]).items()}
-    # Kopf 15–35° zum Inhalt (Stilbuch 14.2); Blick der Figur leicht zum Inhalt
-    p["blick"] = -s * spec.get("koerper_drehung", 18)
-    p.setdefault("kopf", {})
-    p["kopf"]["drehen"] = p["kopf"].get("drehen", 0) * 0.3 - s * spec.get("kopf_drehung", 14)
-    p["kopf"]["neigen"] = p["kopf"].get("neigen", 0) - s * 6
-    mfigur.pose(fig, p)
-    if spec.get("mimik"):
-        mmimik.setze_mimik(fig, spec["mimik"])
-
-    # Kamera auf Augenhöhe, 45 mm, Kopf ~60 % der Bildhöhe, Figur in ihrer Bildhälfte
     cam_daten = bpy.data.cameras.new("kamera")
     cam_daten.lens = 45
     cam = bpy.data.objects.new("kamera", cam_daten)
     scene.collection.objects.link(cam)
     scene.camera = cam
-    kopf = fig.kopf_mitte()
-    kopf_h = 8 * mfigur.PX * 1.06
-    vfov = 2 * math.atan(cam_daten.sensor_width * HOEHE / BREITE / 2 / cam_daten.lens)
-    abstand = kopf_h / spec.get("kopf_anteil", 0.6) / (2 * math.tan(vfov / 2))
-    breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
-    hoehe_m = breite_m * HOEHE / BREITE
-    # Kopf bei 27 % (bzw. 73 %) der Breite und knapp über der Mitte; Kamera schaut geradeaus
-    ziel = kopf + Vector((-s * (0.5 - 0.27) * breite_m, 0, -(0.56 - 0.5) * hoehe_m))
-    cam.location = ziel + Vector((0, -abstand, 0))
-    cam.rotation_euler = (math.radians(90), 0, 0)
+
+    def stelle(posen_name, anteil=None):
+        """Pose setzen und Kamera rahmen: Kopf ~60 % der Bildhöhe, Figur in ihrer Bildhälfte (Stilbuch 14.1–14.4)."""
+        p = {k: (dict(v) if isinstance(v, dict) else v) for k, v in POSEN.get(posen_name, POSEN["neutral"]).items()}
+        if s > 0:  # Inhalt links: Pose seitenverkehrt, damit Zeigen und Gesten zum Inhalt gehen
+            p = mszene._spiegeln(p)
+        # Kopf 15–35° zum Inhalt (Stilbuch 14.2); Blick der Figur leicht zum Inhalt
+        p["blick"] = -s * spec.get("koerper_drehung", 18)
+        p.setdefault("kopf", {})
+        p["kopf"]["drehen"] = p["kopf"].get("drehen", 0) * 0.3 - s * spec.get("kopf_drehung", 14)
+        p["kopf"]["neigen"] = p["kopf"].get("neigen", 0) - s * 6
+        mfigur.pose(fig, p)
+        kopf = fig.kopf_mitte()
+        kopf_h = 8 * mfigur.PX * 1.06
+        vfov = 2 * math.atan(cam_daten.sensor_width * HOEHE / BREITE / 2 / cam_daten.lens)
+        abstand = kopf_h / (anteil or spec.get("kopf_anteil", 0.6)) / (2 * math.tan(vfov / 2))
+        breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
+        hoehe_m = breite_m * HOEHE / BREITE
+        # Kopf bei 27 % (bzw. 73 %) der Breite und knapp über der Mitte; Kamera schaut geradeaus
+        ziel = kopf + Vector((-s * (0.5 - 0.27) * breite_m, 0, -(0.56 - 0.5) * hoehe_m))
+        cam.location = ziel + Vector((0, -abstand, 0))
+        cam.rotation_euler = (math.radians(90), 0, 0)
+        bpy.context.view_layer.update()
+        return kopf, abstand
+
+    from bpy_extras.object_utils import world_to_camera_view
+
+    inhalt_u = 0.70 if seite == "links" else 0.30
+
+    def bild(punkt):
+        p = world_to_camera_view(scene, cam, punkt)
+        return p.x, 1 - p.y
+
+    def hand_im_text():
+        """Liegt eine Hand im Bereich von Wort und Pfeilanfang (Inhaltsseite, obere 40 %)?"""
+        for h in ("r", "l"):
+            u, v = bild(fig.hand(h))
+            if abs(u - inhalt_u) < 0.27 and v < 0.42:
+                return True
+        return False
+
+    pose_name = spec.get("pose", "neutral")
+    kopf, abstand = stelle(pose_name)
+    # Gesicht muss ganz frei bleiben und keine Hand darf in Wort oder Pfeil ragen, sonst gilt die Pose ohne Hände
+    sicht = mszene._gesicht_sichtbar(scene, cam, fig)
+    if pose_name != "neutral" and (sicht < 0.96 or hand_im_text()):
+        pose_name = "neutral"
+        kopf, abstand = stelle(pose_name)
+        sicht = mszene._gesicht_sichtbar(scene, cam, fig)
+    # Liegt der wichtige Punkt hinter der Figur, rückt die Figur zum Rand (Kopf bleibt ganz im Bild);
+    # reicht der Platz nicht, wird die Figur schrittweise kleiner (Kopf 60 → 44 % der Bildhöhe)
+    if spec.get("pfeil_ziel"):
+        zu = spec["pfeil_ziel"][0]
+        start = spec.get("kopf_anteil", 0.6)
+        for anteil in (start, start * 0.87, start * 0.74):
+            if anteil != start:
+                kopf, abstand = stelle(pose_name, anteil)
+            ecken = [bild(c) for c in fig.kopf_ecken()]
+            k0, k1 = min(e[0] for e in ecken), max(e[0] for e in ecken)
+            noetig = (zu + 0.1 - k0) if seite == "rechts" else (k1 + 0.1 - zu)
+            platz = (0.99 - k1) if seite == "rechts" else (k0 - 0.01)
+            schub = max(0.0, min(noetig, platz))
+            breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
+            cam.location.x -= (schub if seite == "rechts" else -schub) * breite_m
+            bpy.context.view_layer.update()
+            if noetig <= platz:
+                break
+    if spec.get("mimik"):
+        mmimik.setze_mimik(fig, spec["mimik"])
     cam_daten.dof.use_dof = True
     cam_daten.dof.focus_distance = abstand
     cam_daten.dof.aperture_fstop = 2.8
-    bpy.context.view_layer.update()
 
     # Hintergrund weit hinten (Tiefenschärfe macht ihn weich, Stilbuch 14.9)
     hinten = abstand * 9
@@ -200,8 +248,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     def punkt(u, v):
         return cam.location + Vector(((u - 0.5) * b_e, ebene, (0.5 - v) * h_e))
 
-    info = {"wort": None, "pfeil": None}
-    inhalt_u = 0.70 if seite == "links" else 0.30
+    info = {"wort": None, "pfeil": None, "pose": pose_name, "gesicht_sichtbar": round(sicht, 2)}
     if spec.get("wort"):
         wort_h = h_e * spec.get("wort_anteil", 0.2)
         t = _textobjekt(spec["wort"].upper(), spec.get("schrift"), wort_h, spec.get("wort_farbe", (1, 1, 1)))
@@ -237,8 +284,6 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     scene.view_settings.exposure = -0.2
     mlook.farbkorrektur(scene, 1.05, 1.04, 0.35)
     bpy.context.view_layer.update()
-    from bpy_extras.object_utils import world_to_camera_view
-
     ecken = [world_to_camera_view(scene, cam, c) for c in fig.kopf_ecken()]
     info["kopf_box"] = [min(e.x for e in ecken), 1 - max(e.y for e in ecken), max(e.x for e in ecken), 1 - min(e.y for e in ecken)]
     if ausgabe:
