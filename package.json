@@ -1,7 +1,7 @@
 {
   "name": "moinstudio",
   "productName": "MoinStudio",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "Lokale Desktop-App für Minecraft-Thumbnails, Videoschnitt und Planung mit dem eigenen Claude-Abo",
   "author": "Philip (MoinMornhart)",
   "license": "MIT",
