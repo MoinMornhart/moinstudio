@@ -57,7 +57,8 @@ export const IPC = {
   thumbErgebnis: 'thumb:ergebnis',
   thumbSpeichern: 'thumb:speichern',
   thumbVideo: 'thumb:video',
-  thumbVideoErgebnis: 'thumb:video-ergebnis'
+  thumbVideoErgebnis: 'thumb:video-ergebnis',
+  thumbVorlagen: 'thumb:vorlagen'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -70,8 +71,18 @@ export interface ThumbSkin {
   slim: boolean | null
 }
 
+/** Serien-Vorlage (config/vorlagen.json) */
+export interface ThumbSerie {
+  id: string
+  name: string
+  merkmal: { farbe: string; platz: string }
+  folgen: { nr: number; titel: string; beschreibung: string; wort?: string }[]
+}
+
 export interface ThumbStart {
   beschreibung: string
+  /** Serien-Folge: Nummer (und optional Schlagwort) kommen als Serien-Merkmal aufs Bild */
+  serie?: { id: string; nr: number; wort?: string }
   kanal?: string
   /** Skin-IDs der Freunde, die mit ins Bild sollen */
   freunde?: string[]
@@ -247,4 +258,6 @@ export interface MoinApi {
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */
   thumbVideo(kanal: string, titel?: string): Promise<string | null>
   thumbVideoErgebnis(jobId: string): Promise<ThumbVideoErgebnis | null>
+  /** Serien-Vorlagen */
+  thumbVorlagen(): Promise<ThumbSerie[]>
 }

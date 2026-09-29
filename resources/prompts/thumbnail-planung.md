@@ -19,7 +19,11 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Treffer, Flucht, Sturz, Sprung. Ruhige Posen nur, wenn die Beschreibung wirklich nichts Aktives hergibt.
 2. **Philip groß vorn links**, Gegner oder Thema auf der rechten Bildseite (+X), 2–4 Blöcke weiter hinten. Gegner müssen gut
    zu sehen sein, nicht winzig.
-3. **Gesichter bleiben immer frei.** Keine Arme oder Waffen vor Gesichtern. Philip schaut zur Kamera oder zum Gegner.
+3. **Mimik passend zur Situation** (Feld `mimik` je Figur): wütend im Kampf, erschrocken bei Gefahr, froh beim Fund,
+   traurig bei Verlust, müde nach langer Nacht, skeptisch bei Verrat, schreiend beim Angriff. Die Augen bleiben die
+   echten Skin-Augen, die Mimik kommt über Lider, Augenringe und einen Mund im leichten Pixel-Stil. Gesten wie
+   jubeln, kopfkratzen, achselzucken stehen bei den Posen.
+   **Gesichter bleiben immer frei.** Keine Arme oder Waffen vor Gesichtern. Philip schaut zur Kamera oder zum Gegner.
 4. **Waffen:** Schaut Philip zum Gegner (`blick` 55–75), hält er die Waffe in der rechten Hand (`"hand": "r"`), denn das ist
    dann die kameranahe Seite. Bei ruhigen Posen mit `blick` 0–35 nimmt er die linke Hand (`"hand": "l"`). Item-Namen sind
    Minecraft-IDs (diamond_sword, netherite_axe, bow, lantern, flint_and_steel …).
@@ -60,7 +64,7 @@ Antworte nur mit JSON nach dem vorgegebenen Schema. Jede `szene` hat dieses Form
   "welt": {"art": "klippe", "kante": 2, "tiefe": 20, "seed": 7, "bloecke": [{"art": "tnt", "von": [5, 6, 1], "bis": [6, 7, 1]}]},
   "himmel": "blutrot",
   "figuren": [
-    {"id": "ich", "pose": "sturmangriff", "position": [0, 0], "blick": 70, "item": {"name": "diamond_sword", "hand": "r"}},
+    {"id": "ich", "pose": "sturmangriff", "mimik": "wuetend", "position": [0, 0], "blick": 70, "item": {"name": "diamond_sword", "hand": "r"}},
     {"id": "gegner", "pose": "getroffen", "position": [2.8, 3], "blick": -60, "hoehe": 0.5}
   ],
   "mobs": [{"art": "zombie", "position": [4, 5], "blick": "ich", "groesse": 1}],

@@ -8,6 +8,9 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Hinzugefügt
 - Alle Mobs, immer die neuesten: automatischer Import aus Mojangs bedrock-samples-Vorschau bei jedem Auftrag (Geometrie, Texturen, Grundhaltung aus den setup-Animationen), derzeit 120 Figuren inklusive noch unveröffentlichter Mobs; die 31 geprüften Mobs behalten Vorrang.
+- Mimik (Philip): wütend, traurig, erschrocken, müde, skeptisch, froh, schreiend – Skin-Augen bleiben, dazu Lider mit schräger Kante, Augenringe und ein Mund im leichten Pixel-Stil; Augenzeile und Hautfarbe werden aus dem Skin gelesen. Neue Gesten: jubeln, kopfkratzen, achselzucken.
+- Serien-Vorlagen: „Minecraft durchspielen“ mit 8 Folgen (erste Nacht bis Enderdrache); die Folgennummer kommt als Serien-Merkmal in Minecraft-Schrift aufs Bild und weicht aus, wenn ihr Platz belegt ist.
+- Blöcke Netherportal (leuchtend, durchsichtig) und Netherziegel.
 - Enderdrache, nach dem Spielcode aus den Originalteilen zusammengesetzt (5 Halssegmente, Kopf mit Kiefer, 12 Schwanzsegmente, Flügel mit Spitzen, Beine).
 - Neue Welt „end“ (Endstein-Insel mit Obsidiansäulen) und Himmel „end“; bei dunklen Himmeln bekommt ein Thema-Mob eigenes Füll- und Randlicht.
 - Alle Blöcke: jeder Block der Spieldatei wird aus seinem Blockmodell abgeleitet (Würfel, Säulen, Front, Kreuz-Pflanzen, Doppelpflanzen); die App lädt immer den neuesten Snapshot inklusive Blockmodellen.

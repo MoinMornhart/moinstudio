@@ -69,6 +69,8 @@ ARTEN = {
     "deepslate_iron_ore": {"alle": ("deepslate_iron_ore", None)},
     "tuff": {"alle": ("tuff", None)},
     # Nether
+    "nether_portal": {"alle": ("nether_portal", None), "durchsichtig": True, "leuchtet": 2.5},
+    "nether_bricks": {"alle": ("nether_bricks", None)},
     "glowstone": {"alle": ("glowstone", None), "leuchtet": 2.5},
     "magma_block": {"alle": ("magma", None), "leuchtet": 0.8},
     "nether_quartz_ore": {"alle": ("nether_quartz_ore", None)},
@@ -243,7 +245,7 @@ def art_info(art, texturen=None):
         raise KeyError(art)
     tex, kette = {}, []
     # Manche Blöcke haben nur Teilmodelle (Doppelpflanzen, Wachstumsstufen, Zustände)
-    for kandidat in (art, f"{art}_bottom", f"{art}_stage3", f"{art}_stage2", f"{art}_0", f"{art}_inventory", f"{art}_off", f"{art}_floor"):
+    for kandidat in (art, f"{art}_bottom", f"{art}_stage3", f"{art}_stage2", f"{art}_0", f"{art}_inventory", f"{art}_off", f"{art}_floor", f"{art}_ns"):
         tex, kette = _modell(texturen.ordner, kandidat)
         if kette:
             break

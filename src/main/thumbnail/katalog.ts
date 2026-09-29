@@ -7,6 +7,7 @@ import { join } from 'node:path'
  */
 export interface Katalog {
   posen: { name: string; hinweis: string }[]
+  mimiken: string[]
   kameraModi: string[]
   himmel: string[]
   welten: { name: string; hinweis: string }[]
@@ -55,15 +56,17 @@ function schluessel(quelle: string, block: string, muster = /^ {4}"([a-z0-9_]+)"
 /** `mobTabelle`: Pfad zur Mob-Tabelle (Ordner mit mobs.json oder die Datei selbst); `blockModelle`: models/block der Spieldatei */
 export async function ladeKatalog(blenderDir: string, mobTabelle: string, blockModelle?: string): Promise<Katalog> {
   const lies = (f: string): Promise<string> => readFile(join(blenderDir, 'moin', f), 'utf8')
-  const [posen, kamera, himmel, bloecke, mobs] = await Promise.all([
+  const [posen, kamera, himmel, bloecke, mobs, mimik] = await Promise.all([
     lies('posen.py'),
     lies('kamera.py'),
     lies('himmel.py'),
     lies('bloecke.py'),
-    readFile(mobTabelle.endsWith('.json') ? mobTabelle : join(mobTabelle, 'mobs.json'), 'utf8')
+    readFile(mobTabelle.endsWith('.json') ? mobTabelle : join(mobTabelle, 'mobs.json'), 'utf8'),
+    lies('mimik.py')
   ])
   return {
     posen: schluessel(posen, 'POSEN'),
+    mimiken: [...(/AUSDRUECKE = \(([^)]*)\)/.exec(mimik)?.[1] ?? '').matchAll(/"(\w+)"/g)].map((m) => m[1]!),
     kameraModi: schluessel(kamera, 'MODI').map((e) => e.name),
     himmel: schluessel(himmel, 'VARIANTEN').map((e) => e.name),
     welten: WELTEN,

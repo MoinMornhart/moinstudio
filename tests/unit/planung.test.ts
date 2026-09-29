@@ -14,6 +14,8 @@ describe('Thumbnail-Katalog', () => {
     const k = await katalog()
     expect(k.posen.map((p) => p.name)).toEqual(expect.arrayContaining(['sturmangriff', 'getroffen', 'kreuzen', 'schreck']))
     expect(k.posen.find((p) => p.name === 'sturmangriff')?.hinweis).toMatch(/Sturmangriff/)
+    expect(k.posen.map((p) => p.name)).toEqual(expect.arrayContaining(['jubeln', 'kopfkratzen', 'achselzucken']))
+    expect(k.mimiken).toEqual(['neutral', 'wuetend', 'traurig', 'erschrocken', 'muede', 'skeptisch', 'froh', 'schreiend'])
     expect(k.kameraModi).toEqual(expect.arrayContaining(['nah', 'kampf', 'gefahr']))
     expect(k.himmel).toEqual(expect.arrayContaining(['tag', 'blutrot', 'gewitter']))
     expect(k.mobs).toEqual(expect.arrayContaining(['zombie', 'creeper', 'enderman']))

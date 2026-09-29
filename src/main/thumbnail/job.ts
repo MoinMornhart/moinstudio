@@ -50,6 +50,8 @@ export interface ThumbnailPayload {
   configDir: string
   promptDatei: string
   ausgabe: string
+  /** Serien-Merkmal (Folgennummer, Schlagwort) – kommt auf jede Variante, Claudes eigener Text entfällt dann */
+  merkmal?: { text: string; farbe?: string; platz?: string }[]
 }
 
 export interface ThumbnailVariante {
@@ -154,7 +156,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
       const pfad = `${basis}.v${bestes.versuch}`
       let bild = `${pfad}.png`
       const warnungen = [...bestes.warnungen]
-      const texte = v.text ?? []
+      const texte = p.merkmal?.length ? p.merkmal : (v.text ?? [])
       if (texte.length) {
         ctx.progress(anteil(0.9), `Variante ${i + 1}: Text setzen …`)
         await writeFile(`${basis}.texte.json`, JSON.stringify(texte))

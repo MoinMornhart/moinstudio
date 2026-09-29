@@ -89,6 +89,7 @@ export async function ladeVorbilder(configDir: string): Promise<Vorbild[]> {
 function katalogText(k: Katalog): string {
   return [
     `Posen: ${k.posen.map((p) => (p.hinweis ? `${p.name} (${p.hinweis})` : p.name)).join('; ')}`,
+    `Mimik (Feld „mimik“ je Figur, Augen bleiben die Skin-Augen): ${k.mimiken.join(', ')}`,
     `Welten: ${k.welten.map((w) => `${w.name} (${w.hinweis})`).join('; ')}`,
     `Himmel: ${k.himmel.join(', ')}`,
     `Kamera-Modi: ${k.kameraModi.join(', ')}`,
@@ -132,6 +133,7 @@ export function pruefeSzene(s: Szene, k: Katalog, figurIds: string[]): string[] 
     if (!figurIds.includes(f.id)) fehler.push(`Unbekannte Figur „${f.id}“`)
     ids.add(f.id)
     if (!posen.has(f.pose)) fehler.push(`Unbekannte Pose „${f.pose}“ bei ${f.id}`)
+    if (f['mimik'] !== undefined && !k.mimiken.includes(String(f['mimik']))) f['mimik'] = 'neutral'
     if (f.item && !/^[a-z0-9_]+$/.test(f.item.name)) fehler.push(`Ungültiges Item „${f.item.name}“`)
     if (f.item && f.item.hand !== 'r' && f.item.hand !== 'l') f.item.hand = 'l'
   }

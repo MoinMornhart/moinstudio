@@ -2,7 +2,7 @@ import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
-import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
+import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSerie, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
 import { findClaudeCli } from '../claude/cli'
 import { readJson, writeJsonAtomic } from '../data/jsonfile'
 import type { SettingsStore } from '../data/settings'
@@ -61,6 +61,9 @@ export function registerThumbnailIpc(
   getWindow: () => BrowserWindow | undefined
 ): { starteThumbnail: (start: ThumbStart) => Promise<string>; starteVideo: (video: string, kanal: string, titel?: string) => Promise<string> } {
   queue.register('thumbnail', thumbnailJob)
+  const vorlagen = async (): Promise<ThumbSerie[]> =>
+    ((JSON.parse(await readFile(join(resourceDir('config'), 'vorlagen.json'), 'utf8')) as { serien?: ThumbSerie[] }).serien ?? [])
+  ipcMain.handle(IPC.thumbVorlagen, () => vorlagen())
   queue.register('video-vorschlaege', videoVorschlaegeJob)
 
   // Video hochladen → Vorschläge (ROADMAP 5.5)
@@ -191,6 +194,13 @@ export function registerThumbnailIpc(
       minecraftDir: resourceDir('minecraft'),
       configDir: resourceDir('config'),
       promptDatei: join(resourceDir('prompts'), 'thumbnail-planung.md'),
+      merkmal: await (async () => {
+        if (!start.serie) return undefined
+        const serie = (await vorlagen()).find((x) => x.id === start.serie!.id)
+        const texte = [{ text: `#${start.serie.nr}`, farbe: serie?.merkmal.farbe ?? 'gelb', platz: serie?.merkmal.platz ?? 'unten_rechts' }]
+        if (start.serie.wort) texte.push({ text: start.serie.wort, farbe: 'weiss', platz: 'auto' })
+        return texte
+      })(),
       ausgabe: join(dir, 'thumbnails', id)
     }
     return queue.enqueue('thumbnail', `Thumbnail: ${beschreibung.slice(0, 50)}`, payload)

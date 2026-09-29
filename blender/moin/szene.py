@@ -26,6 +26,7 @@ from . import himmel as mhimmel
 from . import items as mitems
 from . import kamera as mkamera
 from . import look as mlook
+from . import mimik as mmimik
 from . import mobs as mmobs
 from . import welt as mwelt
 from . import bloecke
@@ -358,6 +359,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             p = _spiegeln(p)
         p["blick"] = 0 if blick == "auto" else blick
         mfigur.pose(fig, p)
+        if f.get("mimik"):
+            mmimik.setze_mimik(fig, f["mimik"])
         _auf_den_boden(scene, fig, f.get("hoehe"))
         figuren.append((f, fig))
     haupt = figuren[0][1]

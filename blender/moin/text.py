@@ -124,7 +124,8 @@ def setze_text(bild_pfad, bericht, texte, assets, ausgabe):
             bh = (glyph_h * len(zeilen) + 1) * k * 1.15 / H
             if bw > 0.92:
                 continue
-            plaetze = [t["platz"]] if t.get("platz", "auto") != "auto" else PLAETZE
+            # Wunschplatz zuerst; ist er belegt, weicht der Text in einen anderen freien Platz aus
+            plaetze = [t["platz"]] + [p for p in PLAETZE if p != t["platz"]] if t.get("platz", "auto") != "auto" else PLAETZE
             for p in plaetze:
                 box = _box_fuer(p, bw, bh)
                 stoert = sum(_ueberlappung(box, w) for w in wichtig + belegt)

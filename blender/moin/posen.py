@@ -177,4 +177,26 @@ POSEN = {
         "bein_r": {"vor": 16, "seitlich": 8},
         "bein_l": {"vor": -16, "seitlich": 8},
     },
+    # Gesten (Reactions und Stimmung, Philip 29.09.): Gesicht bleibt frei
+    # Jubeln: beide Arme hoch, angewinkelt
+    "jubeln": {
+        "kopf": {"nicken": -10},
+        "arm_r": {"heben": 165, "seitlich": 32, "beugen": 35},
+        "arm_l": {"heben": 165, "seitlich": 32, "beugen": 35},
+        "bein_r": {"seitlich": 6},
+        "bein_l": {"seitlich": 6},
+    },
+    # Kopfkratzen: eine Hand hinten am Kopf, Kopf schief (ratlos)
+    "kopfkratzen": {
+        "kopf": {"neigen": 12, "drehen": 10},
+        "arm_l": {"heben": 150, "seitlich": 28, "drehen": -35, "beugen": 115},
+        "arm_r": {"heben": 10, "seitlich": 8, "beugen": 10},
+    },
+    # Achselzucken: Unterarme nach vorn, Hände offen, Kopf schief
+    "achselzucken": {
+        "kopf": {"neigen": 14},
+        "koerper": {"neigen": -4},
+        "arm_r": {"heben": 25, "seitlich": 38, "beugen": 75},
+        "arm_l": {"heben": 25, "seitlich": 38, "beugen": 75},
+    },
 }
