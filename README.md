@@ -41,11 +41,11 @@
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.9.1** (2026-09-29): Spiele-Vorlage: sauberer Hintergrund mit LaMa, Arm zielt automatisch aufs Ziel
 - **0.9.0** (2026-09-29): Änderungen unter jedem Thumbnail schreiben, Aufträge löschen, Spiele-Vorlage in der App, lebendiger Text, Reaction und Gaming getrennt
 - **0.8.0** (2026-09-29): Eigenes Bild: Hintergrund hochladen und Pose frei beschreiben; Serie „Minecraft durchspielen“ entfernt
 - **0.7.0** (2026-09-29): Spiele-Vorlagen: du an der Stelle der Person im Spiele-Thumbnail; neue Gesten; Reactions mit kleinerer Figur, freiem Gesicht und Pfeil
 - **0.6.0** (2026-09-29): Gaming-Thumbnails mit Spielname, bessere Reaction-Posen, saubere Tiermodelle.
-- **0.5.0** (2026-09-29): Alle Mobs und Blöcke (immer die neuesten), Enderdrache und End, Mimik und Gesten, Serien-Vorlagen und Reaction-Thumbnails.
 <!-- CHANGELOG:END -->
 
 ## Installation

@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-29
+
+> Spiele-Vorlage: sauberer Hintergrund mit LaMa, Arm zielt automatisch aufs Ziel
+
 ### Behoben
 - Spiele-Vorlage: Wo die Person war, füllt jetzt LaMa (lokales KI-Modell, Apache-2.0, CPU) echten Hintergrund auf statt einer verschmierten Fläche; Mündungsfeuer und Effekte werden mit entfernt.
 - Spiele-Vorlage: Zielt die Person auf etwas, richtet Blender den Arm mit dem Gegenstand automatisch genau dorthin.
