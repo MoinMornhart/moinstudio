@@ -70,4 +70,7 @@ Antworte nur mit JSON nach dem vorgegebenen Schema. Jede `szene` hat dieses Form
 ```
 
 Die Figuren-`id`s müssen genau die oben genannten sein. Skins trägt MoinStudio selbst ein, gib keine Pfade an.
-`kamera.thema` ist entweder die `id` einer Figur oder ein Punkt `[x, y, z]` (z. B. die Mitte eines Mobs).
+`kamera.thema` ist die `id` einer Figur, ein Mob als `"mob:0"` (Index in `mobs`, die Kamera zielt auf seine echte Mitte –
+bei großen oder schwebenden Mobs wie Ghast, Riesenspinne oder Warden immer so) oder ein Punkt `[x, y, z]`.
+Große Mobs (`groesse` 3–10) brauchen Abstand: stelle sie 8–20 Blöcke nach hinten, sonst passen sie nicht ins Bild.
+Schwebende Mobs (Ghast, Phantom, Blaze) bekommen `hoehe` 3–8.

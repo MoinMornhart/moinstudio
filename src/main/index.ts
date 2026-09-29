@@ -27,7 +27,7 @@ registerClaudeIpc()
 registerMcpIpc(localRoot())
 // Im Screenshot-Modus den Assistenten nur zeigen, wenn er ausdrücklich aufgenommen werden soll
 registerSetupIpc(settings, !!screenshotDir && !process.argv.includes(SETUP_FLAG))
-const { queue: jobs, enqueueProbe } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
+const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
 
 // Fester Name für den Autostart-Eintrag (HKCU\...\Run). Ohne ihn leitet Electron den Namen
 // aus der AppUserModelId ab, und Setzen und Abfragen könnten verschiedene Einträge meinen.
@@ -130,6 +130,40 @@ if (toolsArg === 'install') {
       log(`fortgesetzt: ${jobs.get(id)?.state}`)
       const info = await jobs.waitFor(id)
       log(`Ende: ${info.state} ${info.error ?? ''} ${JSON.stringify(jobs.result(id) ?? {})}`)
+      app.exit(info.state === 'done' ? 0 : 1)
+    } catch (err) {
+      console.error(err)
+      app.exit(1)
+    }
+  })
+} else if (process.argv.some((a) => a.startsWith('--moin-video='))) {
+  // Integrationstest Video → Vorschläge (ROADMAP 5.5) ohne Dateidialog
+  const video = process.argv.find((a) => a.startsWith('--moin-video='))!.slice('--moin-video='.length)
+  void app.whenReady().then(async () => {
+    await jobs.start()
+    try {
+      const id = await starteVideo(video, 'MoinMornhart')
+      const info = await jobs.waitFor(id)
+      console.log(`Ende: ${info.state} ${info.error ?? ''}`)
+      const res = jobs.result<{ inhalt: string; vorschlaege: unknown[] }>(id)
+      console.log(JSON.stringify({ inhalt: res?.inhalt, vorschlaege: res?.vorschlaege }, null, 1))
+      app.exit(info.state === 'done' ? 0 : 1)
+    } catch (err) {
+      console.error(err)
+      app.exit(1)
+    }
+  })
+} else if (process.argv.some((a) => a.startsWith('--moin-thumbnail='))) {
+  // Integrationstest Thumbnail: ganzer Ablauf wie im Reiter (Claude plant, Blender rendert, Prüfung, Text)
+  const text = process.argv.find((a) => a.startsWith('--moin-thumbnail='))!.slice('--moin-thumbnail='.length)
+  void app.whenReady().then(async () => {
+    await jobs.start()
+    try {
+      const id = await starteThumbnail({ beschreibung: text, freunde: process.argv.filter((a) => a.startsWith('--moin-freund=')).map((a) => a.slice(14)), anzahl: 2 })
+      console.log('Job', id)
+      const info = await jobs.waitFor(id)
+      console.log(`Ende: ${info.state} ${info.error ?? ''}`)
+      console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))
       app.exit(info.state === 'done' ? 0 : 1)
     } catch (err) {
       console.error(err)

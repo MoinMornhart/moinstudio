@@ -138,8 +138,14 @@ export function pruefeSzene(s: Szene, k: Katalog, figurIds: string[]): string[] 
   for (const o of s.objekte ?? []) if (!bloecke.has(o.block) || o.block === 'luft') fehler.push(`Unbekannter Block „${o.block}“`)
   s.kamera = s.kamera ?? {}
   if (!s.kamera.modus || !k.kameraModi.includes(s.kamera.modus)) s.kamera.modus = 'nah'
-  if (typeof s.kamera.thema === 'string' && !ids.has(s.kamera.thema)) fehler.push(`Kamera-Thema „${s.kamera.thema}“ ist keine Figur`)
-  if (s.kamera.thema === undefined) s.kamera.thema = s.figuren?.[1]?.id ?? [4, 4, 1.5]
+  const mobs = s.mobs ?? []
+  if (typeof s.kamera.thema === 'string') {
+    const t = s.kamera.thema
+    const mobIndex = /^mob:(\d+)$/.exec(t)?.[1]
+    const istMob = mobIndex !== undefined ? Number(mobIndex) < mobs.length : mobs.some((m) => m.art === t)
+    if (!ids.has(t) && !istMob) fehler.push(`Kamera-Thema „${t}“ ist weder Figur noch Mob der Szene`)
+  }
+  if (s.kamera.thema === undefined) s.kamera.thema = s.figuren?.[1]?.id ?? (mobs.length ? 'mob:0' : [4, 4, 1.5])
   return fehler
 }
 

@@ -82,7 +82,9 @@ const api: MoinApi = {
   thumbStart: (start: ThumbStart) => ipcRenderer.invoke(IPC.thumbStart, start),
   thumbAuftraege: () => ipcRenderer.invoke(IPC.thumbAuftraege),
   thumbErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbErgebnis, jobId),
-  thumbSpeichern: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbSpeichern, jobId, index)
+  thumbSpeichern: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbSpeichern, jobId, index),
+  thumbVideo: (kanal: string, titel?: string) => ipcRenderer.invoke(IPC.thumbVideo, kanal, titel),
+  thumbVideoErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbVideoErgebnis, jobId)
 }
 
 contextBridge.exposeInMainWorld('moin', api)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ThumbAuftrag, ThumbErgebnis, ThumbSkin } from '@shared/app'
+import type { ThumbAuftrag, ThumbErgebnis, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 import { useJobs } from '../components/JobsWidget'
 
@@ -156,6 +156,54 @@ function Ergebnis({ auftrag }: { auftrag: ThumbAuftrag }): React.JSX.Element {
   )
 }
 
+/** Video-Auswertung (ROADMAP 5.5): was Claude im Video sieht und welche Thumbnails es vorschlägt */
+function VideoVorschlaege({ auftrag, kanal, onStart }: { auftrag: ThumbAuftrag; kanal: string; onStart: (id: string) => void }): React.JSX.Element {
+  const [ergebnis, setErgebnis] = useState<ThumbVideoErgebnis | null>(null)
+  const [fehler, setFehler] = useState<string | null>(null)
+  useEffect(() => {
+    if (auftrag.state === 'done') void window.moin.thumbVideoErgebnis(auftrag.id).then(setErgebnis)
+  }, [auftrag.id, auftrag.state])
+  if (auftrag.state === 'failed') return <p className="warn">Fehlgeschlagen: {auftrag.error}</p>
+  if (auftrag.state !== 'done')
+    return (
+      <p className="muted">
+        {auftrag.step || 'Wartet …'} {auftrag.progress !== null && `(${Math.round(auftrag.progress)} %)`}
+      </p>
+    )
+  if (!ergebnis) return <p className="muted">Lade Vorschläge …</p>
+  return (
+    <div className="plan-result">
+      {fehler && <p className="warn">{fehler}</p>}
+      <p className="muted">{ergebnis.inhalt}</p>
+      {ergebnis.vorschlaege.map((v, i) => (
+        <div key={i} className="analysis">
+          <strong>{v.beschreibung}</strong>
+          <span className="muted small">
+            {v.warum}
+            {v.zeitpunkt && ` · bei ${v.zeitpunkt}`}
+          </span>
+          <div className="row">
+            <button
+              className="btn small primary"
+              onClick={() =>
+                void window.moin.thumbStart({ beschreibung: v.beschreibung, kanal, freunde: v.freunde, anzahl: 3 }).then(onStart, (err: unknown) => setFehler(fehlerText(err)))
+              }
+            >
+              Dieses Thumbnail erstellen
+            </button>
+          </div>
+        </div>
+      ))}
+      <details>
+        <summary className="muted small">Bilder, die Claude gesehen hat</summary>
+        {ergebnis.boegen.map((b, i) => (
+          <img key={i} src={b} alt="" style={{ width: '100%', borderRadius: 6, marginTop: 4 }} />
+        ))}
+      </details>
+    </div>
+  )
+}
+
 /** Thumbnail-Reiter (ROADMAP 5.4): Beschreibung → Claude plant Varianten mit Vorbild → Blender rendert. */
 export function ThumbnailTab(): React.JSX.Element {
   const jobs = useJobs()
@@ -167,6 +215,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const [fehler, setFehler] = useState<string | null>(null)
   const [auftraege, setAuftraege] = useState<ThumbAuftrag[]>([])
   const [offen, setOffen] = useState<string | null>(null)
+  const [videoTitel, setVideoTitel] = useState('')
 
   useEffect(() => {
     void window.moin.thumbSkins().then(setSkins, (err: unknown) => setFehler(fehlerText(err)))
@@ -181,6 +230,18 @@ export function ThumbnailTab(): React.JSX.Element {
       setOffen(id)
       setBeschreibung('')
       ladeAuftraege()
+    } catch (err) {
+      setFehler(fehlerText(err))
+    }
+  }
+  const video = async (): Promise<void> => {
+    setFehler(null)
+    try {
+      const id = await window.moin.thumbVideo(kanal, videoTitel)
+      if (id) {
+        setOffen(id)
+        ladeAuftraege()
+      }
     } catch (err) {
       setFehler(fehlerText(err))
     }
@@ -231,6 +292,15 @@ export function ThumbnailTab(): React.JSX.Element {
               Thumbnail erstellen
             </button>
           </div>
+          <p className="muted small" style={{ marginTop: 14 }}>
+            Oder lade dein Video hoch: Claude sieht es sich an und schlägt passende Thumbnails vor.
+          </p>
+          <div className="row wrap">
+            <input className="input" placeholder="Videotitel (optional)" value={videoTitel} onChange={(e) => setVideoTitel(e.target.value)} />
+            <button className="btn" onClick={() => void video()}>
+              Video hochladen …
+            </button>
+          </div>
         </Card>
         <Skins skins={skins} setSkins={setSkins} />
         <Card title="Aufträge" badge={`${auftraege.length}`}>
@@ -238,12 +308,24 @@ export function ThumbnailTab(): React.JSX.Element {
           {auftraege.map((a) => (
             <div key={a.id} className="session">
               <div className="session-head" style={{ cursor: 'pointer' }} onClick={() => setOffen(offen === a.id ? null : a.id)}>
-                <strong className="session-title">{a.titel.replace(/^Thumbnail: /, '')}</strong>
+                <strong className="session-title">{a.art === 'video' ? '🎬 ' : ''}{a.titel.replace(/^Thumbnail: /, '')}</strong>
                 <span className={`status ${a.state === 'done' ? 'fertig' : a.state === 'failed' ? 'fehler' : 'rendert'}`}>
                   {a.state === 'done' ? 'fertig' : a.state === 'failed' ? 'Fehler' : a.state === 'paused' ? 'pausiert' : a.state === 'waiting-limit' ? 'wartet auf Claude-Limit' : 'läuft'}
                 </span>
               </div>
-              {(offen === a.id || a.state !== 'done') && <Ergebnis auftrag={a} />}
+              {(offen === a.id || a.state !== 'done') &&
+                (a.art === 'video' ? (
+                  <VideoVorschlaege
+                    auftrag={a}
+                    kanal={kanal}
+                    onStart={(id) => {
+                      setOffen(id)
+                      ladeAuftraege()
+                    }}
+                  />
+                ) : (
+                  <Ergebnis auftrag={a} />
+                ))}
             </div>
           ))}
         </Card>

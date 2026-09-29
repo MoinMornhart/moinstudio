@@ -360,7 +360,12 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     cam_data.clip_end = 5000
     oben, unten = haupt.kopf_punkte()
     t = k.get("thema", (8, 6, 0))
-    if isinstance(t, str):  # Thema ist eine Figur (Gegner): ihr Kopf
+    if isinstance(t, str) and (t.startswith("mob:") or any(m["art"] == t for m, _ in mobs)):
+        # Thema ist ein Mob: Mitte seiner echten Ausdehnung (große oder schwebende Mobs wie Ghast, Riesenspinne)
+        mob = mobs[int(t[4:])][1] if t.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == t)
+        punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+        thema = sum(punkte, Vector()) / len(punkte)
+    elif isinstance(t, str):  # Thema ist eine Figur (Gegner): ihr Kopf
         thema = next(fig for f, fig in figuren if f["id"] == t).kopf_mitte()
     else:
         thema = Vector([c * BLOCK for c in t])

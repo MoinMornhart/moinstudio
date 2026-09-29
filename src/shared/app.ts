@@ -55,7 +55,9 @@ export const IPC = {
   thumbStart: 'thumb:start',
   thumbAuftraege: 'thumb:auftraege',
   thumbErgebnis: 'thumb:ergebnis',
-  thumbSpeichern: 'thumb:speichern'
+  thumbSpeichern: 'thumb:speichern',
+  thumbVideo: 'thumb:video',
+  thumbVideoErgebnis: 'thumb:video-ergebnis'
 } as const
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
@@ -78,12 +80,21 @@ export interface ThumbStart {
 
 export interface ThumbAuftrag {
   id: string
+  /** Thumbnail-Auftrag oder Video-Auswertung */
+  art: 'thumbnail' | 'video'
   titel: string
   state: string
   progress: number | null
   step: string
   error: string | null
   createdAt: string
+}
+
+/** Video-Auswertung: Inhalt, Vorschläge (Freunde als Skin-IDs) und die Bildbögen, die Claude gesehen hat */
+export interface ThumbVideoErgebnis {
+  inhalt: string
+  vorschlaege: { beschreibung: string; warum: string; freunde: string[]; zeitpunkt?: string }[]
+  boegen: string[]
 }
 
 export interface ThumbErgebnis {
@@ -233,4 +244,7 @@ export interface MoinApi {
   thumbErgebnis(jobId: string): Promise<ThumbErgebnis | null>
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
+  /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */
+  thumbVideo(kanal: string, titel?: string): Promise<string | null>
+  thumbVideoErgebnis(jobId: string): Promise<ThumbVideoErgebnis | null>
 }

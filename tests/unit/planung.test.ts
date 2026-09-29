@@ -54,6 +54,9 @@ describe('Thumbnail-Planung', () => {
     expect(fehler.join('\n')).toMatch(/Pose „tanzen“/)
     expect(fehler.join('\n')).toMatch(/Mob „drache“/)
     expect(fehler.join('\n')).toMatch(/Kamera-Thema/)
+    // Mob als Thema ist erlaubt
+    const mitMob: Szene = { welt: { art: 'wiese' }, figuren: [{ id: 'ich', pose: 'schreck' }], mobs: [{ art: 'ghast' }], kamera: { thema: 'mob:0' } }
+    expect(pruefeSzene(mitMob, k, ['ich'])).toEqual([])
     expect(s.himmel).toBe('tag')
     expect(s.kamera?.modus).toBe('nah')
     expect(s.figuren[0]!.item!.hand).toBe('l')

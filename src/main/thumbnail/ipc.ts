@@ -2,7 +2,7 @@ import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
-import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSkin, type ThumbStart } from '@shared/app'
+import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
 import { findClaudeCli } from '../claude/cli'
 import { readJson, writeJsonAtomic } from '../data/jsonfile'
 import type { SettingsStore } from '../data/settings'
@@ -11,10 +11,11 @@ import type { HardwareController } from '../hardware/controller'
 import type { JobQueue } from '../jobs/queue'
 import { resourceDir } from '../resources'
 import type { ToolManager } from '../tools/manager'
-import { BLENDER_FALLBACK, BLENDER_PRIMARY } from '../tools/specs'
+import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG } from '../tools/specs'
 import { z } from 'zod'
 import { thumbnailJob, type ThumbnailPayload, type ThumbnailVariante } from './job'
 import { ladeVorbilder } from './planung'
+import { videoVorschlaegeJob, type VideoPayload, type VideoVorschlag } from './video'
 
 /**
  * Thumbnail-Reiter (ROADMAP 5.4): Skin-Bibliothek im Datenordner (Philip lädt seine Skins und die seiner Freunde selbst
@@ -52,8 +53,56 @@ async function alsDataUrl(pfad: string): Promise<string | null> {
   }
 }
 
-export function registerThumbnailIpc(queue: JobQueue, settings: SettingsStore, hardware: HardwareController, tools: ToolManager, getWindow: () => BrowserWindow | undefined): void {
+export function registerThumbnailIpc(
+  queue: JobQueue,
+  settings: SettingsStore,
+  hardware: HardwareController,
+  tools: ToolManager,
+  getWindow: () => BrowserWindow | undefined
+): { starteThumbnail: (start: ThumbStart) => Promise<string>; starteVideo: (video: string, kanal: string, titel?: string) => Promise<string> } {
   queue.register('thumbnail', thumbnailJob)
+  queue.register('video-vorschlaege', videoVorschlaegeJob)
+
+  // Video hochladen → Vorschläge (ROADMAP 5.5)
+  const starteVideo = async (video: string, kanal: unknown, titel?: unknown): Promise<string> => {
+    const dir = await datenOrdner(settings)
+    const ffmpeg = await tools.exePath(FFMPEG)
+    if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
+    const cli = await findClaudeCli()
+    if (!cli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
+    const skins = await ladeSkins(dir)
+    const id = randomUUID()
+    const payload: VideoPayload = {
+      video,
+      kanal: typeof kanal === 'string' && kanal ? kanal : 'MoinMornhart',
+      titel: typeof titel === 'string' && titel.trim() ? titel.trim() : undefined,
+      ffmpeg,
+      claudeCli: cli,
+      ausgabe: join(dir, 'thumbnails', `video-${id}`),
+      datenOrdner: dir,
+      freunde: skins.filter((x) => x.rolle === 'freund').map((x) => x.name)
+    }
+    return queue.enqueue('video-vorschlaege', `Video ansehen: ${basename(video)}`, payload)
+  }
+  ipcMain.handle(IPC.thumbVideo, async (_e, kanal: unknown, titel: unknown) => {
+    const win = getWindow()
+    const opts = { title: 'Video wählen', filters: [{ name: 'Video', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm'] }], properties: ['openFile' as const] }
+    const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    if (wahl.canceled || !wahl.filePaths[0]) return null
+    return starteVideo(wahl.filePaths[0], kanal, titel)
+  })
+
+  ipcMain.handle(IPC.thumbVideoErgebnis, async (_e, jobId: unknown): Promise<ThumbVideoErgebnis | null> => {
+    const dir = await datenOrdner(settings)
+    const res = queue.result<{ inhalt: string; vorschlaege: VideoVorschlag[]; boegen: string[] }>(String(jobId))
+    if (!res) return null
+    const skins = await ladeSkins(dir)
+    return {
+      inhalt: res.inhalt,
+      vorschlaege: res.vorschlaege.map((v) => ({ ...v, freunde: v.freunde.map((n) => skins.find((x) => x.name === n)?.id).filter((x): x is string => !!x) })),
+      boegen: (await Promise.all(res.boegen.filter((b) => imOrdner(dir, b)).map(async (b) => (await readFile(b).catch(() => null))?.toString('base64')))).filter((b): b is string => !!b).map((b) => `data:image/jpeg;base64,${b}`)
+    }
+  })
 
   ipcMain.handle(IPC.thumbSkins, async () => ladeSkins(await datenOrdner(settings)))
 
@@ -102,8 +151,7 @@ export function registerThumbnailIpc(queue: JobQueue, settings: SettingsStore, h
     return s ? alsDataUrl(join(dir, 'skins', s.datei)) : null
   })
 
-  ipcMain.handle(IPC.thumbStart, async (_e, raw: unknown) => {
-    const start = raw as ThumbStart
+  const starteThumbnail = async (start: ThumbStart): Promise<string> => {
     const beschreibung = String(start?.beschreibung ?? '').trim()
     if (beschreibung.length < 3) throw new Error('Bitte beschreibe das Thumbnail in ein paar Worten.')
     const dir = await datenOrdner(settings)
@@ -146,13 +194,14 @@ export function registerThumbnailIpc(queue: JobQueue, settings: SettingsStore, h
       ausgabe: join(dir, 'thumbnails', id)
     }
     return queue.enqueue('thumbnail', `Thumbnail: ${beschreibung.slice(0, 50)}`, payload)
-  })
+  }
+  ipcMain.handle(IPC.thumbStart, (_e, raw: unknown) => starteThumbnail(raw as ThumbStart))
 
   ipcMain.handle(IPC.thumbAuftraege, (): ThumbAuftrag[] =>
     queue
       .state()
-      .jobs.filter((j) => j.kind === 'thumbnail')
-      .map((j) => ({ id: j.id, titel: j.title, state: j.state, progress: j.progress, step: j.step, error: j.error ?? null, createdAt: j.createdAt }))
+      .jobs.filter((j) => j.kind === 'thumbnail' || j.kind === 'video-vorschlaege')
+      .map((j) => ({ id: j.id, art: j.kind === 'thumbnail' ? ('thumbnail' as const) : ('video' as const), titel: j.title, state: j.state, progress: j.progress, step: j.step, error: j.error ?? null, createdAt: j.createdAt }))
       .reverse()
   )
 
@@ -191,4 +240,5 @@ export function registerThumbnailIpc(queue: JobQueue, settings: SettingsStore, h
     shell.showItemInFolder(ziel.filePath)
     return ziel.filePath
   })
+  return { starteThumbnail, starteVideo }
 }
