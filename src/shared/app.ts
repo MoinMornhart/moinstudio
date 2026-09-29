@@ -84,8 +84,48 @@ export const IPC = {
   schnittHighlights: 'schnitt:highlights',
   schnittClips: 'schnitt:clips',
   schnittClipDateien: 'schnitt:clip-dateien',
-  schnittClipOrdner: 'schnitt:clip-ordner'
+  schnittClipOrdner: 'schnitt:clip-ordner',
+  planungKarten: 'planung:karten',
+  planungNeu: 'planung:neu',
+  planungAendern: 'planung:aendern',
+  planungVerschieben: 'planung:verschieben',
+  planungLoeschen: 'planung:loeschen',
+  /** Ereignis: Karten im Datenordner haben sich geändert */
+  planungGeaendert: 'planung:geaendert'
 } as const
+
+/** Planung (ROADMAP 7.2/7.3): Spalten des Boards in fester Reihenfolge */
+export const PLANUNG_SPALTEN = [
+  { id: 'idee', name: 'Idee' },
+  { id: 'aufnahme', name: 'Aufnahme' },
+  { id: 'schnitt', name: 'Schnitt' },
+  { id: 'thumbnail', name: 'Thumbnail' },
+  { id: 'upload', name: 'Upload' },
+  { id: 'veroeffentlicht', name: 'Veröffentlicht' }
+] as const
+export type PlanungSpalte = (typeof PLANUNG_SPALTEN)[number]['id']
+export type PlanungKanal = 'MoinMornhart' | 'MoinMorni'
+
+/** Planungskarte, eine Datei pro Karte im Datenordner */
+export interface PlanungKarte {
+  id: string
+  kanal: PlanungKanal
+  spalte: PlanungSpalte
+  ordnung: number
+  titel: string
+  notizen: string
+  checkliste: { text: string; erledigt: boolean }[]
+  /** Upload-Termin als lokale Zeit „2026-10-03T17:00“ */
+  termin: string | null
+  thumbnail: string | null
+  schnitt: string | null
+  youtube: { titel: string; beschreibung: string; kapitel: string } | null
+  erstellt: string
+  rev: number
+  updatedAt: string
+  updatedBy: string
+}
+export type PlanungAenderung = Partial<Pick<PlanungKarte, 'kanal' | 'spalte' | 'titel' | 'notizen' | 'checkliste' | 'termin' | 'thumbnail' | 'schnitt' | 'youtube'>>
 
 /** Skin in der Bibliothek des Datenordners (Philip lädt seine Skins selbst hoch). */
 /** Transkript-Abschnitt mit Wortzeiten (ROADMAP 6.3) */
@@ -365,6 +405,13 @@ export interface MoinApi {
   schnittClips(id: string, auswahl: { index: number; art: 'clip' | 'short' }[]): Promise<string>
   schnittClipDateien(id: string): Promise<{ name: string; url: string }[]>
   schnittClipOrdner(id: string): Promise<void>
+  /** Planung (ROADMAP 7.3) */
+  planungKarten(): Promise<PlanungKarte[]>
+  planungNeu(basis: { kanal: PlanungKanal; titel: string; spalte?: PlanungSpalte; termin?: string | null; notizen?: string }): Promise<PlanungKarte>
+  planungAendern(id: string, aenderung: PlanungAenderung): Promise<PlanungKarte>
+  planungVerschieben(id: string, ziel: { spalte: PlanungSpalte; index: number; kanal?: PlanungKanal }): Promise<PlanungKarte>
+  planungLoeschen(id: string): Promise<void>
+  onPlanungGeaendert(handler: () => void): () => void
   /** Speichern-unter-Dialog für eine Variante; liefert den Zielpfad oder null */
   thumbSpeichern(jobId: string, index: number): Promise<string | null>
   /** Dateidialog: Video wählen, Claude schlägt Thumbnails vor; liefert die Job-ID oder null */

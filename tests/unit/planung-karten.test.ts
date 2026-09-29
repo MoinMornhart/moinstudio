@@ -13,6 +13,7 @@ import {
   neueKarte,
   neueId,
   ordnungFuer,
+  pruefeAenderung,
   verschiebeKarte,
   wendeAn,
   type Karte
@@ -65,6 +66,19 @@ describe('Planung: Karten-Speicher (ROADMAP 7.2)', () => {
     const laptop = wendeAn(basis(), { notizen: 'Notiz vom Laptop', termin: '2026-10-04T17:00' }, 'LAPTOP', '2026-09-29T12:05:00.000Z')
     const k = fuehreZusammen([pc, laptop])
     expect(k).toMatchObject({ titel: 'Titel vom PC', notizen: 'Notiz vom Laptop', termin: '2026-10-04T17:00', rev: 3 })
+  })
+
+  it('lässt bei einer Änderung alle anderen Felder unangetastet', async () => {
+    expect(pruefeAenderung({ spalte: 'schnitt' })).toEqual({ spalte: 'schnitt' })
+    expect(pruefeAenderung({ termin: null, rev: 99 })).toEqual({ termin: null })
+    expect(() => pruefeAenderung({ spalte: 'irgendwo' })).toThrow()
+    const d = await ordner()
+    const k = await neueKarte(d, { kanal: 'MoinMornhart', titel: 'A', notizen: 'Wichtig', termin: '2026-10-07T17:00', checkliste: [{ text: 'x', erledigt: false }] }, 'PC')
+    await verschiebeKarte(d, k.id, { spalte: 'schnitt', index: 0 }, 'PC')
+    await aendereKarte(d, k.id, { checkliste: [{ text: 'x', erledigt: true }] }, 'PC')
+    const [n] = await ladeKarten(d)
+    expect(n).toMatchObject({ spalte: 'schnitt', notizen: 'Wichtig', termin: '2026-10-07T17:00', checkliste: [{ text: 'x', erledigt: true }] })
+    expect(Object.keys(n.felder).sort()).toEqual(['checkliste', 'spalte'])
   })
 
   it('findet Reihenfolge-Werte zwischen Nachbarn und meldet, wenn kein Platz mehr ist', () => {

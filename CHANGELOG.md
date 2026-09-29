@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Planung: neuer Reiter mit Board je Kanal (Idee, Aufnahme, Schnitt, Thumbnail, Upload, Veröffentlicht). Karten lassen sich anlegen, per Maus verschieben und mit Notizen, Checkliste und Upload-Termin bearbeiten. Änderungen vom anderen Gerät erscheinen von selbst (ROADMAP 7.3).
+- Aufnahme-Modus: frei beschreibbare Prüfschritte, mit denen Bedienabläufe in der echten App getestet werden.
+
 ## [0.22.0] - 2026-09-29
 
 > Planung: Karten-Speicher

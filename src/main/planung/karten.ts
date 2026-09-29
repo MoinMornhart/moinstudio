@@ -176,12 +176,22 @@ export async function neueKarte(daten: string, basis: Pick<Karte, 'kanal' | 'tit
   return karte
 }
 
+/**
+ * Prüft eine Änderung. Nur die übergebenen Felder bleiben übrig – `partial()` allein würde bei fehlenden Feldern die
+ * Standardwerte einsetzen (leere Notizen, kein Termin) und damit alles andere löschen.
+ */
+export function pruefeAenderung(aenderung: unknown): KartenAenderung {
+  const roh = (aenderung ?? {}) as Record<string, unknown>
+  const geprueft = KarteSchema.pick(Object.fromEntries(FELDER.map((f) => [f, true])) as { [K in (typeof FELDER)[number]]: true }).partial().parse(roh)
+  return Object.fromEntries(Object.entries(geprueft).filter(([f]) => f in roh)) as KartenAenderung
+}
+
 /** Ändert Felder einer Karte (liest vorher neu ein, damit Änderungen vom anderen Gerät erhalten bleiben). */
 export async function aendereKarte(daten: string, id: string, aenderung: KartenAenderung, geraet = hostname()): Promise<Karte> {
   return gesperrt(id, async () => {
     const alt = await ladeKarte(daten, id)
     if (!alt) throw new Error('Karte nicht gefunden.')
-    const neu = wendeAn(alt, KarteSchema.partial().parse(aenderung) as KartenAenderung, geraet)
+    const neu = wendeAn(alt, pruefeAenderung(aenderung), geraet)
     if (neu !== alt) await writeJsonAtomic(join(kartenOrdner(daten), `${id}.json`), neu)
     return neu
   })

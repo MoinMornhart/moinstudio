@@ -5,6 +5,7 @@ import {
   type ExternalLink,
   type JobAction,
   type MoinApi,
+  type PlanungAenderung,
   type TabId,
   type ThumbStart,
   type ToolProgressEvent,
@@ -108,6 +109,16 @@ const api: MoinApi = {
   schnittClips: (id: string, auswahl: { index: number; art: 'clip' | 'short' }[]) => ipcRenderer.invoke(IPC.schnittClips, id, auswahl),
   schnittClipDateien: (id: string) => ipcRenderer.invoke(IPC.schnittClipDateien, id),
   schnittClipOrdner: (id: string) => ipcRenderer.invoke(IPC.schnittClipOrdner, id),
+  planungKarten: () => ipcRenderer.invoke(IPC.planungKarten),
+  planungNeu: (basis: Parameters<MoinApi['planungNeu']>[0]) => ipcRenderer.invoke(IPC.planungNeu, basis),
+  planungAendern: (id: string, aenderung: PlanungAenderung) => ipcRenderer.invoke(IPC.planungAendern, id, aenderung),
+  planungVerschieben: (id: string, ziel: Parameters<MoinApi['planungVerschieben']>[1]) => ipcRenderer.invoke(IPC.planungVerschieben, id, ziel),
+  planungLoeschen: (id: string) => ipcRenderer.invoke(IPC.planungLoeschen, id),
+  onPlanungGeaendert(handler: () => void) {
+    const listener = (): void => handler()
+    ipcRenderer.on(IPC.planungGeaendert, listener)
+    return () => ipcRenderer.removeListener(IPC.planungGeaendert, listener)
+  },
   thumbVideo: (kanal: string, titel?: string) => ipcRenderer.invoke(IPC.thumbVideo, kanal, titel),
   thumbVideoErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbVideoErgebnis, jobId),
   thumbSpielvorlage: (o: { wunsch?: string; freunde?: string[] }) => ipcRenderer.invoke(IPC.thumbSpielvorlage, o),

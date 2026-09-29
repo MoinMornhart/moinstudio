@@ -12,6 +12,7 @@ import type { SettingsStore } from '../data/settings'
 import { JobQueue } from './queue'
 import { registerThumbnailIpc } from '../thumbnail/ipc'
 import { registerSchnittIpc } from '../schnitt/ipc'
+import { registerPlanungIpc } from '../planung/ipc'
 
 /**
  * Legt die Warteschlange an, registriert Job-Arten und IPC. Fundament (Neustart 28.09.): nur der Probe-Render als
@@ -23,13 +24,14 @@ export function setupJobs(
   hardware: HardwareController,
   settings: SettingsStore,
   getWindow: () => BrowserWindow | undefined
-): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion']; starteSpielvorlage: ReturnType<typeof registerThumbnailIpc>['starteSpielvorlage']; starteAenderung: ReturnType<typeof registerThumbnailIpc>['starteAenderung']; starteImport: ReturnType<typeof registerSchnittIpc>['starteImport']; starteWunsch: ReturnType<typeof registerSchnittIpc>['starteWunsch']; schnitt: ReturnType<typeof registerSchnittIpc> } {
+): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion']; starteSpielvorlage: ReturnType<typeof registerThumbnailIpc>['starteSpielvorlage']; starteAenderung: ReturnType<typeof registerThumbnailIpc>['starteAenderung']; starteImport: ReturnType<typeof registerSchnittIpc>['starteImport']; starteWunsch: ReturnType<typeof registerSchnittIpc>['starteWunsch']; schnitt: ReturnType<typeof registerSchnittIpc>; planung: ReturnType<typeof registerPlanungIpc> } {
   const queue = new JobQueue(join(root, 'jobs'))
   queue.register('probe-render', probeRenderJob)
   registerJobsIpc(queue, getWindow)
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
   const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
   const { starteImport, starteWunsch } = schnitt
+  const planung = registerPlanungIpc(settings, getWindow)
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()
@@ -58,5 +60,5 @@ export function setupJobs(
       return null
     }
   })
-  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt }
+  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt, planung }
 }

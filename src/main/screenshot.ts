@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { IPC, TABS } from '@shared/app'
 
@@ -38,6 +38,27 @@ export async function runScreenshotMode(win: BrowserWindow, dir: string): Promis
     await wait(1200)
     await writeFile(join(dir, `${tab.id}.png`), (await aufnahme(win)).toPNG())
   }
+  await zusatzSchritte(win, dir)
+}
+
+/**
+ * Selbstprüfung von Bedienabläufen: `MOIN_SCREENSHOT_SCHRITTE=<datei.json>` enthält
+ * `[{ "reiter"?: "planung", "js"?: "…", "warte"?: 800, "name"?: "planung-details" }]`. Jeder Schritt wechselt optional den
+ * Reiter, führt JavaScript in der Oberfläche aus und speichert bei `name` ein Bild. Das Ergebnis des Skripts landet in
+ * `schritte.json`.
+ */
+async function zusatzSchritte(win: BrowserWindow, dir: string): Promise<void> {
+  const datei = process.env['MOIN_SCREENSHOT_SCHRITTE']
+  if (!datei) return
+  const schritte = JSON.parse(await readFile(datei, 'utf8')) as { reiter?: string; js?: string; warte?: number; name?: string }[]
+  const ergebnisse: unknown[] = []
+  for (const s of schritte) {
+    if (s.reiter) win.webContents.send(IPC.selectTab, s.reiter)
+    ergebnisse.push(s.js ? await win.webContents.executeJavaScript(s.js, true).catch((e: Error) => `Fehler: ${e.message}`) : null)
+    await wait(s.warte ?? 800)
+    if (s.name) await writeFile(join(dir, `${s.name}.png`), (await aufnahme(win)).toPNG())
+  }
+  await writeFile(join(dir, 'schritte.json'), JSON.stringify(ergebnisse, null, 2))
 }
 
 /** Auf langsamen Rechnern liefert die Aufnahme manchmal ein leeres, einfarbiges Bild – dann warten und neu aufnehmen. */
