@@ -6,6 +6,9 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+- „Mit Claude verbinden“: ein Knopf in den Einstellungen, im Einrichtungsassistenten und oben im Thumbnail-Reiter, solange Claude fehlt. Fehlt Claude Code, richtet Anthropics offizieller Installer es ohne Admin-Rechte ein; danach öffnet sich die offizielle Anmeldung fest mit dem Abo (--claudeai). MoinStudio erkennt die Verbindung selbst, ohne „Erneut prüfen“.
+
 ## [0.12.0] - 2026-09-29
 
 > Freunde auch bei Reaction, Gaming und Spiele-Vorlage

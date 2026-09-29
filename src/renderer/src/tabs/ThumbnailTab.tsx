@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ThumbAuftrag, ThumbErgebnis, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
+import { ClaudeVerbinden } from '../components/ClaudeCard'
+import type { ClaudeStatusInfo, ThumbAuftrag, ThumbErgebnis, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 import { useJobs } from '../components/JobsWidget'
 
@@ -321,6 +322,11 @@ export function ThumbnailTab(): React.JSX.Element {
   const [mitWort, setMitWort] = useState('')
   const [vorlageWunsch, setVorlageWunsch] = useState('')
   const [loeschen, setLoeschen] = useState<string | null>(null)
+  // Ohne Claude-Verbindung geht hier nichts: dann steht oben direkt der Knopf „Mit Claude verbinden“
+  const [claude, setClaude] = useState<ClaudeStatusInfo | null>(null)
+  useEffect(() => {
+    void window.moin.claudeStatus().then(setClaude)
+  }, [])
   const [modus, setModus] = useState<Modus>(() => {
     try {
       return (localStorage.getItem('thumb-modus') as Modus | null) ?? 'minecraft'
@@ -421,6 +427,13 @@ export function ThumbnailTab(): React.JSX.Element {
   return (
     <>
       <PageHeader title="Thumbnail" subtitle="Beschreibe dein Video – Claude plant Szenen nach den großen Minecraft-Kanälen, Blender rendert sie mit echten Texturen." />
+      {claude && !claude.usable && (
+        <div className="claude-hinweis">
+          <strong>Claude ist noch nicht verbunden</strong>
+          <span className="muted small">Für Thumbnails braucht MoinStudio dein Claude-Abo.</span>
+          <ClaudeVerbinden status={claude} onStatus={setClaude} />
+        </div>
+      )}
       <div className="modus-wahl" aria-label="Was möchtest du machen?">
         {MODI.map((m) => (
           <button key={m.id} aria-pressed={modus === m.id} className={modus === m.id ? 'modus on' : 'modus'} onClick={() => waehle(m.id)}>

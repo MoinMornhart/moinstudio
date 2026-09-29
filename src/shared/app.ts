@@ -232,7 +232,8 @@ export interface MoinApi {
   onSetupStep(handler: (step: number) => void): () => void
   openLink(key: ExternalLink): Promise<void>
   /** Öffnet ein Terminal mit Anthropics offiziellem Login (claude auth login) */
-  claudeLogin(): Promise<void>
+  /** Mit Claude verbinden: installiert Claude Code falls nötig und öffnet die offizielle Anmeldung */
+  claudeLogin(): Promise<{ installiert: boolean }>
   /** Skin-Bibliothek (Datenordner/skins) */
   thumbSkins(): Promise<ThumbSkin[]>
   /** Dateidialog: Skins hochladen; rolle „ich“ = Philips Hauptskin */

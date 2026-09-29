@@ -310,3 +310,8 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .modus:hover { border-color: var(--muted, #888); }
 .modus.on { border-color: var(--accent); background: #33301f; }
 .modus-kanal { font-size: 11px; color: var(--accent); letter-spacing: 0.03em; }
+
+/* „Mit Claude verbinden“ */
+.claude-verbinden { display: grid; gap: 6px; margin: 8px 0; }
+.claude-verbinden .btn { justify-self: start; }
+.claude-hinweis { display: grid; gap: 4px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: #33301f; }

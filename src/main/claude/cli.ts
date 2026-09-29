@@ -110,7 +110,7 @@ export async function claudeStatus(configured?: string | null): Promise<ClaudeSt
 
   const base: ClaudeStatus = { cli: null, version: null, loggedIn: false, authMethod: null, subscription: null, usable: false, warnings, problem: null }
   const cli = await findClaudeCli(configured)
-  if (!cli) return { ...base, problem: 'Claude Code wurde nicht gefunden. Bitte Claude Code installieren (claude.com/claude-code).' }
+  if (!cli) return { ...base, problem: 'Claude ist noch nicht verbunden. Klicke auf „Mit Claude verbinden“ – Claude Code wird dabei automatisch eingerichtet.' }
 
   const env = cleanClaudeEnv()
   const version = await runHidden(cli, ['--version'], 30_000, env)
@@ -126,7 +126,7 @@ export async function claudeStatus(configured?: string | null): Promise<ClaudeSt
   result.authMethod = typeof data['authMethod'] === 'string' ? data['authMethod'] : null
   result.subscription = typeof data['subscriptionType'] === 'string' ? data['subscriptionType'] : null
   result.usable = result.loggedIn && result.authMethod === 'claude.ai' && (data['apiProvider'] === undefined || data['apiProvider'] === 'firstParty')
-  if (!result.loggedIn) result.problem = 'Claude Code ist nicht angemeldet. Bitte einmal im Terminal „claude auth login“ ausführen und mit deinem Claude-Konto anmelden.'
+  if (!result.loggedIn) result.problem = 'Claude ist noch nicht mit deinem Konto verbunden. Klicke auf „Mit Claude verbinden“ und melde dich mit deinem Claude-Konto an.'
   else if (!result.usable) result.problem = `Claude Code ist nicht mit einem Claude-Abo angemeldet (Methode: ${result.authMethod ?? 'unbekannt'}). MoinStudio nutzt ausschließlich das Abo.`
   return result
 }

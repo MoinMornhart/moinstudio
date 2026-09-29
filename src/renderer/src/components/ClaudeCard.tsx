@@ -49,6 +49,54 @@ function DesktopConnect(): React.JSX.Element {
 
 const SUBSCRIPTION: Record<string, string> = { pro: 'Claude Pro', max: 'Claude Max' }
 
+/**
+ * Ein Knopf „Mit Claude verbinden“ (Philip, 29.09.): installiert Claude Code bei Bedarf, öffnet Anthropics Anmeldung und
+ * prüft danach alle 3 Sekunden (höchstens 10 Minuten), bis die Verbindung per Abo steht.
+ */
+export function ClaudeVerbinden({ status, onStatus }: { status: ClaudeStatusInfo | null; onStatus: (s: ClaudeStatusInfo) => void }): React.JSX.Element | null {
+  const [wartet, setWartet] = useState<'installiert' | 'anmeldung' | null>(null)
+  const [fehler, setFehler] = useState<string | null>(null)
+  useEffect(() => {
+    if (!wartet) return
+    const beginn = Date.now()
+    const t = setInterval(() => {
+      void window.moin.claudeStatus().then((s) => {
+        onStatus(s)
+        if (s.usable || Date.now() - beginn > 600_000) {
+          setWartet(null)
+          clearInterval(t)
+        }
+      })
+    }, 3000)
+    return () => clearInterval(t)
+  }, [wartet, onStatus])
+  if (!status || status.usable) return null
+  const verbinden = async (): Promise<void> => {
+    setFehler(null)
+    try {
+      const r = await window.moin.claudeLogin()
+      setWartet(r.installiert ? 'installiert' : 'anmeldung')
+    } catch (err) {
+      setFehler(err instanceof Error ? err.message : String(err))
+    }
+  }
+  return (
+    <div className="claude-verbinden">
+      <button className="btn primary" disabled={!!wartet} onClick={() => void verbinden()}>
+        {wartet ? 'Warte auf deine Anmeldung …' : 'Mit Claude verbinden'}
+      </button>
+      <p className="muted small">
+        {wartet === 'installiert'
+          ? 'Im neuen Fenster wird Claude Code eingerichtet, danach öffnet sich die Anmeldung im Browser. Melde dich mit deinem Claude-Konto an – hier wird es automatisch erkannt.'
+          : wartet
+            ? 'Melde dich im Browser mit deinem Claude-Konto an – hier wird es automatisch erkannt.'
+            : 'Öffnet Anthropics offizielle Anmeldung mit deinem Claude-Konto (Abo, kein API-Key). Fehlt Claude Code, wird es vorher automatisch eingerichtet.'}
+      </p>
+      {fehler && <p className="warn">{fehler}</p>}
+    </div>
+  )
+}
+
 /** Status der Claude-Code-Anbindung: gefunden? per Abo angemeldet? Warnungen? */
 export function ClaudeCard(): React.JSX.Element {
   const [status, setStatus] = useState<ClaudeStatusInfo | null>(null)
@@ -73,7 +121,7 @@ export function ClaudeCard(): React.JSX.Element {
         <>
           <dl className="facts">
             <dt>Claude Code</dt>
-            <dd>{status.cli ? `gefunden${status.version ? ` (Version ${status.version})` : ''}` : 'nicht gefunden'}</dd>
+            <dd>{status.cli ? `gefunden${status.version ? ` (Version ${status.version})` : ''}` : 'noch nicht eingerichtet'}</dd>
             <dt>Anmeldung</dt>
             <dd>
               {status.usable
@@ -94,25 +142,11 @@ export function ClaudeCard(): React.JSX.Element {
         </>
       )}
       <div className="row wrap">
-        {status && !status.cli && (
-          <button className="btn primary" onClick={() => void window.moin.openLink('claude-code')}>
-            Claude Code herunterladen
-          </button>
-        )}
-        {status?.cli && !status.usable && (
-          <button className="btn primary" onClick={() => void window.moin.claudeLogin()}>
-            Mit Claude-Konto anmelden
-          </button>
-        )}
         <button className="btn" disabled={checking} onClick={() => void check()}>
           Erneut prüfen
         </button>
       </div>
-      {status?.cli && !status.usable && (
-        <p className="muted small">
-          Es öffnet sich ein Fenster mit Anthropics offizieller Anmeldung. Danach hier auf „Erneut prüfen“ klicken.
-        </p>
-      )}
+      <ClaudeVerbinden status={status} onStatus={setStatus} />
       <DesktopConnect />
     </Card>
   )
