@@ -53,6 +53,10 @@ function schluessel(quelle: string, block: string, muster = /^ {4}"([a-z0-9_]+)"
   return ergebnis
 }
 
+/** Wurfgeschosse und Effekte aus den Entity-Daten sind keine Mobs – im Spiel flache Item-Bilder, als Modell schwarze
+ * Scheiben (Mob-Prüfbogen 30.09.). In Thumbnails kommen sie als gehaltenes Item vor (egg, snowball, splash_potion …). */
+export const KEINE_MOBS = new Set(['egg', 'snowball', 'ender_pearl', 'eye_of_ender_signal', 'splash_potion', 'lingering_potion', 'llama_spit', 'shulker_bullet', 'breeze_wind_charge_projectile', 'wind_charge_projectile', 'evocation_fang', 'thrown_trident', 'fireball', 'small_fireball', 'dragon_fireball', 'wither_skull', 'wither_skull_dangerous', 'xp_bottle', 'xp_orb', 'arrow', 'fishing_hook', 'lightning_bolt', 'area_effect_cloud', 'fireworks_rocket', 'leash_knot', 'npc'])
+
 /** `mobTabelle`: Pfad zur Mob-Tabelle (Ordner mit mobs.json oder die Datei selbst); `blockModelle`: models/block der Spieldatei */
 export async function ladeKatalog(blenderDir: string, mobTabelle: string, blockModelle?: string): Promise<Katalog> {
   const lies = (f: string): Promise<string> => readFile(join(blenderDir, 'moin', f), 'utf8')
@@ -70,7 +74,7 @@ export async function ladeKatalog(blenderDir: string, mobTabelle: string, blockM
     kameraModi: schluessel(kamera, 'MODI').map((e) => e.name),
     himmel: schluessel(himmel, 'VARIANTEN').map((e) => e.name),
     welten: WELTEN,
-    mobs: Object.keys(JSON.parse(mobs) as Record<string, unknown>).filter((k) => !k.startsWith('_')),
+    mobs: Object.keys(JSON.parse(mobs) as Record<string, unknown>).filter((k) => !k.startsWith('_') && !KEINE_MOBS.has(k)),
     bloecke: [...new Set([...schluessel(bloecke, 'ARTEN').map((e) => e.name), ...(blockModelle ? await alleBloecke(blockModelle) : [])])]
   }
 }

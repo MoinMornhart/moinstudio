@@ -17,6 +17,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Fixed
 
+- Mobs: Piglin- und Hoglin-Ohren stehen wieder seitlich ab statt im Kopf zu stecken, Drachenflügel sind ausgebreitet (Drehrichtung beim Einlesen der Bedrock-Modelle war vertauscht); der Fuchs hat keinen schwarzen Schlafkopf-Kasten mehr, und Geschosse wie Pfeil, Schneeball oder Erfahrungsflasche tauchen nicht mehr als „Mob“ auf.
 - Blender blieb manchmal nach dem fertigen Bild beim Photoshop-Maskenschritt hängen und renderte bei einem Absturz dort das ganze Bild ein zweites Mal.
 
 ### Fixed

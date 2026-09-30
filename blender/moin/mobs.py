@@ -147,6 +147,9 @@ def baue_mob(art, eintrag, texturen_ordner, groesse=1.0, pose="stand", collectio
             fertig.add(p["name"])
             offen.remove(p)
     for p in reihe:
+        # Zustandsteile, die das Spiel nur manchmal zeigt (Fuchs „head_sleeping“ – im Prüfbogen ein schwarzer Klotz)
+        if "sleep" in p["name"]:
+            continue
         pb = Vector((p["pivot"][0], p["pivot"][2], p["pivot"][1]))
         e = bpy.data.objects.new(f"{name}.{p['name']}", None)
         col.objects.link(e)
@@ -164,7 +167,9 @@ def baue_mob(art, eintrag, texturen_ordner, groesse=1.0, pose="stand", collectio
         if pose == "angriff" and p["name"] in ("right_arm", "left_arm") and art not in ARME_VORN:
             rx -= 70
         e.rotation_mode = "XZY"
-        e.rotation_euler = Euler((math.radians(rx), math.radians(-rz), math.radians(ry)), "XZY")
+        # Drehung um die Vorwärtsachse (Bedrock z → Blender y) mit gleichem Vorzeichen: mit umgekehrtem lagen die
+        # Piglin-Ohren im Kopf und die Drachenflügel waren zu einem Strich gefaltet (Mob-Prüfbogen 30.09.)
+        e.rotation_euler = Euler((math.radians(rx), math.radians(rz), math.radians(ry)), "XZY")
         empties[p["name"]] = e
         me = _mesh(f"{name}.{p['name']}.mesh", p["boxes"], tex_w, tex_h, pb, mat)
         if me:
