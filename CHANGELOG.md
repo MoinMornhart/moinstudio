@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-09-30
+
+> Minecraft-Thumbnails wie bei BastiGHG: Grafik-Ebene, geteilte Bilder, Werkzeuge exakt wie im Spiel, Gegenüber mit Gesicht, alle Mobs geprüft
+
 ### Added
 
 - Minecraft-Thumbnails: Grafik-Ebene wie bei BastiGHG – Hotbar mit Herzen, Hunger und XP, „Level 19“, Etiketten im Knopf-Stil, rote Lupe mit Pfeil, Haken-/Kreuz-/Zahl-Abzeichen und großer Regel-Text, alles aus den echten Texturen und der Schrift der Spieldatei. Dazu geteilte Bilder (10€/100€/1000€, Noob/Pro) und eine rote Markierung auf dem Boden.
