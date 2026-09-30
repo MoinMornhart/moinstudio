@@ -135,8 +135,19 @@ const api: MoinApi = {
   },
   thumbVideo: (kanal: string, titel?: string) => ipcRenderer.invoke(IPC.thumbVideo, kanal, titel),
   thumbVideoErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.thumbVideoErgebnis, jobId),
-  thumbSpielvorlage: (o: { wunsch?: string; freunde?: string[] }) => ipcRenderer.invoke(IPC.thumbSpielvorlage, o),
-  thumbReaktion: (o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[] }) => ipcRenderer.invoke(IPC.thumbReaktion, o)
+  thumbSpielvorlage: (o: Parameters<MoinApi['thumbSpielvorlage']>[0]) => ipcRenderer.invoke(IPC.thumbSpielvorlage, o),
+  thumbReaktion: (o: Parameters<MoinApi['thumbReaktion']>[0]) => ipcRenderer.invoke(IPC.thumbReaktion, o),
+  logoListe: () => ipcRenderer.invoke(IPC.logoListe),
+  logoBild: (id: string) => ipcRenderer.invoke(IPC.logoBild, id),
+  logoHochladen: (name: string, png: string) => ipcRenderer.invoke(IPC.logoHochladen, name, png),
+  logoEintrag: (id: string, patch: Parameters<MoinApi['logoEintrag']>[1]) => ipcRenderer.invoke(IPC.logoEintrag, id, patch),
+  logoStart: (start: Parameters<MoinApi['logoStart']>[0]) => ipcRenderer.invoke(IPC.logoStart, start),
+  logoAuftraege: () => ipcRenderer.invoke(IPC.logoAuftraege),
+  logoErgebnis: (jobId: string) => ipcRenderer.invoke(IPC.logoErgebnis, jobId),
+  logoAendern: (jobId: string, index: number, wunsch: string) => ipcRenderer.invoke(IPC.logoAendern, jobId, index, wunsch),
+  logoLoeschen: (jobId: string) => ipcRenderer.invoke(IPC.logoLoeschen, jobId),
+  logoMerken: (jobId: string, index: number, name: string) => ipcRenderer.invoke(IPC.logoMerken, jobId, index, name),
+  logoExport: (quelle: Parameters<MoinApi['logoExport']>[0], groesse: Parameters<MoinApi['logoExport']>[1]) => ipcRenderer.invoke(IPC.logoExport, quelle, groesse)
 }
 
 contextBridge.exposeInMainWorld('moin', api)

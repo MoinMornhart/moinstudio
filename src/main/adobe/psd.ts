@@ -148,6 +148,22 @@ export function thumbnailEbenen(bilder: { fertig: Uint8Array; ohneText: Uint8Arr
   return ebenen
 }
 
+/** Ebene „Logo“: genau die Pixel, in denen sich das fertige Bild vom Bild ohne Logo unterscheidet (samt Schatten). */
+export function logoEbene(fertig: Uint8Array, ohneLogo: Uint8Array, pixel: number): PsdEbene | null {
+  const logo = new Uint8Array(pixel * 4)
+  let da = false
+  for (let o = 0; o < pixel * 4; o += 4) {
+    if (fertig[o] !== ohneLogo[o] || fertig[o + 1] !== ohneLogo[o + 1] || fertig[o + 2] !== ohneLogo[o + 2]) {
+      logo[o] = fertig[o]!
+      logo[o + 1] = fertig[o + 1]!
+      logo[o + 2] = fertig[o + 2]!
+      logo[o + 3] = 255
+      da = true
+    }
+  }
+  return da ? { name: 'Logo', rgba: logo } : null
+}
+
 function deckend(rgba: Uint8Array, pixel: number): Uint8Array {
   const b = Uint8Array.from(rgba)
   for (let i = 0; i < pixel; i++) b[i * 4 + 3] = 255

@@ -482,3 +482,14 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .verlauf-nr { color: var(--accent); font-weight: 600; font-size: 12px; }
 .verlauf-eingabe { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 12px; }
 .variant.gewaehlt img { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Logos (Philip, 30.09.): Auswahl im Thumbnail, Reiter „Logo“ mit Bibliothek. Das Schachbrett zeigt die Transparenz. */
+.logo-wahl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.logo-vorschau { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 6px; background: repeating-conic-gradient(#3a3a44 0% 25%, #2a2a31 0% 50%) 0 0 / 12px 12px; }
+.logo-vorschau img { height: 100%; max-width: 100%; object-fit: contain; }
+.logo-grid { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.logo-tile { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.logo-tile .logo-vorschau { width: 100%; box-sizing: border-box; }
+.logo-tile .input { width: 100%; box-sizing: border-box; }
+.logo-variante .variant-open { background: repeating-conic-gradient(#3a3a44 0% 25%, #2a2a31 0% 50%) 0 0 / 16px 16px; }
+.logo-variante .variant-open img { object-fit: contain; }

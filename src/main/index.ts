@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { IPC, type AppInfo, type AutostartState } from '@shared/app'
+import { IPC, type AppInfo, type AutostartState, type ThumbLogoWahl } from '@shared/app'
 import { parseScreenshotArg, runScreenshotMode, SETUP_FLAG } from './screenshot'
 import { runUpdateCli, setupUpdater } from './updater'
 import { SettingsStore } from './data/settings'
@@ -17,6 +17,12 @@ import { registerSetupIpc } from './setup/ipc'
 import { medienBedienen, medienSchemaAnmelden } from './schnitt/medien'
 
 const screenshotDir = parseScreenshotArg(process.argv)
+/** Integrationstests: Logo aus der Bibliothek (--moin-mit-logo=<id|standard>, --moin-logo-position=, --moin-logo-groesse=) */
+const testLogo = ((): ThumbLogoWahl | undefined => {
+  const arg = (n: string): string | undefined => process.argv.find((a) => a.startsWith(`--moin-${n}=`))?.split('=').slice(1).join('=')
+  const id = arg('mit-logo')
+  return id ? { id, position: (arg('logo-position') ?? 'auto') as ThumbLogoWahl['position'], groesse: (arg('logo-groesse') ?? 'mittel') as ThumbLogoWahl['groesse'] } : undefined
+})()
 medienSchemaAnmelden() // vor „app ready“
 const mainWindow = (): BrowserWindow | undefined => BrowserWindow.getAllWindows()[0]
 const settings = new SettingsStore(app.getPath('userData'))
@@ -30,7 +36,7 @@ registerClaudeIpc()
 registerMcpIpc(localRoot())
 // Im Screenshot-Modus den Assistenten nur zeigen, wenn er ausdrücklich aufgenommen werden soll
 registerSetupIpc(settings, !!screenshotDir && !process.argv.includes(SETUP_FLAG))
-const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt, planung } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
+const { queue: jobs, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt, planung, logo } = setupJobs(localRoot(), tools, hardware, settings, mainWindow)
 
 // Fester Name für den Autostart-Eintrag (HKCU\...\Run). Ohne ihn leitet Electron den Namen
 // aus der AppUserModelId ab, und Setzen und Abfragen könnten verschiedene Einträge meinen.
@@ -146,7 +152,7 @@ if (toolsArg === 'install') {
   void app.whenReady().then(async () => {
     await jobs.start()
     try {
-      const id = await starteReaktion(original, { gefuehl: arg('gefuehl'), wort: arg('wort'), spiel: arg('spiel'), wunsch: arg('wunsch'), ohneExtras: process.argv.includes('--moin-ohne-extras') })
+      const id = await starteReaktion(original, { gefuehl: arg('gefuehl'), wort: arg('wort'), spiel: arg('spiel'), wunsch: arg('wunsch'), ohneExtras: process.argv.includes('--moin-ohne-extras'), logo: testLogo })
       const info = await jobs.waitFor(id)
       console.log(`Ende: ${info.state} ${info.error ?? ''}`)
       console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))
@@ -163,7 +169,7 @@ if (toolsArg === 'install') {
   void app.whenReady().then(async () => {
     await jobs.start()
     try {
-      const id = await starteSpielvorlage(vorlage, wunsch)
+      const id = await starteSpielvorlage(vorlage, wunsch, undefined, testLogo)
       const info = await jobs.waitFor(id)
       console.log(`Ende: ${info.state} ${info.error ?? ''}`)
       console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))
@@ -246,7 +252,25 @@ if (toolsArg === 'install') {
   void app.whenReady().then(async () => {
     await jobs.start()
     try {
-      const id = await starteThumbnail({ beschreibung: text, freunde: process.argv.filter((a) => a.startsWith('--moin-freund=')).map((a) => a.slice(14)), anzahl: 2 })
+      const id = await starteThumbnail({ beschreibung: text, freunde: process.argv.filter((a) => a.startsWith('--moin-freund=')).map((a) => a.slice(14)), anzahl: Number(process.argv.find((a) => a.startsWith('--moin-anzahl='))?.slice(14) ?? 2), logo: testLogo })
+      console.log('Job', id)
+      const info = await jobs.waitFor(id)
+      console.log(`Ende: ${info.state} ${info.error ?? ''}`)
+      console.log(JSON.stringify(jobs.result(id) ?? {}, null, 1))
+      app.exit(info.state === 'done' ? 0 : 1)
+    } catch (err) {
+      console.error(err)
+      app.exit(1)
+    }
+  })
+} else if (process.argv.some((a) => a.startsWith('--moin-logo=') || a.startsWith('--moin-logo-aendern='))) {
+  // Integrationstest Logo-Reiter: --moin-logo=<Beschreibung> [--moin-anzahl=2] oder --moin-logo-aendern=<Auftrag> --moin-index=0 --moin-wunsch=…
+  const arg = (n: string): string | undefined => process.argv.find((a) => a.startsWith(`--moin-${n}=`))?.split('=').slice(1).join('=')
+  void app.whenReady().then(async () => {
+    await jobs.start()
+    try {
+      const aendern = arg('logo-aendern')
+      const id = aendern ? await logo.starteLogoAenderung(aendern, Number(arg('index') ?? 0), arg('wunsch')) : await logo.starteLogo({ beschreibung: arg('logo') ?? '', anzahl: Number(arg('anzahl') ?? 2) })
       console.log('Job', id)
       const info = await jobs.waitFor(id)
       console.log(`Ende: ${info.state} ${info.error ?? ''}`)

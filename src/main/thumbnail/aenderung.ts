@@ -7,6 +7,8 @@ import type { JobContext } from '../jobs/queue'
 import type { ThumbnailVariante } from './job'
 import { sichereMcAssets } from './minecraft'
 import { titelArgumente } from './spielvorlage'
+import { wichtigeBoxen, type Box } from '../logo/platz'
+import { logoAufsetzen, logoAusAntwort, logoFuerClaude, logoHilfe, sperrenVorlage, type LogoWahl, type VarianteLogo } from '../logo/setzen'
 
 /**
  * Änderungswunsch zu einem fertigen Thumbnail (Philip, 29.09.: „wenn man das Thumbnail unten sieht, auch Änderungen
@@ -35,6 +37,10 @@ export interface AenderungPayload {
   /** Spiele-Vorlage: Python der Bildwerkzeuge (für den Titel) */
   python?: string
   ausgabe: string
+  /** Logo der geänderten Variante (bleibt erhalten, in Worten änderbar), Philips Logo-Bibliothek und Standard-Logo */
+  logo?: LogoWahl
+  logoBibliothek?: { name: string; datei: string }[]
+  logoStandard?: LogoWahl
 }
 
 const HILFE: Record<Exclude<AenderungsArt, 'thumbnail'>, string> = {
@@ -55,7 +61,7 @@ const TEXT_HILFE = `
 Texte im Bild stehen im Feld „texte“ als Liste, z. B. [{"text": "GIGANTISCH", "farbe": "gelb"}] (farbe optional: weiss,
 gelb, gold, gruen, tuerkis, rot). Leere Liste = kein Text. Soll Text dazu, weg oder anders sein, ändere nur dieses Feld.`
 
-export function aenderungsPrompt(p: Pick<AenderungPayload, 'art' | 'wunsch' | 'bild' | 'formatHilfe'>, szene: string): string {
+export function aenderungsPrompt(p: Pick<AenderungPayload, 'art' | 'wunsch' | 'bild' | 'formatHilfe' | 'logoBibliothek'>, szene: string): string {
   return `Philip möchte an seinem Thumbnail etwas ändern. Sieh dir das aktuelle Bild an: ${p.bild}
 
 Sein Wunsch: „${p.wunsch}“
@@ -65,7 +71,7 @@ ${szene}
 
 ${p.art === 'thumbnail' ? `Das Szenenformat und die Regeln stehen in dieser Anleitung (Auszug aus der Planung):\n${p.formatHilfe ?? ''}` : HILFE[p.art]}
 
-Ändere nur, was der Wunsch verlangt, alles andere bleibt genau so (Pfade, Skins, Größen, Kamera …).${p.art === 'thumbnail' ? TEXT_HILFE : ''}
+Ändere nur, was der Wunsch verlangt, alles andere bleibt genau so (Pfade, Skins, Größen, Kamera …).${p.art === 'thumbnail' ? TEXT_HILFE : ''}${logoHilfe((p.logoBibliothek ?? []).map((b) => b.name))}
 Antworte nur mit {"szene": <die vollständige geänderte Szene>}.`
 }
 
@@ -112,6 +118,8 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
   // Minecraft-Szenen: Texte liegen neben der Szene (variante-N.texte.json bzw. aenderung.texte.json) und dürfen
   // mitgeändert werden. Das Feld ist immer da, damit Claude auch neuen Text hinzufügen kann.
   if (p.art === 'thumbnail') alt['texte'] = await ladeTexte(p.szene)
+  // Logo als eigenes Feld, damit „Logo kleiner“, „Logo nach links“ oder „Logo weg“ gehen
+  alt['logo'] = logoFuerClaude(p.logo)
 
   ctx.progress(5, 'Claude setzt deinen Wunsch um …')
   const res = await runClaudeInJob(
@@ -131,6 +139,8 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
     }
   }
   const texte = normaleTexte(neu['texte'] ?? neu['text'])
+  const logo = logoAusAntwort(neu['logo'], p.logo, p.logoBibliothek ?? [], p.logoStandard)
+  delete neu['logo']
   delete neu['texte']
   if (p.art === 'thumbnail') delete neu['text']
 
@@ -141,6 +151,8 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
   const blender = (script: string, args: string[]): ReturnType<typeof runBlender> => runBlender({ exe: p.blender.exe, mesa: p.blender.mesa, script: join(p.blenderDir, script), args }, c)
   let bild: string | null = null
   let fehler: string | undefined
+  /** belegte Stellen für das Logo (Text, Titel der Vorlage …); Figuren kommen aus dem Bericht */
+  const sperren: Box[] = []
   if (p.art === 'thumbnail') {
     const mc = await sichereMcAssets(p.datenOrdner, { onProgress: (t) => ctx.progress(null, t) })
     const r = await blender('render_szene.py', [`${ziel}.szene.json`, mc.textures, `${ziel}.roh.png`, `${ziel}.bericht.json`])
@@ -152,6 +164,8 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
         await writeFile(`${ziel}.texte.json`, JSON.stringify(texte))
         const t = await blender('text_setzen.py', [`${ziel}.roh.png`, `${ziel}.bericht.json`, `${ziel}.texte.json`, mc.assets, `${ziel}.png`])
         if (t.code === 0) bild = `${ziel}.png`
+        const zeile = /MOIN_TEXT (.*)/.exec(t.output)?.[1]
+        if (zeile) sperren.push(...wichtigeBoxen({ texte: (JSON.parse(zeile) as { texte?: unknown }).texte }))
       }
     } else fehler = `Blender Exit ${r.code}`
   } else if (p.art === 'reaktion') {
@@ -177,6 +191,17 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
     } else fehler = `Blender Exit ${r.code}`
   }
   const bericht = JSON.parse(await readFile(`${ziel}.bericht.json`, 'utf8').catch(() => '{}')) as { fehler?: string; warnungen?: string[] }
+  const warnungen = [...(bericht.warnungen ?? [])]
+  let logoInfo: VarianteLogo | null = null
+  if (bild && !bericht.fehler && logo) {
+    ctx.progress(92, 'Logo setzen …')
+    if (p.art === 'spielvorlage') sperren.push(...(await sperrenVorlage(`${ziel}.bericht.json`, join(p.szene, '..', 'analyse.json'), neu)))
+    else sperren.push(...wichtigeBoxen(bericht), ...wichtigeBoxen({ sperren: neu['sperren'] }))
+    const l = await logoAufsetzen({ bild, logo, sperren, ausgabe: `${ziel}.logo.png`, blender: p.blender, blenderDir: p.blenderDir }, c)
+    bild = l.bild
+    logoInfo = l.logo
+    warnungen.push(...l.warnungen)
+  }
   ctx.progress(100, 'Fertig')
   return {
     varianten: [
@@ -186,7 +211,8 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
         warum: p.wunsch,
         bild: bericht.fehler ? null : bild,
         szene: `${ziel}.szene.json`,
-        warnungen: bericht.warnungen ?? [],
+        warnungen,
+        ...(logoInfo ? { logo: logoInfo } : {}),
         ...(bericht.fehler || fehler ? { fehler: bericht.fehler ?? fehler } : {})
       }
     ]

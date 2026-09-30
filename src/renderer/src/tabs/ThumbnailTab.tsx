@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ClaudeVerbinden } from '../components/ClaudeCard'
-import type { ClaudeStatusInfo, ThumbAuftrag, ThumbErgebnis, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
+import type { ClaudeStatusInfo, ThumbAuftrag, ThumbErgebnis, ThumbLogoWahl, ThumbSkin, ThumbVideoErgebnis } from '@shared/app'
+import { LogoWahl } from '../components/LogoWahl'
 import { Card, PageHeader } from '../components/Panel'
 import { useJobs } from '../components/JobsWidget'
 
@@ -306,7 +307,7 @@ function Verlauf({ auftrag, aenderungen, onNeu }: { auftrag: ThumbAuftrag; aende
 }
 
 /** Video-Auswertung (ROADMAP 5.5): was Claude im Video sieht und welche Thumbnails es vorschlägt */
-function VideoVorschlaege({ auftrag, kanal, onStart }: { auftrag: ThumbAuftrag; kanal: string; onStart: (id: string) => void }): React.JSX.Element {
+function VideoVorschlaege({ auftrag, kanal, logo, onStart }: { auftrag: ThumbAuftrag; kanal: string; logo: ThumbLogoWahl | undefined; onStart: (id: string) => void }): React.JSX.Element {
   const [ergebnis, setErgebnis] = useState<ThumbVideoErgebnis | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   useEffect(() => {
@@ -335,7 +336,7 @@ function VideoVorschlaege({ auftrag, kanal, onStart }: { auftrag: ThumbAuftrag; 
             <button
               className="btn small primary"
               onClick={() =>
-                void window.moin.thumbStart({ beschreibung: v.beschreibung, kanal, freunde: v.freunde, anzahl: 3 }).then(onStart, (err: unknown) => setFehler(fehlerText(err)))
+                void window.moin.thumbStart({ beschreibung: v.beschreibung, kanal, freunde: v.freunde, anzahl: 3, logo }).then(onStart, (err: unknown) => setFehler(fehlerText(err)))
               }
             >
               Dieses Thumbnail erstellen
@@ -373,6 +374,8 @@ export function ThumbnailTab(): React.JSX.Element {
   const [mitWort, setMitWort] = useState('')
   const [vorlageWunsch, setVorlageWunsch] = useState('')
   const [loeschen, setLoeschen] = useState<string | null>(null)
+  // Logo in jedem Modus (Philip, 30.09.): Standard-Logo des Kanals vorausgewählt
+  const [logo, setLogo] = useState<ThumbLogoWahl | undefined>({ id: 'standard', position: 'auto', groesse: 'mittel' })
   // Ohne Claude-Verbindung geht hier nichts: dann steht oben direkt der Knopf „Mit Claude verbinden“
   const [claude, setClaude] = useState<ClaudeStatusInfo | null>(null)
   useEffect(() => {
@@ -402,7 +405,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const start = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbStart({ beschreibung, kanal, freunde, anzahl })
+      const id = await window.moin.thumbStart({ beschreibung, kanal, freunde, anzahl, logo })
       setOffen(id)
       setBeschreibung('')
       ladeAuftraege()
@@ -425,7 +428,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const reaktion = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni', freunde })
+      const id = await window.moin.thumbReaktion({ gefuehl, wort: reaktionWort, kanal: 'MoinMorni', freunde, logo })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -437,7 +440,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const eigenesBild = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', spiel, wunsch: wunsch.trim() || undefined, ohneExtras: Boolean(wunsch.trim()) && !mitWort.trim(), freunde })
+      const id = await window.moin.thumbReaktion({ gefuehl: wunschGefuehl, wort: mitWort, kanal: 'MoinMorni', spiel, wunsch: wunsch.trim() || undefined, ohneExtras: Boolean(wunsch.trim()) && !mitWort.trim(), freunde, logo })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -449,7 +452,7 @@ export function ThumbnailTab(): React.JSX.Element {
   const spielvorlage = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.thumbSpielvorlage({ wunsch: vorlageWunsch, freunde })
+      const id = await window.moin.thumbSpielvorlage({ wunsch: vorlageWunsch, freunde, logo })
       if (id) {
         setOffen(id)
         ladeAuftraege()
@@ -509,6 +512,7 @@ export function ThumbnailTab(): React.JSX.Element {
             onChange={(e) => setBeschreibung(e.target.value)}
           />
           {freundWahl}
+          <LogoWahl kanal={kanal} wert={logo} onWert={setLogo} />
           <div className="row wrap">
             <select className="input" value={kanal} onChange={(e) => setKanal(e.target.value)} style={{ flex: '0 0 170px' }}>
               {KANAELE.map((k) => (
@@ -543,6 +547,7 @@ export function ThumbnailTab(): React.JSX.Element {
             Lade das Thumbnail des Videos hoch, auf das du reagierst. Dein Skin kommt dazu – wie bei BastiGHGs Zweitkanal und Zarbex, jedes Mal in einer neuen Pose, mit Wort und Pfeil.
           </p>
           {freundWahl}
+          <LogoWahl kanal="MoinMorni" wert={logo} onWert={setLogo} />
           <div className="row wrap">
             <select className="input" value={gefuehl} onChange={(e) => setGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
               {GEFUEHLE.map((g) => (
@@ -572,6 +577,7 @@ export function ThumbnailTab(): React.JSX.Element {
             onChange={(e) => setWunsch(e.target.value)}
           />
           {freundWahl}
+          <LogoWahl kanal="MoinMorni" wert={logo} onWert={setLogo} />
           <div className="row wrap">
             <select className="input" value={wunschGefuehl} onChange={(e) => setWunschGefuehl(e.target.value)} style={{ flex: '0 0 170px' }}>
               {GEFUEHLE.map((g) => (
@@ -595,6 +601,7 @@ export function ThumbnailTab(): React.JSX.Element {
             etwas hält. Der Titel bleibt obendrauf. Das Ergebnis ist nur für dich (fremde Vorlage). Sind mehrere Personen drauf, ersetzen deine gewählten Freunde die anderen.
           </p>
           {freundWahl}
+          <LogoWahl kanal="MoinMorni" wert={logo} onWert={setLogo} />
           <div className="row wrap">
             <input className="input" placeholder="Wunsch (optional, z. B. schau wütender)" value={vorlageWunsch} onChange={(e) => setVorlageWunsch(e.target.value)} />
             <button className="btn primary" onClick={() => void spielvorlage()}>
@@ -638,6 +645,7 @@ export function ThumbnailTab(): React.JSX.Element {
                   <VideoVorschlaege
                     auftrag={a}
                     kanal={kanal}
+                    logo={logo}
                     onStart={(id) => {
                       setOffen(id)
                       ladeAuftraege()

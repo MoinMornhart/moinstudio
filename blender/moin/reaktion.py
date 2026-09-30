@@ -6,7 +6,8 @@ Aufbau in einer Blender-Szene, ein Render:
 - Philips echter Skin (nie gezeichnet) steht in einer Bildhälfte, auf Brusthöhe angeschnitten, Kopf 55–65 % der
   Bildhöhe, 15–35° zum Inhalt gedreht, mit Mimik und wechselnder Pose (14.1–14.4).
 - Genau ein Wort groß auf der Inhaltsseite (14.5), höchstens ein roter gebogener Pfeil zum Detail (14.6),
-  optional ein Logo in der unteren Ecke gegenüber der Figur (14.7).
+  optional der Spielname in der unteren Ecke gegenüber der Figur (14.7). Ein Logo setzt die App danach in eine freie
+  Ecke (blender/logo_setzen.py); dafür stehen alle belegten Stellen im Bericht unter „boxen“.
 - Weiches Key-Licht von vorn oben, dünne helle Randkante, kein Glow (14.8).
 """
 import math
@@ -135,7 +136,7 @@ def _pfeil(von, nach, dicke, farbe=ROT):
 
 def baue_reaktion(spec, ausgabe, bericht=None):
     """spec: {hintergrund, skin, slim, seite: links|rechts, mimik, pose, wort, wort_farbe, schrift,
-    pfeil_ziel: [u, v] (0..1, oben links = 0,0), logo, samples}"""
+    pfeil_ziel: [u, v] (0..1, oben links = 0,0), samples}"""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     scene.render.resolution_x, scene.render.resolution_y = BREITE, HOEHE
@@ -277,6 +278,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         return cam.location + Vector(((u - 0.5) * b_e, ebene, (0.5 - v) * h_e))
 
     info = {"wort": None, "pfeil": None, "pose": pose_name, "gesicht_sichtbar": round(sicht, 2)}
+    boxen = []  # belegte Stellen (Wort, Pfeil, Spielname, Freunde) – dort darf später kein Logo hin
     rng = mtext.zufall(spec)
     if spec.get("wort"):
         wort = spec["wort"].upper()
@@ -328,6 +330,7 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         kipp = mtext.neigung(rng)
         t.rotation_euler = (math.radians(90), math.radians(kipp), 0)
         info["wort"] = {"platz": [round(u_t, 3), round(v_t, 3)], "neigung": round(kipp, 1), "farbe": farbname}
+        boxen.append([u_t - halb_b - 0.02, v_t - anteil / 2 - 0.04, u_t + halb_b + 0.02, v_t + anteil / 2 + 0.04])  # mit Luft für die Neigung
     else:
         u_t, v_t, halb_b = inhalt_u, 0.16, 0.0
     if spec.get("pfeil_ziel"):
@@ -341,16 +344,17 @@ def baue_reaktion(spec, ausgabe, bericht=None):
         ende = punkt(zu, zv - 0.06 if zv > v_start else zv + 0.06)
         _pfeil(start, ende, h_e * 0.03)
         info["pfeil"] = [zu, zv]
+        (su, sv), (eu, ev) = bild(start), bild(ende)
+        boxen.append([min(su, eu) - 0.04, min(sv, ev) - 0.04, max(su, eu) + 0.04, max(sv, ev) + 0.04])
     if spec.get("spiel"):
         # Spielname als Logo in der unteren Ecke gegenüber der Figur, 12–20 % der Bildbreite (Stilbuch 14.7)
         name = _textobjekt(spec["spiel"].upper(), spec.get("schrift"), h_e * 0.075, (1, 0.85, 0.2))
         name.location = punkt(0.84 if seite == "links" else 0.16, 0.9)
         name.rotation_euler = (math.radians(90), 0, 0)
         info["spiel"] = spec["spiel"]
-    if spec.get("logo") and os.path.exists(spec["logo"]):
-        logo = _bildflaeche(spec["logo"], cam, ebene, name="logo", helligkeit=1.0)
-        logo.scale = (0.16, 0.16, 0.16)
-        logo.location = punkt(0.86 if seite == "links" else 0.14, 0.86)
+        halb = min(0.3, len(spec["spiel"]) * 0.075 * 0.8 * HOEHE / BREITE / 2)
+        mitte_u = 0.84 if seite == "links" else 0.16
+        boxen.append([mitte_u - halb - 0.01, 0.85, mitte_u + halb + 0.01, 0.95])
 
     scene.render.engine = "CYCLES"
     mlook.gpu_einrichten(scene, spec.get("geraet", "CPU"))
@@ -366,6 +370,12 @@ def baue_reaktion(spec, ausgabe, bericht=None):
     bpy.context.view_layer.update()
     ecken = [world_to_camera_view(scene, cam, c) for c in fig.kopf_ecken()]
     info["kopf_box"] = [min(e.x for e in ecken), 1 - max(e.y for e in ecken), max(e.x for e in ecken), 1 - min(e.y for e in ecken)]
+    for f in freunde:  # Kopf und Körper der Freunde (der Körper reicht bis zum unteren Rand)
+        ek = [bild(c) for c in f.kopf_ecken()]
+        k = [min(e[0] for e in ek), min(e[1] for e in ek), max(e[0] for e in ek), max(e[1] for e in ek)]
+        w = k[2] - k[0]
+        boxen += [k, [k[0] - w * 0.75, k[1], k[2] + w * 0.75, 1.0]]
+    info["boxen"] = [[round(v, 4) for v in b] for b in boxen]
     if ausgabe:
         scene.render.filepath = ausgabe
         bpy.ops.render.render(write_still=True)

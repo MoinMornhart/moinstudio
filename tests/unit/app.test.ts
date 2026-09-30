@@ -4,7 +4,7 @@ import { parseScreenshotArg } from '../../src/main/screenshot'
 
 describe('Reiter', () => {
   it('enthält die drei Hauptreiter in der richtigen Reihenfolge plus Einstellungen', () => {
-    expect(TABS.map((t) => t.id)).toEqual(['thumbnail', 'schnitt', 'planung', 'einstellungen'])
+    expect(TABS.map((t) => t.id)).toEqual(['thumbnail', 'schnitt', 'planung', 'logo', 'einstellungen'])
   })
 
   it('erkennt gültige und ungültige Reiter-IDs', () => {
