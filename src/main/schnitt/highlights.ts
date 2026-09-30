@@ -3,7 +3,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runClaudeInJob } from '../claude/run'
 import type { JobContext } from '../jobs/queue'
-import { sicherePakete, sichereUmgebung } from '../python'
+import { OPENCV_PRUEFUNG, sicherePakete, sichereUmgebung } from '../python'
 import { encoderArgs } from './export'
 import { ffmpegMitFortschritt } from './import'
 import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
@@ -143,7 +143,7 @@ export interface ClipsPayload {
 
 async function findeFacecam(p: ClipsPayload, pfad: string, dauer: number, ctx: JobContext<unknown>): Promise<[number, number, number, number] | null> {
   const python = await sichereUmgebung(p.uv, p.pyDir, ctx)
-  await sicherePakete(p.uv, python, 'rembg, cv2, PIL', ['rembg==2.0.*', 'onnxruntime', 'opencv-python-headless', 'pillow'], ctx, 'Richte die Personenerkennung ein (einmalig) …')
+  await sicherePakete(p.uv, python, OPENCV_PRUEFUNG, ['rembg==2.0.*', 'onnxruntime', 'opencv-python-headless>=4.10,<5', 'pillow'], ctx, 'Richte die Personenerkennung ein (einmalig) …')
   const out = await new Promise<string>((resolve, reject) => {
     const child = spawn(python, [p.facecamSkript, pfad, String(dauer), p.ffmpeg], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
     ctx.track(child)

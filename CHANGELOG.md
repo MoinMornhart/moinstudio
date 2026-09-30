@@ -24,6 +24,8 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Fixed
 
+- Beine wirkten bei manchen Thumbnails zu groß: Kamera von unten nicht mehr mit Weitwinkel (bläst nahe Beine auf), Knie beim Beugen schlanker.
+- Bildwerkzeuge stürzten sporadisch ab (OpenCV 5.0, „Unknown C++ exception“): MoinStudio nutzt OpenCV 4 und stellt vorhandene Installationen selbst um.
 - Äxte und andere Werkzeuge waren winzig: sie sind jetzt so lang wie ein Schwert und werden nie vors Gesicht gehalten.
 
 ## [0.37.0] - 2026-09-30

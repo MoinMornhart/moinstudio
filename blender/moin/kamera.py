@@ -19,7 +19,8 @@ MODI = {
     "klippe": {"linse": 24, "kopf_anteil": 0.30, "kopf_uv": (0.26, 0.66), "thema_uv": (0.72, 0.30), "hoehe": 4},
     "klippe_wand": {"linse": 22, "kopf_anteil": 0.18, "kopf_uv": (0.30, 0.74), "thema_uv": (0.58, 0.28), "hoehe": 12},
     "abgrund": {"linse": 20, "kopf_anteil": 0.13, "kopf_uv": (0.40, 0.78), "thema_uv": (0.52, 0.16), "hoehe": 26},
-    "held": {"linse": 22, "kopf_anteil": 0.34, "kopf_uv": (0.30, 0.66), "thema_uv": (0.72, 0.50), "hoehe": -8},
+    # von unten mit längerer Brennweite: 22 mm nah von unten bläst die Beine auf (Philip, 30.09.)
+    "held": {"linse": 30, "kopf_anteil": 0.30, "kopf_uv": (0.30, 0.62), "thema_uv": (0.72, 0.50), "hoehe": -5},
     # Kampf/Duell (GommeHD-Duelle; Philip, 30.09.: nicht immer er riesig vorn): beide gleich groß auf gleicher Höhe,
     # längere Brennweite gegen perspektivisches Aufblähen, Kamera fast auf Augenhöhe
     "kampf": {"linse": 40, "kopf_anteil": 0.17, "kopf_uv": (0.30, 0.42), "thema_uv": (0.70, 0.42), "hoehe": 2},

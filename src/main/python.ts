@@ -33,6 +33,12 @@ export async function sichereUmgebung(uv: string, pyDir: string, ctx: JobContext
 }
 
 /** Installiert `pakete`, wenn sich `modul` nicht importieren lässt. */
+/**
+ * Bildwerkzeuge (rembg, OpenCV, Pillow) vorhanden und OpenCV in Version 4: OpenCV 5.0 warf auf Philips Rechner immer
+ * wieder „Unknown C++ exception“ (30.09.) – ist 5.x installiert, schlägt die Prüfung fehl und 4.x wird installiert.
+ */
+export const OPENCV_PRUEFUNG = 'rembg, cv2, PIL; assert cv2.__version__.startswith("4.")'
+
 export async function sicherePakete(uv: string, python: string, modul: string, pakete: string[], ctx: JobContext<unknown>, hinweis: string): Promise<void> {
   const ok = await lauf(python, ['-c', `import ${modul}`], ctx).then(
     () => true,

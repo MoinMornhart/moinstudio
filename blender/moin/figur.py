@@ -37,7 +37,9 @@ def _beuge_matrix(glied, grad, anteil=1.0):
     nach hinten (+Y), wie echte Ellbogen und Knie. Drehachse ist die Innenkante (Armbeuge vorn, Kniekehle hinten):
     so staucht und faltet sich innen nichts, außen dehnt sich das Glied nur leicht."""
     richtung = -1 if glied.startswith("arm") else 1
-    innen = Vector((0, 2 * PX * richtung, 0))
+    # Beine: Drehachse zwischen Mitte und Kniekehle – um die Kante gedreht dehnt sich die Knievorderseite bei starkem
+    # Beugen (Sitzen, Knien, Klettern) zum Klotz, das Bein wirkt zu groß (Philip, 30.09.)
+    innen = Vector((0, (2 if glied.startswith("arm") else 1) * PX * richtung, 0))
     dreh = Matrix.Rotation(math.radians(grad * anteil * richtung), 4, "X")
     return Matrix.Translation(innen) @ dreh @ Matrix.Translation(-innen)
 

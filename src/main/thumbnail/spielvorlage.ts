@@ -6,7 +6,7 @@ import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import type { ThumbnailVariante } from './job'
 import { MIMIKEN, posenBeispiele, posenNamen } from './reaktion'
-import { sicherePakete, sichereUmgebung } from '../python'
+import { OPENCV_PRUEFUNG, sicherePakete, sichereUmgebung } from '../python'
 import { sichereMcAssets } from './minecraft'
 import { logoAufsetzen, sperrenVorlage, type LogoWahl } from '../logo/setzen'
 
@@ -142,7 +142,7 @@ const existiert = (p: string): Promise<boolean> => stat(p).then(() => true, () =
 export async function sicherePython(uv: string, pyDir: string, ctx: JobContext<unknown>): Promise<string> {
   await sichereLama(pyDir, ctx)
   const python = await sichereUmgebung(uv, pyDir, ctx)
-  await sicherePakete(uv, python, 'rembg, cv2, PIL', ['rembg==2.0.*', 'onnxruntime', 'opencv-python-headless', 'pillow'], ctx, 'Richte die Bildwerkzeuge ein (einmalig, ca. 700 MB) …')
+  await sicherePakete(uv, python, OPENCV_PRUEFUNG, ['rembg==2.0.*', 'onnxruntime', 'opencv-python-headless>=4.10,<5', 'pillow'], ctx, 'Richte die Bildwerkzeuge ein (einmalig, ca. 700 MB) …')
   return python
 }
 
