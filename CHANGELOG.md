@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-09-30
+
+> Prompt für ContentStudio
+
 ### Added
 
 - Doku: Prompt für ContentStudio (docs/contentstudio/PROMPT.md) – MoinStudio als öffentliche App für andere Creator, andere Plattformen und andere KI-Anbieter nachbauen und MoinStudio-Updates automatisch übernehmen.
