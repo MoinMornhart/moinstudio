@@ -26,7 +26,7 @@ export const WELTEN: Katalog['welten'] = [
   { name: 'meer', hinweis: 'Wasser bis zum Horizont, Figur auf einer Säule' },
   { name: 'end', hinweis: 'Das End: Endstein-Insel mit Obsidiansäulen, dazu himmel end; Enderdrache als Mob ender_dragon (hoehe 6–12), Endkristalle ender_crystal' },
   { name: 'hoehle', hinweis: 'geschlossene Höhle mit Erzen und Lava- oder Wasserbecken auf der Themenseite' },
-  { name: 'nether', hinweis: 'Nether mit Netherrack, Glowstone, Magma und Lavameer' }
+  { name: 'nether', hinweis: 'Nether als riesige Höhle mit Lavameer, Lavafällen, Glowstone und Glut; "biom": oede (Netherrack), karmesin (rote Riesenpilze), wirr (türkis, Wirrpilze), seelensand (Seelensandtal, Knochen, Basaltsäulen), basalt (Basaltdeltas); himmel wird automatisch zur Nether-Stimmung' }
 ]
 
 /** Liest die Namen aus einem Python-Dict-Block: Zeilen der Form `    "name": {` bzw. `    "name": {"schlüssel"`. */

@@ -20,11 +20,12 @@ MODI = {
     "klippe_wand": {"linse": 22, "kopf_anteil": 0.18, "kopf_uv": (0.30, 0.74), "thema_uv": (0.58, 0.28), "hoehe": 12},
     "abgrund": {"linse": 20, "kopf_anteil": 0.13, "kopf_uv": (0.40, 0.78), "thema_uv": (0.52, 0.16), "hoehe": 26},
     "held": {"linse": 22, "kopf_anteil": 0.34, "kopf_uv": (0.30, 0.66), "thema_uv": (0.72, 0.50), "hoehe": -8},
-    # Kampf (GommeHD Helden): beide Gegner groß im Bild, Kamera leicht von unten, Gegner in der anderen Hälfte
-    "kampf": {"linse": 26, "kopf_anteil": 0.29, "kopf_uv": (0.30, 0.74), "thema_uv": (0.70, 0.66), "hoehe": -6},
+    # Kampf/Duell (GommeHD-Duelle; Philip, 30.09.: nicht immer er riesig vorn): beide gleich groß auf gleicher Höhe,
+    # längere Brennweite gegen perspektivisches Aufblähen, Kamera fast auf Augenhöhe
+    "kampf": {"linse": 40, "kopf_anteil": 0.17, "kopf_uv": (0.30, 0.42), "thema_uv": (0.70, 0.42), "hoehe": 2},
     "brust": {"linse": 35, "kopf_anteil": 0.26, "kopf_uv": (0.30, 0.68), "thema_uv": (0.70, 0.45), "hoehe": 5},
     # Mob als Thema (BastiGHG, Paluten): Figur halbnah links, Mob groß rechts auf Augenhöhe – statt Riesenkopf mit winzigem Mob
-    "mob": {"linse": 28, "kopf_anteil": 0.22, "kopf_uv": (0.28, 0.52), "thema_uv": (0.70, 0.50), "hoehe": 3},
+    "mob": {"linse": 38, "kopf_anteil": 0.17, "kopf_uv": (0.30, 0.44), "thema_uv": (0.68, 0.46), "hoehe": 3},
     # Ganze Figur mit Umgebung (Freiform-Test): für besondere Orte und Körperhaltungen (Yoga, Handstand, Klettern, Surfen),
     # damit Ort und Handlung zu sehen sind statt nur ein großer Kopf
     "ganz": {"linse": 24, "kopf_anteil": 0.12, "kopf_uv": (0.30, 0.72), "thema_uv": (0.70, 0.42), "hoehe": 10},

@@ -6,6 +6,16 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Spiele-Vorlage neu für jede Art von Bild: Jede Person bekommt einen eigenen Umriss (Segment Anything + Personenmodell, auch für Spielfiguren, Comic, Roboter), jede Figur wird in ihren Umriss eingepasst (dein Skin und jeder Freund), keine Geister mehr. Ganzkörperposen mit Beinen (klettern, Hechtsprung, hängen, sitzen, knien, fallen, liegen), Verbindungen wie im Original (echte Minecraft-Kette, Seil, Leine). Zum Schluss vergleicht Claude Original und Ergebnis und korrigiert bis zu zweimal, bevor du das Bild siehst. Testreihe mit 17 echten Spiele-Motiven.
+- Kämpfe: Du stehst nicht mehr automatisch riesig im Vordergrund. Beide Kämpfer gleich groß auf gleicher Höhe (Duell wie bei GommeHD), der Gegner rückt neben dich; bei Mobs genauso.
+- Nether neu nach den Biom-Daten des Spiels: riesige offene Höhle mit Lavameer, Lavafällen, Glowstone und Glut, dazu die Biome Ödland, Karmesinwald, Wirrwald, Seelensandtal und Basaltdeltas mit ihren Nebelfarben; die Figur wird nicht mehr rot eingefärbt.
+
+### Fixed
+
+- Äxte und andere Werkzeuge waren winzig: sie sind jetzt so lang wie ein Schwert und werden nie vors Gesicht gehalten.
+
 ## [0.37.0] - 2026-09-30
 
 > Thumbnail-Änderungen als Verlauf

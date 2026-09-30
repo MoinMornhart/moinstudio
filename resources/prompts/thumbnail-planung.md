@@ -129,7 +129,8 @@ Beschreibung geht, bekommen `"wichtig": true` – dann prüft MoinStudio, dass s
 Große Mobs (`groesse` 3–10) brauchen Abstand: stelle sie 8–20 Blöcke nach hinten, sonst passen sie nicht ins Bild.
 Schwebende Mobs (Ghast, Phantom, Blaze) bekommen `hoehe` 3–8.
 Verbindungen (`"verbindungen": [{"von": …, "zu": …, "art": …}]` auf oberster Ebene der Szene) zeichnen etwas zwischen zwei
-Punkten: `"angelschnur"` (dünne Schnur, hängt leicht durch), `"leine"` (Minecraft-Leine), `"strahl"` (Wächter-Laser mit
+Punkten: `"angelschnur"` (dünne Schnur, hängt leicht durch), `"leine"` (Minecraft-Leine), `"seil"`, `"kette"` (echte
+Minecraft-Kette, z. B. zwei aneinandergekettete Spieler), `"strahl"` (Wächter-Laser mit
 echter Textur, leuchtet). Punkte: `"mob:0"` (Mitte des Mobs), eine Figuren-`id` (Hals), `"<id>:hand"` (Spitze des
 gehaltenen Gegenstands, z. B. der Angel) oder `[x, y, z]`. Beispiel Angeln: Philip hält `fishing_rod`, Verbindung
 `{"von": "ich:hand", "zu": "mob:0", "art": "angelschnur"}`. Kurzform für Laser: Ein Wächter oder Älterer Wächter

@@ -89,10 +89,87 @@ def _ziele(fig, p, seite, punkt):
     return {"waffe": waffe, "stuetze": stuetze}
 
 
-def _deckung(scene, cam, maske_pfad, raster=(64, 36)):
+def _objekte_von(fig):
+    """Alle Objekte einer Figur (Teile samt Kindern: Überzug-Ebene, Augen …)."""
+    raus, offen = set(), [fig.wurzel]
+    while offen:
+        o = offen.pop()
+        raus.add(o.name)
+        offen.extend(o.children)
+    return raus
+
+
+def _bild_box(scene, cam, fig):
+    """Umriss der Figur im Bild [x0, y0, x1, y1] (0–1, oben links = 0,0)."""
+    from bpy_extras.object_utils import world_to_camera_view
+
+    ecken = [world_to_camera_view(scene, cam, o.matrix_world @ Vector(c)) for n in _objekte_von(fig) for o in [bpy.data.objects[n]] if o.type == "MESH" for c in o.bound_box]
+    if not ecken:
+        return None
+    return [min(e.x for e in ecken), 1 - max(e.y for e in ecken), max(e.x for e in ecken), 1 - min(e.y for e in ecken)]
+
+
+def _skaliere_um_kopf(fig, faktor):
+    """Figur größer/kleiner machen, der Kopf bleibt an seiner Stelle im Bild."""
+    vorher = fig.kopf_mitte().copy()
+    fig.wurzel.scale = fig.wurzel.scale * faktor
+    bpy.context.view_layer.update()
+    fig.wurzel.location += vorher - fig.kopf_mitte()
+    bpy.context.view_layer.update()
+
+
+def _einpassen(scene, cam, fig, person, maske, name):
+    """Figur in den Umriss der Person einpassen, die sie ersetzt (Philip, 30.09.: Freund winzig, alte Person als Geist
+    sichtbar). Solange sie die Person zu wenig abdeckt oder deutlich kürzer ist als sie, wird sie um den Kopf herum
+    größer – höchstens dreimal, zusammen höchstens 1,8-fach. Ist die Person unten angeschnitten, muss die Figur es auch sein."""
+    schritte = []
+    gesamt = 1.0
+    for _ in range(4):
+        deck = _deckung(scene, cam, maske, nur=_objekte_von(fig)) if maske and os.path.exists(maske) else 1.0
+        box = _bild_box(scene, cam, fig)
+        ziel_h = (person.get("box") or [0, 0, 0, 0])
+        soll = (ziel_h[3] - ziel_h[1]) * 0.85 if person.get("box") else 0
+        ist = (box[3] - box[1]) if box else 1
+        unten_fehlt = person.get("unten_angeschnitten") and box and box[3] < 0.97
+        faktor = 1.0
+        # Maßstab ist die Größe der Person: so hoch wie sie (85 %), höchstens 12 % höher – Minecraft-Figuren mit ihrem
+        # großen Kopf wirken sonst riesig (Test 30.09.: Kletterer nach Deckungs-Regel 40 % zu groß). Die Deckung zählt
+        # nur, wenn sie wirklich schlecht ist (schräge Posen decken einen menschlichen Umriss nie ganz).
+        if soll and ist < soll:
+            faktor = max(faktor, soll / max(ist, 0.01))
+        if deck < 0.42:
+            faktor = max(faktor, math.sqrt(0.5 / max(deck, 0.05)))
+        if unten_fehlt:
+            faktor = max(faktor, 1.08)
+        if soll:
+            faktor = min(faktor, soll / 0.85 * 1.12 / max(ist, 0.01))
+        faktor = min(faktor, 1.8 / gesamt, 1.45)
+        schritte.append({"deckung": round(deck, 3), "hoehe": round(ist, 3), "soll": round(soll, 3), "faktor": round(faktor, 3)})
+        if faktor < 1.03:
+            break
+        _skaliere_um_kopf(fig, faktor)
+        gesamt *= faktor
+    print("MOIN_EINPASSEN", name, schritte)
+    return {"schritte": schritte, "faktor": round(gesamt, 3), "deckung": schritte[-1]["deckung"]}
+
+
+def _punkt(fig, teil):
+    """Befestigungspunkt an der Figur: huefte, hand_r, hand_l, hals, fuss_r, fuss_l."""
+    if teil in ("hand_r", "hand_l"):
+        return fig.hand(teil[-1])
+    if teil == "hals":
+        return fig.kopf_mitte() - Vector((0, 0, 5 * mfigur.PX * fig.wurzel.scale.z))
+    if teil in ("fuss_r", "fuss_l"):
+        bein = fig.teile[f"bein_{teil[-1]}"]
+        return bein.matrix_world @ Vector((0, 0, -12 * mfigur.PX))
+    return fig.teile["koerper"].matrix_world.translation.copy()  # Hüfte
+
+
+def _deckung(scene, cam, maske_pfad, raster=(64, 36), nur=None):
     """Wie viel der entfernten Person verdecken die Figuren (Philip, Freunde, Gegenstand)? Sichtstrahlen durch ein
     Punktraster der Personenmaske; Treffer auf etwas anderes als die Hintergrundfläche zählen als verdeckt. Liegt der
-    Wert niedrig, bleibt der aufgefüllte Umriss der alten Person sichtbar („Geist“)."""
+    Wert niedrig, bleibt der aufgefüllte Umriss der alten Person sichtbar („Geist“). `nur`: nur Treffer auf diese
+    Objekte zählen (eine Figur je Person)."""
     import numpy as np
 
     img = bpy.data.images.load(maske_pfad, check_existing=True)
@@ -112,7 +189,7 @@ def _deckung(scene, cam, maske_pfad, raster=(64, 36)):
             punkte += 1
             ziel = rahmen[3] + (rahmen[0] - rahmen[3]) * u + (rahmen[2] - rahmen[3]) * v
             ok, _, _, _, ob, _ = scene.ray_cast(tiefe, von, (ziel - von).normalized())
-            if ok and ob is not None and ob.name != "hintergrund":
+            if ok and ob is not None and ob.name != "hintergrund" and (nur is None or ob.name in nur):
                 gedeckt += 1
     return round(gedeckt / punkte, 3) if punkte else 1.0
 
@@ -165,9 +242,14 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         if all(0.01 < e.x < 0.99 and 0.02 < e.y < 0.99 for e in ecken):
             break
     kopf_faktor = faktor  # für den Bericht: wie stark die Figur für „Kopf im Bild“ verkleinert wurde
-    _bildflaeche(spec["hintergrund"], cam, abstand * 6, helligkeit=spec.get("hintergrund_hell", 1.0))
+    # weit hinten, damit auch kleinere (fernere) Freunde davor stehen
+    _bildflaeche(spec["hintergrund"], cam, abstand * 14, helligkeit=spec.get("hintergrund_hell", 1.0))
 
     info = {"kopf_faktor": kopf_faktor}
+    # Philip in den Umriss der Person einpassen, die er ersetzt (eigene Maske je Person aus freistellen.py) – vor dem
+    # Gegenstand, damit der in der Hand der fertigen Figur sitzt
+    if spec.get("person"):
+        info["einpassen"] = _einpassen(scene, cam, fig, spec["person"], spec["person"].get("maske"), "ich")
     r = spec.get("requisit")
     if spec.get("ziel"):
         # Worauf die Person zielt oder zeigt ([u, v] im Bild): den Arm mit dem Gegenstand genau dorthin richten.
@@ -188,13 +270,15 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         oben = (rot @ Vector((0, -1, 0)))  # Vorderseite des hängenden Arms = oben, wenn er nach vorn zeigt
         oben = (oben - lauf * oben.dot(lauf)).normalized()
         quer = oben.cross(lauf).normalized()
-        leer = _requisit(r["gltf"], r.get("knoten"), r.get("laenge_px", 9) * mfigur.PX)
-        leer.matrix_world = Matrix.Translation(fig.hand(seite) + lauf * 0.6 * mfigur.PX + oben * 0.8 * mfigur.PX) @ Matrix((lauf, quer, oben)).transposed().to_4x4()
+        g = fig.wurzel.scale.x  # eingepasste Figur: Gegenstand wächst mit
+        leer = _requisit(r["gltf"], r.get("knoten"), r.get("laenge_px", 9) * mfigur.PX * g)
+        leer.matrix_world = Matrix.Translation(fig.hand(seite) + (lauf * 0.6 + oben * 0.8) * mfigur.PX * g) @ Matrix((lauf, quer, oben)).transposed().to_4x4()
         info["requisit"] = r["gltf"]
 
     # Freunde (Philip, 29.09.): an der Stelle weiterer Personen der Vorlage oder daneben. Die Größe ergibt sich aus der
     # Entfernung: halb so großer Kopf = doppelt so weit weg, auf dem Sehstrahl durch die Kopfmitte im Bild
     haupt_anteil = spec.get("kopf_anteil", 0.4)
+    freund_figuren = []
     for i, fr in enumerate(spec.get("freunde") or []):
         f = mfigur.baue_figur(f"freund{i}", fr["skin"], slim=fr.get("slim"))
         roh_f = fr.get("pose", "neutral")
@@ -209,7 +293,23 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         ziel_kopf = cam.location + Vector(((fu - 0.5) * breite_m / abstand, 1, (0.5 - fv) * hoehe_m / abstand)) * tiefe
         f.wurzel.location = ziel_kopf - f.kopf_mitte()
         bpy.context.view_layer.update()
-        info.setdefault("freunde", []).append({"kopf": [fu, fv], "tiefe": round(tiefe, 2)})
+        freund_figuren.append(f)
+        eintrag = {"kopf": [fu, fv], "tiefe": round(tiefe, 2)}
+        if fr.get("person"):
+            eintrag["einpassen"] = _einpassen(scene, cam, f, fr["person"], fr["person"].get("maske"), f"freund{i}")
+        info.setdefault("freunde", []).append(eintrag)
+
+    # Verbindungen zwischen den Figuren wie in der Vorlage (Kette bei Chained Together, Seil, Leine)
+    alle = {"ich": fig, **{f"freund{i}": f for i, f in enumerate(freund_figuren)}}
+    for n, vb in enumerate(spec.get("verbindungen") or []):
+        a, b = alle.get(vb.get("von")), alle.get(vb.get("zu"))
+        art = vb.get("art", "kette")
+        if not a or not b or art not in mszene.VERBINDUNGEN:
+            print("MOIN_WARNUNG Verbindung übersprungen", vb)
+            continue
+        pa, pb = _punkt(a, vb.get("von_punkt", "huefte")), _punkt(b, vb.get("zu_punkt", "huefte"))
+        mszene._verbindung(pa, pb, art, spec.get("texturen", ""), f"verbindung{n}.{art}")
+        info.setdefault("verbindungen", []).append(vb)
 
     # Licht wie in der Vorlage: warmes Key-Licht von der Lichtseite, kühle Füllung, helle Randkante
     for name, ort, energie, groesse, farbe in (

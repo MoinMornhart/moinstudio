@@ -290,4 +290,70 @@ POSEN = {
         "bein_r": {"seitlich": 6},
         "bein_l": {"seitlich": 4},
     },
+    # Ganzkörperposen aus Spiele-Thumbnails (Spiele-Vorlage, Philip 30.09.: „alles können“)
+    # Klettern an einer Wand: Arme hoch und versetzt, ein Knie hochgezogen, das andere Bein gestreckt nach unten
+    "klettern": {
+        "koerper": {"vor": 8},
+        "kopf": {"nicken": 18},
+        "arm_r": {"heben": 165, "seitlich": 12, "beugen": 35},
+        "arm_l": {"heben": 125, "seitlich": 18, "beugen": 55},
+        "bein_r": {"vor": 70, "seitlich": 10, "beugen": 95},
+        "bein_l": {"vor": -8, "seitlich": 6, "beugen": 15},
+    },
+    # Hechtsprung / Sprung nach etwas greifen: Körper nach vorn geneigt in der Luft, ein Arm weit vorgestreckt,
+    # der andere schwingt nach hinten, Beine ziehen nach
+    "hechtsprung": {
+        "kippen": -38,
+        "koerper": {"drehen": -12, "vor": 10},
+        "kopf": {"nicken": -30, "drehen": 10},
+        "arm_r": {"heben": 125, "seitlich": 28, "beugen": 8},
+        "arm_l": {"heben": 60, "seitlich": 75, "drehen": -20, "beugen": 12},
+        "bein_r": {"vor": -35, "seitlich": 10, "beugen": 60},
+        "bein_l": {"vor": 20, "seitlich": 14, "beugen": 35},
+    },
+    # Hängen: an einer oder beiden Händen, Arme gestreckt nach oben, Beine baumeln locker
+    "haengen": {
+        "koerper": {"vor": -4},
+        "kopf": {"nicken": 22},
+        "arm_r": {"heben": 172, "seitlich": 10, "beugen": 6},
+        "arm_l": {"heben": 168, "seitlich": 16, "beugen": 10},
+        "bein_r": {"vor": 12, "seitlich": 4, "beugen": 25},
+        "bein_l": {"vor": -6, "seitlich": 8, "beugen": 10},
+    },
+    # Sitzen (Stuhl, Kante, Couch): Oberschenkel waagerecht nach vorn, Unterschenkel hängen senkrecht
+    "sitzen": {
+        "kopf": {"nicken": 4},
+        "arm_r": {"heben": 38, "seitlich": 8, "beugen": 40},
+        "arm_l": {"heben": 34, "seitlich": 8, "beugen": 45},
+        "bein_r": {"vor": 90, "seitlich": 6, "beugen": 90},
+        "bein_l": {"vor": 88, "seitlich": 8, "beugen": 88},
+    },
+    # Knien: ein Knie am Boden, das andere Bein aufgestellt
+    "knien": {
+        "koerper": {"vor": 6},
+        "arm_r": {"heben": 30, "seitlich": 10, "beugen": 40},
+        "arm_l": {"heben": 20, "seitlich": 10, "beugen": 30},
+        "bein_r": {"vor": 85, "seitlich": 6, "beugen": 90},
+        "bein_l": {"vor": -5, "seitlich": 6, "beugen": 95},
+    },
+    # Fallen (nach hinten, Arme rudern hoch, Beine strampeln)
+    "fallen": {
+        "kippen": 30,
+        "kippen_seite": -10,
+        "koerper": {"vor": -12},
+        "kopf": {"nicken": -10},
+        "arm_r": {"heben": 150, "seitlich": 55, "beugen": 30},
+        "arm_l": {"heben": 120, "seitlich": 70, "beugen": 40},
+        "bein_r": {"vor": 40, "seitlich": 14, "beugen": 55},
+        "bein_l": {"vor": 5, "seitlich": 18, "beugen": 20},
+    },
+    # Liegen auf dem Rücken (verletzt, erschöpft, schlafend)
+    "liegen": {
+        "kippen": 88,
+        "kopf": {"nicken": 20, "drehen": 20},
+        "arm_r": {"heben": 20, "seitlich": 30, "beugen": 10},
+        "arm_l": {"heben": 10, "seitlich": 20},
+        "bein_r": {"seitlich": 8, "vor": 10, "beugen": 20},
+        "bein_l": {"seitlich": 6},
+    },
 }

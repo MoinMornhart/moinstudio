@@ -39,6 +39,13 @@ def baue_item(name, texturen_ordner, pixel=ITEM_PIXEL, collection=None):
             return False
         return px[(j * w + i) * 4 + 3] > 0.5
 
+    # Werkzeuge (Axt, Hacke, Schaufel, Spitzhacke) füllen ihre Textur nicht ganz: nach sichtbarer Länge entlang der
+    # Diagonale auf Schwertlänge bringen (Philip, 30.09.: „die Axt ist falsch“ – sie wirkte winzig)
+    diag = [i + j for j in range(h) for i in range(w) if deckend(i, j)]
+    if diag:
+        spanne = max(diag) - min(diag) + 1
+        pixel *= min(1.35, max(1.0, 27 * w / 16 / spanne))
+
     verts, faces, uvs = [], [], []
     d = 0.5 * pixel
 
@@ -116,4 +123,49 @@ def in_die_hand(item, figur, seite, kamera, winkel=40.0):
     griff = Vector(item["griff"])
     item.matrix_world = Matrix.Translation(hand) @ rot @ Matrix.Translation(-griff)
     bpy.context.view_layer.update()
+    # Gesicht frei (Stilbuch: das Gesicht ist das Wichtigste): liegt der Gegenstand über dem Kopf, zur anderen Seite
+    # drehen, sonst steiler halten
+    if not getattr(in_die_hand, "_innen", False) and _ueber_gesicht(item, figur, kamera) > 0.2:
+        in_die_hand._innen = True
+        try:
+            for w2, andersrum in ((winkel, True), (75.0, False), (75.0, True)):
+                _neu_ausrichten(item, figur, seite, kamera, w2, andersrum)
+                if _ueber_gesicht(item, figur, kamera) <= 0.2:
+                    break
+        finally:
+            in_die_hand._innen = False
     return item
+
+
+def _neu_ausrichten(item, figur, seite, kamera, winkel, andersrum):
+    """wie in_die_hand, aber die Klinge zeigt bei `andersrum` zur anderen Bildseite"""
+    hand = figur.hand(seite)
+    cam = kamera.matrix_world.to_3x3()
+    rechts, oben, vor = cam @ Vector((1, 0, 0)), cam @ Vector((0, 1, 0)), cam @ Vector((0, 0, -1))
+    nach_rechts = ((hand - figur.kopf_mitte()).dot(rechts) >= 0) != andersrum
+    a = math.radians(winkel)
+    klinge = (rechts * (math.cos(a) if nach_rechts else -math.cos(a)) + oben * math.sin(a)).normalized()
+    y_w = vor.normalized()
+    anti = y_w.cross(klinge).normalized()
+    x_w, z_w = ((klinge - anti) / math.sqrt(2)).normalized(), ((klinge + anti) / math.sqrt(2)).normalized()
+    if x_w.cross(y_w).dot(z_w) < 0:
+        anti = -anti
+        x_w, z_w = ((klinge - anti) / math.sqrt(2)).normalized(), ((klinge + anti) / math.sqrt(2)).normalized()
+    rot = Matrix((x_w, y_w, z_w)).transposed().to_4x4()
+    item.matrix_world = Matrix.Translation(hand) @ rot @ Matrix.Translation(-Vector(item["griff"]))
+    bpy.context.view_layer.update()
+
+
+def _ueber_gesicht(item, figur, kamera):
+    """Anteil des Kopfes im Bild, den der Gegenstand verdeckt (nur wenn er vor dem Kopf liegt)."""
+    from bpy_extras.object_utils import world_to_camera_view
+
+    scene = bpy.context.scene
+    k = [world_to_camera_view(scene, kamera, e) for e in figur.kopf_ecken()]
+    i = [world_to_camera_view(scene, kamera, item.matrix_world @ Vector(c)) for c in item.bound_box]
+    if min(e.z for e in i) > min(e.z for e in k) + 0.3:  # Gegenstand deutlich hinter dem Kopf
+        return 0.0
+    kx0, kx1, ky0, ky1 = min(e.x for e in k), max(e.x for e in k), min(e.y for e in k), max(e.y for e in k)
+    ix0, ix1, iy0, iy1 = min(e.x for e in i), max(e.x for e in i), min(e.y for e in i), max(e.y for e in i)
+    schnitt = max(0.0, min(kx1, ix1) - max(kx0, ix0)) * max(0.0, min(ky1, iy1) - max(ky0, iy0))
+    return schnitt / max(1e-6, (kx1 - kx0) * (ky1 - ky0))

@@ -2,7 +2,7 @@
 
 Beschreibung (alle Längen in Blöcken, Winkel in Grad):
 {
-  "welt": {"art": "wiese" | "klippe" | "meeresklippe" | "schlucht" | "dorf" | "hoehle" | "nether", "kante": 0, "tiefe": 20, "seed": 7,
+  "welt": {"art": "wiese" | "klippe" | "meeresklippe" | "schlucht" | "dorf" | "hoehle" | "nether" (mit "biom": oede | karmesin | wirr | seelensand | basalt), "kante": 0, "tiefe": 20, "seed": 7,
            "grund": "lava" | "water" | null},
   "himmel": "tag" | "abend" | "nacht",
   "figuren": [{"id": "ich", "skin": "<pfad>", "slim": null, "pose": "zeigen", "posen_korrektur": {…},
@@ -78,6 +78,11 @@ def _welt(w, texturen, himmel="tag"):
         if art == "lavameer":
             bloecke.DUNST.update(farbe=(0.9, 0.35, 0.08), halbwert=90.0)
         return mwelt.baue_meerwelt(texturen, "lava" if art == "lavameer" else "water", aend)
+    if art == "nether":
+        # Nether nach den Biom-Daten des Spiels: offene Riesenhöhle, Lavameer, heller Dunst in Biomfarbe
+        b = mwelt.NETHER_BIOME[mwelt.nether_biom(w.get("biom"))]
+        bloecke.DUNST.update(farbe=b["dunst"], halbwert=75.0)
+        return mwelt.baue_nether(texturen, aend, biom=w.get("biom"), seed=seed)
     if art in mwelt.RAUM_ARTEN:
         # geschlossener Raum: dunkler bzw. roter Dunst statt Himmelsblau
         bloecke.DUNST.update({"hoehle": {"farbe": (0.015, 0.02, 0.03), "halbwert": 70.0},
@@ -213,6 +218,39 @@ def _mob_auf_die_buehne(scene, haupt, mobs, thema, getragen=frozenset()):
             mob.wurzel.location = (neu.x, neu.y, boden)
             print("MOIN_BUEHNE", m["art"], "herangeholt von", round(weg.length / BLOCK, 1), "neben Philip")
     bpy.context.view_layer.update()
+
+
+def _gegner_auf_die_buehne(scene, haupt, figuren, thema):
+    """Kampf/Duell (Philip, 30.09.: „es soll aufhören, mich immer in den Vordergrund zu packen bei einem Kampf“): Der Gegner
+    steht wie bei GommeHD-Duellen auf gleicher Tiefe neben Philip, beide gleich groß im Bild – nicht klein hinten.
+    Steht die Thema-Figur mehr als 1,2 Blöcke weiter hinten oder mehr als 3,6 Blöcke entfernt, rückt sie heran."""
+    for f, fig in figuren:
+        if fig is haupt or f.get("auf") or not (thema == f["id"] or thema in ("gegner", None) and f.get("id") != "ich"):
+            continue
+        weg = fig.wurzel.location - haupt.wurzel.location
+        weg.z = 0
+        if abs(weg.y) <= 1.2 * BLOCK and weg.length <= 3.6 * BLOCK:
+            continue
+        seite = 1 if weg.x >= 0 else -1
+        neu = haupt.wurzel.location + Vector((seite * 2.8 * BLOCK, max(-0.6, min(0.6, weg.y / BLOCK * 0.2)) * BLOCK, 0))
+        for o in _alle_objekte(fig):
+            o.hide_viewport = True
+        boden = _boden_hoehe(scene, neu.x, neu.y, nah_an=fig.wurzel.location.z)
+        for o in _alle_objekte(fig):
+            o.hide_viewport = False
+        fig.wurzel.location = (neu.x, neu.y, boden + (f.get("hoehe") or 0) * BLOCK)
+        print("MOIN_BUEHNE Gegner", f["id"], "herangeholt von", round(weg.length / BLOCK, 1), "neben Philip")
+        break
+    bpy.context.view_layer.update()
+
+
+def _alle_objekte(fig):
+    raus, offen = [], [fig.wurzel]
+    while offen:
+        o = offen.pop()
+        raus.append(o)
+        offen.extend(o.children)
+    return raus
 
 
 def _riesen_zurueck(haupt, mobs, thema, getragen=frozenset()):
@@ -429,8 +467,24 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     return info
 
 
+def _nether_himmel(szene):
+    """Im Nether gibt es keinen Himmel: Tag/Nacht/Blutrot werden durch die Stimmung des Bioms ersetzt."""
+    w = szene.get("welt", {})
+    if w.get("art") != "nether":
+        return
+    name = mwelt.nether_biom(w.get("biom"))
+    b = mwelt.NETHER_BIOME[name]
+    schluessel = f"nether_{name}"
+    mhimmel.VARIANTEN[schluessel] = {"oben": tuple(c * 0.25 for c in b["dunst"]), "horizont": b["dunst"], "wolken": b["dunst"],
+                                     "staerke": 0.6, "sonne": 0.0, "sonne_farbe": (1, 1, 1), "sonne_hoehe": 60,
+                                     "rand": b["rand"], "gesicht": 34.0, "mob_licht": True, "mob_licht_faktor": 0.7,
+                                     "dunst": b["dunst"], "ohne_wolken": True}
+    szene["himmel"] = schluessel
+
+
 def baue(szene, texturen, ausgabe=None, bericht=None):
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    _nether_himmel(szene)
     scene = bpy.context.scene
     r = szene.get("render", {})
     scene.render.resolution_x = r.get("breite", 1280)
@@ -494,6 +548,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     # Mobs, auf denen jemand steht, sitzt oder reitet, bleiben unter der Figur
     getragen = {f.get("auf") for f, _ in figuren if isinstance(f.get("auf"), str)}
     _mob_auf_die_buehne(scene, haupt, mobs, k.get("thema"), getragen)
+    if k.get("modus") in ("kampf", "mob"):
+        _gegner_auf_die_buehne(scene, haupt, figuren, k.get("thema"))
     _riesen_zurueck(haupt, mobs, k.get("thema"), getragen)
     cam_data = bpy.data.cameras.new("kamera")
     cam = bpy.data.objects.new("kamera", cam_data)
@@ -693,6 +749,9 @@ VERBINDUNGEN = {
     "strahl": {"breite": 0.12, "durchhang": 0.0, "textur": ("entity", "guardian", "guardian_beam.png"), "leuchten": 4.0, "tönung": (0.85, 0.73, 0.30)},
     "angelschnur": {"breite": 0.012, "durchhang": 0.12, "farbe": (0.05, 0.05, 0.05)},
     "leine": {"breite": 0.035, "durchhang": 0.08, "farbe": (0.36, 0.24, 0.12)},
+    "seil": {"breite": 0.05, "durchhang": 0.1, "farbe": (0.55, 0.42, 0.26)},
+    # Kette wie der Kettenblock im Spiel: zwei gekreuzte Flächen, 3 Pixel breit, Glieder abwechselnd (template_chain)
+    "kette": {"breite": 1.5 / 16, "durchhang": 0.1, "textur": ("block", "iron_chain.png"), "kreuz": ((0, 3 / 16), (3 / 16, 6 / 16))},
 }
 
 
@@ -741,7 +800,23 @@ def _verbindung(a, b, art, texturen, name):
     w = v["breite"] * BLOCK
     verts, faces, uvs = [], [], []
     gelaufen = 0.0
-    for i in range(stuecke):
+    for i in range(stuecke if v.get("kreuz") else 0):
+        # Kette: je Stück zwei gekreuzte Flächen mit den beiden Gliederspalten der Textur (u 0–3 bzw. 3–6 Pixel)
+        p0, p1 = punkte[i], punkte[i + 1]
+        achse = (p1 - p0).normalized()
+        quer = achse.cross(Vector((0, 0, 1)))
+        if quer.length < 1e-4:
+            quer = Vector((1, 0, 0))
+        quer.normalize()
+        hoch = quer.cross(achse).normalized()
+        schritt = (p1 - p0).length / BLOCK
+        for richtung, (u0, u1) in zip((quer, hoch), v["kreuz"]):
+            n = len(verts)
+            verts += [p0 - richtung * w, p0 + richtung * w, p1 + richtung * w, p1 - richtung * w]
+            faces.append((n, n + 1, n + 2, n + 3))
+            uvs += [(u0, gelaufen), (u1, gelaufen), (u1, gelaufen + schritt), (u0, gelaufen + schritt)]
+        gelaufen += schritt
+    for i in range(0 if v.get("kreuz") else stuecke):
         p0, p1 = punkte[i], punkte[i + 1]
         achse = (p1 - p0).normalized()
         quer = achse.cross(Vector((0, 0, 1)))
@@ -773,6 +848,11 @@ def _verbindung(a, b, art, texturen, name):
         tex.image = bpy.data.images.load(pfad, check_existing=True)
         tex.interpolation = "Closest"
         nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+        if v.get("kreuz"):
+            nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+            bsdf.inputs["Metallic"].default_value = 0.6
+            if hasattr(mat, "blend_method"):
+                mat.blend_method = "CLIP"
         if v.get("leuchten"):
             # wie im Spiel additiv: Schwarz ist durchsichtig, helle Linien leuchten in der Farbe des geladenen Strahls
             # (GuardianRenderer: Farbe wandert beim Aufladen von Lila zu Gold-Weiß; hier 80 % geladen)

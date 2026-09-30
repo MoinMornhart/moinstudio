@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analysePrompt, begrenzeWinkel, besterTreffer, groesserBeiLuecke, freundePlaetze, kopfAnteil, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
+import { analysePrompt, begrenzeWinkel, besterTreffer, groesserBeiLuecke, freundePlaetze, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
 
 describe('Spiele-Vorlage', () => {
   it('findet das passende Poly-Haven-Modell zum Suchwort', () => {
@@ -54,5 +54,36 @@ describe('Spiele-Vorlage', () => {
 
   it('begrenzt verdrehte Körper (Rückansicht nur über ansicht)', () => {
     expect(begrenzeWinkel({ blick: 30, koerper: { drehen: 155, vor: 4 }, arm_r: { heben: 80 } })).toEqual({ koerper: { drehen: 60, vor: 4 }, arm_r: { heben: 80 } })
+  })
+})
+
+describe('Spiele-Vorlage: mehrere Personen, Verbindungen, Schlussprüfung', () => {
+  it('gibt je ersetzter Person einen Kasten an die Freistellung', () => {
+    const a = { box: [0.4, 0.1, 0.9, 0.9] as [number, number, number, number], weitere: [{ box: [0.1, 0.3, 0.5, 1.2] as [number, number, number, number], kopf: [0.3, 0.4] as [number, number], kopf_anteil: 0.2 }] }
+    expect(personenArgumente(a, 1)).toEqual(['--person=0.4,0.1,0.9,0.9', '--person=0.1,0.3,0.5,1'])
+    expect(personenArgumente(a, 0)).toEqual(['--person=0.4,0.1,0.9,0.9'])
+    expect(personenArgumente({ weitere: [] }, 0)).toEqual([])
+  })
+
+  it('zeichnet Verbindungen nur, wenn beide Enden ersetzt werden', () => {
+    const a = { verbindungen: [{ von: 'ich', zu: 'freund0', art: 'kette' as const }, { von: 'ich', zu: 'freund1', art: 'seil' as const }, { von: 'ich', zu: 'ich', art: 'kette' as const }] }
+    expect(gueltigeVerbindungen(a, 1).map((v) => v.zu)).toEqual(['freund0'])
+    expect(gueltigeVerbindungen(a, 0)).toEqual([])
+  })
+
+  it('übernimmt nur erlaubte Korrekturen der Schlussprüfung', () => {
+    const spec: Record<string, unknown> = { skin: 'a.png', kopf_anteil: 0.4, freunde: [{ skin: 'b.png', kopf_anteil: 0.2 }] }
+    korrigiere(spec, { kopf_anteil: 0.95, skin: 'boese.png', pose: { koerper: { drehen: 200 } }, freunde: [{ kopf: [0.3, 0.4], skin: 'x.png' }] })
+    expect(spec['skin']).toBe('a.png')
+    expect(spec['kopf_anteil']).toBe(0.7)
+    expect(spec['pose']).toEqual({ koerper: { drehen: 60 } })
+    expect((spec['freunde'] as Record<string, unknown>[])[0]).toEqual({ skin: 'b.png', kopf_anteil: 0.2, kopf: [0.3, 0.4] })
+  })
+
+  it('beschreibt den ganzen Körper und Verbindungen im Analyse-Prompt', () => {
+    const p = analysePrompt('v.png', ['klettern'], '', undefined, ['SimPell'])
+    expect(p).toContain('bein_r/bein_l')
+    expect(p).toContain('verbindungen')
+    expect(p).toContain('box: [x0, y0, x1, y1] Kasten um die GANZE Person')
   })
 })
