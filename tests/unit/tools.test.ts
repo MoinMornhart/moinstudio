@@ -82,6 +82,7 @@ describe('ToolManager (mit lokalem Testserver)', () => {
   it('lädt, prüft, entpackt (ohne Oberordner) und merkt sich die Installation', async () => {
     const root = join(work, 'root-ok')
     const mgr = new ToolManager(root)
+    mgr.freeBytes = async (): Promise<number> => 50e9 // unabhängig vom echten freien Speicher
     const phases: string[] = []
     const exe = await mgr.install(spec('sums.sha256'), (p) => phases.push(p.phase))
     expect(exe).toBe(join(root, 'tool', '1.0', 'bin', 'tool.exe'))
@@ -100,6 +101,7 @@ describe('ToolManager (mit lokalem Testserver)', () => {
   it('bricht bei falscher Prüfsumme ab und hinterlässt nichts', async () => {
     const root = join(work, 'root-bad')
     const mgr = new ToolManager(root)
+    mgr.freeBytes = async (): Promise<number> => 50e9 // unabhängig vom echten freien Speicher
     await expect(mgr.install(spec('bad.sha256'))).rejects.toBeInstanceOf(ChecksumError)
     expect(await readdir(join(root, 'downloads'))).toEqual([])
     expect(await mgr.exePath(spec('bad.sha256'))).toBeNull()
@@ -108,6 +110,7 @@ describe('ToolManager (mit lokalem Testserver)', () => {
   it('deinstalliert sauber', async () => {
     const root = join(work, 'root-un')
     const mgr = new ToolManager(root)
+    mgr.freeBytes = async (): Promise<number> => 50e9 // unabhängig vom echten freien Speicher
     await mgr.install(spec('sums.sha256'))
     await mgr.uninstall(spec('sums.sha256'))
     expect(await mgr.exePath(spec('sums.sha256'))).toBeNull()
