@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-30
+
+> Premiere: Effekte
+
 ### Added
 
 - Premiere: Effekte kommen mit in die Sequenz – Zooms als Keyframes (auch auf einen Punkt), Texte als Bilder auf Spur V2, jeder Effekt als Marker mit Hinweis, was von Hand gesetzt werden muss (ROADMAP E.6, ungetestet in Premiere).
