@@ -177,6 +177,44 @@ def _auf_den_boden(scene, fig, hoehe=None):
     bpy.context.view_layer.update()
 
 
+def _mob_auf_die_buehne(scene, haupt, mobs, thema, getragen=frozenset()):
+    """Wie bei BastiGHG, GommeHD und Paluten: Der Mob, um den es geht, steht groß und nah neben Philip, nicht klein im
+    Hintergrund (Vergleich mit 56 Vorbildern, 30.09.). Ein Thema-Mob am Boden, der weiter als 4,5 Blöcke von Philip weg
+    steht, rückt auf 3,5 Blöcke heran; kleine Mobs (Huhn, Frosch, Schleim) werden auf mindestens 1,3 Blöcke Höhe vergrößert.
+    Schwebende Mobs, Riesen und Mobs, auf denen jemand sitzt, bleiben, wie sie sind."""
+    for i, (m, mob) in enumerate(mobs):
+        if not (thema == f"mob:{i}" or thema == m["art"]) or f"mob:{i}" in getragen or m["art"] in getragen:
+            continue
+        bpy.context.view_layer.update()
+        punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
+        if not punkte:
+            continue
+        hoehe = max(p.z for p in punkte) - min(p.z for p in punkte)
+        schwebt = m.get("hoehe", 0) > 1.5 or (len(m.get("position", ())) > 2 and m["position"][2] > 1.5)
+        if schwebt or hoehe > 3.0 * BLOCK:
+            continue
+        if hoehe < 1.3 * BLOCK:
+            f = min(2.5, 1.3 * BLOCK / max(hoehe, 1e-3))
+            mob.wurzel.scale = tuple(s * f for s in mob.wurzel.scale)
+            print("MOIN_BUEHNE", m["art"], "vergrößert", round(f, 2))
+        weg = mob.wurzel.location - haupt.wurzel.location
+        weg.z = 0
+        # wie bei den Vorbildern fast auf gleicher Tiefe neben Philip: Abstand nach hinten (y) stauchen, höchstens 2,8 Blöcke
+        flach = Vector((weg.x, weg.y * 0.45, 0))
+        if flach.length < 0.3 * BLOCK:  # genau hinter Philip: nach rechts (Gegner-Seite)
+            flach = Vector((1.0, 0.3, 0)) * BLOCK
+        if weg.length > 2.8 * BLOCK or abs(weg.y) > 1.5 * BLOCK:
+            neu = haupt.wurzel.location + flach.normalized() * min(2.8 * BLOCK, max(2.2 * BLOCK, flach.length))
+            for o in mob.teile.values():  # den Mob selbst nicht als Boden treffen
+                o.hide_viewport = True
+            boden = _boden_hoehe(scene, neu.x, neu.y, nah_an=mob.wurzel.location.z)
+            for o in mob.teile.values():
+                o.hide_viewport = False
+            mob.wurzel.location = (neu.x, neu.y, boden)
+            print("MOIN_BUEHNE", m["art"], "herangeholt von", round(weg.length / BLOCK, 1), "neben Philip")
+    bpy.context.view_layer.update()
+
+
 def _riesen_zurueck(haupt, mobs, thema, getragen=frozenset()):
     """Riesige Mobs (Ghast, 10-fache Mobs) passen nur ins Bild, wenn sie weit genug hinten stehen – wie die
     Riesenspinne bei Paluten. Ist ein Mob das Kamera-Thema und höher als 60 % seines Abstands zur Hauptfigur, wird er
@@ -373,6 +411,15 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
         elif sichtbar < 0.12 and (b[0] < 0 or b[2] > 1 or b[1] < 0 or b[3] > 1):
             # kleine Mobs gehören ganz ins Bild (Riesenmobs dürfen angeschnitten sein wie bei den Vorbildern)
             warnungen.append(f"Mob {m['art']} am Bildrand angeschnitten – weiter zur Mitte oder näher an Philip stellen")
+    # Thema-Mob groß wie bei den Vorbildern (Mob nimmt dort 30–60 % der Bildhöhe ein)
+    t_thema = szene.get("kamera", {}).get("thema")
+    for i, m in enumerate(info["mobs"]):
+        if t_thema in (f"mob:{i}", m["art"]):
+            b = m["box"]
+            sichtbar_h = max(0.0, min(1, b[3]) - max(0, b[1]))
+            if 0 < sichtbar_h < 0.28:
+                warnungen.append(f"Mob {m['art']} zu klein im Bild ({int(sichtbar_h * 100)} % der Bildhöhe) – näher an Philip und die Kamera, wie bei BastiGHG groß neben ihm")
+            break
     for o in info["objekte"]:
         if _im_bild(o["box"]) < 0.8 or o["box"][0] < 0 or o["box"][2] > 1:
             warnungen.append(f"Objekt {o['block']} (objekt:{o['nr']}) nicht ganz im Bild ({int(_im_bild(o['box']) * 100)} %) – näher an Philip und zur Bildmitte")
@@ -446,6 +493,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     k = szene.get("kamera", {})
     # Mobs, auf denen jemand steht, sitzt oder reitet, bleiben unter der Figur
     getragen = {f.get("auf") for f, _ in figuren if isinstance(f.get("auf"), str)}
+    _mob_auf_die_buehne(scene, haupt, mobs, k.get("thema"), getragen)
     _riesen_zurueck(haupt, mobs, k.get("thema"), getragen)
     cam_data = bpy.data.cameras.new("kamera")
     cam = bpy.data.objects.new("kamera", cam_data)
@@ -539,7 +587,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         for nr, (richtung, energie, farbe) in enumerate(((cam.matrix_world.translation - mitte, 600, (1.0, 1.0, 1.0)), (mitte - cam.matrix_world.translation, 3000, variante.get("rand", (1, 1, 1))))):
             l = bpy.data.lights.new(f"mob_licht{nr}", "AREA")
             # gleiche Beleuchtungsstärke für jede Mob-Größe: Abstand wächst mit der Größe, Energie mit dem Abstand²
-            l.energy = energie * (max(0.5, groesse) / 3) ** 2
+            l.energy = energie * (max(0.5, groesse) / 3) ** 2 * variante.get("mob_licht_faktor", 1.0)
             l.size = max(2.0, groesse)
             l.color = farbe
             lo = bpy.data.objects.new(l.name, l)

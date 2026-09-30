@@ -13,7 +13,7 @@ VARIANTEN = {
     "abend": {"oben": (0.10, 0.18, 0.55), "horizont": (1.0, 0.62, 0.36), "wolken": (1.0, 0.72, 0.55), "staerke": 0.8,
               "sonne": 4.0, "sonne_farbe": (1.0, 0.62, 0.32), "sonne_hoehe": 12, "mob_licht": True},
     "nacht": {"oben": (0.005, 0.01, 0.04), "horizont": (0.03, 0.05, 0.12), "wolken": (0.08, 0.09, 0.14), "staerke": 0.6,
-              "sonne": 0.6, "sonne_farbe": (0.55, 0.65, 1.0), "sonne_hoehe": 40, "mob_licht": True, "rand": (0.55, 0.7, 1.0)},
+              "sonne": 0.6, "sonne_farbe": (0.55, 0.65, 1.0), "sonne_hoehe": 40, "mob_licht": True, "mob_licht_faktor": 0.55, "rand": (0.55, 0.7, 1.0)},
     # Das End: fast schwarzer, lila getönter Himmel ohne Wolken, fahles Licht
     "end": {"oben": (0.02, 0.006, 0.05), "horizont": (0.16, 0.06, 0.26), "wolken": (0.16, 0.06, 0.26), "staerke": 1.3,
             "sonne": 1.2, "sonne_farbe": (0.85, 0.75, 1.0), "sonne_hoehe": 55, "rand": (0.75, 0.45, 1.0), "gesicht": 30.0,

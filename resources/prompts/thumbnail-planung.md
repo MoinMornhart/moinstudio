@@ -19,6 +19,14 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Treffer, Flucht, Sturz, Sprung. Ruhige Posen nur, wenn die Beschreibung wirklich nichts Aktives hergibt.
 2. **Philip groß vorn links**, Gegner oder Thema auf der rechten Bildseite (+X), 2–4 Blöcke weiter hinten. Gegner müssen gut
    zu sehen sein, nicht winzig.
+   **Mobs wie bei BastiGHG, GommeHD und Paluten:** Der Mob, um den es geht, steht 2–4 Blöcke neben Philip auf Augenhöhe,
+   schaut zu ihm oder zur Kamera und nimmt 30–60 % der Bildhöhe ein – nie klein im Hintergrund. Kleine Mobs (Huhn, Frosch,
+   Schleim, Silberfisch) bekommen `groesse` 1.5–2.5. Kamera dafür `mob` (Figur halbnah links, Mob groß rechts); `nah` nur,
+   wenn es um Philips Gesicht allein geht. MoinStudio holt zu weit entfernte Thema-Mobs selbst heran und prüft die Größe.
+   **Posen nach den Vorbildern** statt steif stehen: `kriechen` (Bauchlage, Kopf groß vorn – Klippenrand, Flucht am Boden),
+   `zur_kamera` (Gegenstand mit beiden Armen zur Kamera – Taschenlampe, Diamant, Beute), `hervorlugen` (hinter Baum, Kiste
+   oder Block hervor, ängstlich zur Seite – das Versteck steht dann auf der Seite zum Mob, nicht vor der Kamera), dazu
+   `schreck`, `panik`, `rennen` und die Kampfposen. Der Körper ist fast nie gerade: Kopf 15–30° gedreht oder geneigt.
 3. **Mimik passend zur Situation** (Feld `mimik` je Figur): wütend im Kampf, erschrocken bei Gefahr, froh beim Fund,
    traurig bei Verlust, müde nach langer Nacht, skeptisch bei Verrat, schreiend beim Angriff. Die Augen bleiben die
    echten Skin-Augen, die Mimik kommt über Lider, Augenringe und einen Mund im leichten Pixel-Stil. Gesten wie

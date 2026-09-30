@@ -112,6 +112,34 @@ POSEN = {
         "bein_r": {"vor": -6, "seitlich": 4},
         "bein_l": {"vor": -2, "seitlich": 4},
     },
+    # Kriechen/Bauchlage wie BastiGHG P4 (Bedrock-Wand, Klippenrand): liegt zur Kamera, Arme nach vorn auf dem Boden, Kopf hebt sich – Kamera nah und tief
+    "kriechen": {
+        "kippen": -84,
+        "kopf": {"nicken": -62, "drehen": 14, "neigen": 8},
+        "arm_r": {"heben": 172, "seitlich": 14, "beugen": 18},
+        "arm_l": {"heben": 158, "seitlich": 20, "beugen": 30},
+        "bein_r": {"seitlich": 6},
+        "bein_l": {"seitlich": 8, "beugen": 12},
+    },
+    # Gegenstand zur Kamera wie BastiGHG P5 (Taschenlampe, Diamant): beide Arme 80–90° nach vorn, leicht nach innen, Kopf zur Bildmitte gedreht
+    "zur_kamera": {
+        "koerper": {"vor": 6, "drehen": -12},
+        "kopf": {"drehen": 18, "neigen": 6},
+        "arm_r": {"heben": 70, "seitlich": -14, "beugen": 12},
+        "arm_l": {"heben": 64, "seitlich": -20, "beugen": 22},
+        "bein_r": {"vor": 6},
+        "bein_l": {"vor": -6},
+    },
+    # Hervorlugen wie BastiGHG P6 (hinter Baum, Kiste, Heuballen): seitlich geneigt, eine Hand an der Kante, Kopf schief, ängstlich zur Seite
+    "hervorlugen": {
+        "kippen_seite": 18,
+        "koerper": {"neigen": 12, "vor": 8},
+        "kopf": {"neigen": 16, "drehen": 24},
+        "arm_r": {"heben": 88, "seitlich": 30, "beugen": 50},
+        "arm_l": {"heben": 20, "seitlich": 8, "beugen": 40},
+        "bein_r": {"beugen": 20},
+        "bein_l": {"beugen": 30, "vor": 10},
+    },
     # Getroffen: nach hinten geworfen, Arme hoch, Beine vorn – mit Höhe (in der Luft) in der Szene
     "getroffen": {
         "kippen": 30,

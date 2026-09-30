@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Thumbnail: Mobs wie bei BastiGHG, GommeHD und Paluten (Vergleich mit 56 Vorbildern): Ein Thema-Mob, der zu weit weg steht, rückt neben Philip; kleine Mobs werden fürs Bild vergrößert; neuer Kamera-Modus „mob“ (Figur halbnah, Mob groß daneben) statt Riesenkopf; ist der Mob zu klein im Bild, korrigiert die Selbstprüfung.
+- Thumbnail: neue Posen nach Bastis Bildern – kriechen (Bauchlage, Kopf groß vorn), zur_kamera (Gegenstand mit beiden Armen zur Kamera), hervorlugen.
+
 ## [0.35.1] - 2026-09-30
 
 > Thumbnail: ohne Vorbild-Hinweis
