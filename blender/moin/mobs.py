@@ -67,7 +67,10 @@ def _mesh(name, boxes, tex_w, tex_h, pivot_b, mat):
         if box.get("mirror"):
             rects["rechts"], rects["links"] = rects["links"], rects["rechts"]
         mitte = Vector((ox + w / 2, oz + d / 2, oy + h / 2))  # Blender-Achsen (x, z, y)
-        for face, ecken in _faces(w, h, d, inf).items():
+        # Nullstärke-Boxen (Flossen, Flügel): Vorder- und Rückseite lägen exakt aufeinander, das rendert
+        # Cycles schwarz – deshalb hauchdünn auseinanderziehen
+        dick = [max(a, 0.02) for a in (w, h, d)]
+        for face, ecken in _faces(*dick, inf).items():
             rx, ry, rw, rh = rects[face]
             if rw == 0 or rh == 0:
                 continue
