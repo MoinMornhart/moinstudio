@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-30
+
+> Thumbnail: Augen, Laser, Elytra
+
 ### Added
 
 - Thumbnail: Mobs haben leuchtende Augen wie im Spiel (Phantom, Enderman, Spinne), aus den echten Augen-Texturen des Spiels.
