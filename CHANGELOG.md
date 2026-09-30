@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.8] - 2026-09-30
+
+> Plan: Effekte per Sprache
+
 ### Dokumentation
 
 - Plan für Effekte und Intros per Sprache im Schnitt (ROADMAP M6b): Effekte aus kombinierbaren Bausteinen, Claude setzt freie Wünsche wie „mach mir ein geiles Intro“ um.
