@@ -5,6 +5,7 @@ import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import { ladeKatalog } from './katalog'
 import { sichereMcAssets } from './minecraft'
+import { lauf, sicherePakete, sichereUmgebung } from '../python'
 import { sichereMobs } from './mobimport'
 import { logoAufsetzen, type LogoWahl, type VarianteLogo } from '../logo/setzen'
 import { wichtigeBoxen } from '../logo/platz'
@@ -58,6 +59,9 @@ export interface ThumbnailPayload {
   logo?: LogoWahl
   /** Name des Videos, zu dem das Thumbnail gehört (nur für den Dateinamen beim Speichern) */
   videoName?: string
+  /** uv.exe und Ordner der kleinen Python-Umgebung für die Grafik-Ebene (nur Pillow, entsteht beim ersten Gebrauch) */
+  uv?: string
+  grafikPyDir?: string
 }
 
 export interface ThumbnailVariante {
@@ -119,6 +123,9 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
     const anteil = (x: number): number => Math.round(10 + ((i + x) / anzahl) * 88)
     const basis = join(p.ausgabe, `variante-${i + 1}`)
 
+    // Geteiltes Bild: jede Teil-Szene mit der Hauptsache in der Bildmitte (wird später als senkrechter Streifen genutzt)
+    const mitte = (s: Szene): Szene => ({ ...s, kamera: { ...(s.kamera as object), kopf_uv: [0.5, 0.5], thema_uv: [0.5, 0.3] } as Szene['kamera'] })
+    if (v.split) v.szene = mitte(v.szene)
     let szeneAktuell: Szene = v.szene
     let bestes: { versuch: number; ernst: string[]; warnungen: string[] } | null = null
     let renderFehler: string | null = null
@@ -165,7 +172,37 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
       const pfad = `${basis}.v${bestes.versuch}`
       let bild = `${pfad}.png`
       const warnungen = [...bestes.warnungen]
-      const texte = p.merkmal?.length ? p.merkmal : (v.text ?? [])
+      if (v.split) {
+        // weitere Teile je einmal rendern und mit schrägen Trennlinien zusammensetzen
+        ctx.progress(anteil(0.8), `Variante ${i + 1}: weitere Bildteile …`)
+        const teilBilder: [string, string][] = [[bild, v.split.teile[0]!.etikett ?? '-']]
+        for (const [n, teil] of v.split.teile.slice(1).entries()) {
+          const tpfad = `${basis}.teil${n + 2}`
+          const tszene = structuredClone(mitte(teil.szene)) as Szene & { figuren: { id: string; skin?: string; slim?: boolean | null }[] }
+          for (const f of tszene.figuren) {
+            const s = skins.get(f.id)
+            f.skin = s?.skin ?? join(mc.textures, 'entity', 'player', 'wide', 'steve.png')
+            if (s?.slim !== undefined && s.slim !== null) f.slim = s.slim
+          }
+          tszene['render'] = { ...(tszene['render'] as object | undefined), samples: p.blender.samples, geraet: p.blender.geraet }
+          tszene['mob_tabelle'] = mobs.tabelle
+          await writeFile(`${tpfad}.szene.json`, JSON.stringify(tszene, null, 1))
+          const r = await renderAufruf('render_szene.py', [`${tpfad}.szene.json`, mc.textures, `${tpfad}.png`, `${tpfad}.bericht.json`])
+          if (r.code === 0 || r.output.includes('MOIN_BILD_OK')) teilBilder.push([`${tpfad}.png`, teil.etikett ?? '-'])
+          else warnungen.push(`Bildteil ${n + 2} konnte nicht gerendert werden`)
+        }
+        if (teilBilder.length >= 2 && p.uv && p.grafikPyDir) {
+          try {
+            const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
+            await sicherePakete(p.uv, python, 'PIL', ['pillow'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+            await lauf(python, [join(p.blenderDir, 'split_setzen.py'), mc.assets, `${basis}.split.png`, ...teilBilder.flat()], ctx as JobContext<unknown>)
+            bild = `${basis}.split.png`
+          } catch (err) {
+            warnungen.push(`Geteiltes Bild konnte nicht zusammengesetzt werden: ${err instanceof Error ? err.message.slice(0, 120) : String(err)}`)
+          }
+        }
+      }
+      const texte = v.split ? [] : p.merkmal?.length ? p.merkmal : (v.text ?? [])
       let textBoxen: unknown = []
       if (texte.length) {
         ctx.progress(anteil(0.9), `Variante ${i + 1}: Text setzen …`)
@@ -178,6 +215,21 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
           warnungen.push(...(gesetzt.warnungen ?? []))
           textBoxen = gesetzt.texte ?? []
         } else warnungen.push('Text konnte nicht gesetzt werden')
+      }
+      const grafik = v.split ? [] : (v.grafik ?? [])
+      if (grafik.length && p.uv && p.grafikPyDir) {
+        ctx.progress(anteil(0.93), `Variante ${i + 1}: Grafik setzen …`)
+        try {
+          const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
+          await sicherePakete(p.uv, python, 'PIL', ['pillow'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+          await writeFile(`${basis}.grafik.json`, JSON.stringify(grafik))
+          const aus = await lauf(python, [join(p.blenderDir, 'grafik_setzen.py'), bild, `${pfad}.bericht.json`, `${basis}.grafik.json`, mc.assets, `${basis}.grafik.png`], ctx as JobContext<unknown>)
+          const zeile = /MOIN_GRAFIK (.*)/.exec(aus)?.[1]
+          bild = `${basis}.grafik.png`
+          textBoxen = [...(Array.isArray(textBoxen) ? textBoxen : []), ...((zeile ? (JSON.parse(zeile) as { boxen?: unknown[] }).boxen : []) ?? []).map((box) => ({ box }))]
+        } catch (err) {
+          warnungen.push(`Grafik konnte nicht gesetzt werden: ${err instanceof Error ? err.message.slice(0, 120) : String(err)}`)
+        }
       }
       let logo: VarianteLogo | undefined
       if (p.logo) {

@@ -13,7 +13,8 @@ from mathutils import Matrix, Vector
 # Modi: Brennweite, Kopfanteil an der Bildhöhe, Kopf-Lage (u, v; 0,0 = unten links), Wunschlage des Themas,
 # Höhenwinkel (positiv = Kamera höher als der Kopf, schaut hinab)
 MODI = {
-    "nah": {"linse": 24, "kopf_anteil": 0.42, "kopf_uv": (0.27, 0.58), "thema_uv": (0.72, 0.45), "hoehe": 10},
+    # Kopf höchstens gut ein Drittel der Bildhöhe (Vergleich mit BastiGHG 30.09.: 42 % wirkte erdrückend, Gesicht oft angeschnitten)
+    "nah": {"linse": 24, "kopf_anteil": 0.34, "kopf_uv": (0.27, 0.58), "thema_uv": (0.72, 0.45), "hoehe": 10},
     "gefahr": {"linse": 24, "kopf_anteil": 0.32, "kopf_uv": (0.24, 0.62), "thema_uv": (0.70, 0.30), "hoehe": 18},
     "tiefe": {"linse": 22, "kopf_anteil": 0.13, "kopf_uv": (0.32, 0.72), "thema_uv": (0.60, 0.20), "hoehe": 42},
     "klippe": {"linse": 24, "kopf_anteil": 0.30, "kopf_uv": (0.26, 0.66), "thema_uv": (0.72, 0.30), "hoehe": 4},
@@ -69,7 +70,7 @@ def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_
     return fehler, (round(pk.x, 2), round(pk.y, 2)), (round(pt.x, 2), round(pt.y, 2)), round(po.y - pu.y, 2)
 
 
-def _rand_strafe(scene, cam, ecken, rand=0.03):
+def _rand_strafe(scene, cam, ecken, rand=0.05):
     """Wie weit Punkte (z. B. die Kopf-Ecken) aus dem Bild ragen: 0, wenn alle mit Abstand `rand` drin sind."""
     strafe = 0.0
     for p in ecken:

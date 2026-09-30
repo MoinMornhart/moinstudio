@@ -60,6 +60,31 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    sie ans Bild an (nur wenn es wirklich zählt, feste Farbe: weiss, gelb, gold, gruen, tuerkis, rot). Lage und leichte
    Schräglage wählt MoinStudio automatisch und zufällig an einer freien Stelle, nie über etwas Wichtigem. Sonst
    `"text": []`.
+8b. **Grafik-Ebene wie bei BastiGHG** (`grafik` der Variante, höchstens 3 Elemente, oft 1–2; bei reinen Kampf- oder
+   Stimmungsbildern leer). Basti nutzt in 12 von 30 Bildern Minecraft-Oberfläche als Grafik – immer dann, wenn die Idee
+   eine Regel, ein Level, ein Fund, ein Vergleich oder ein Inventar ist. MoinStudio zeichnet alles pixelgenau aus den
+   echten Texturen und setzt es an freie Stellen (nie über Gesichter):
+   - `{"art": "level", "zahl": 19}` – „Level 19“ in XP-Grün mit XP-Leiste, oben. Für Level-, Stufen-, Tag-Challenges.
+   - `{"art": "hud", "items": ["diamond_pickaxe", "torch", "bread"], "auswahl": 0, "herzen": 3, "hunger": 10, "level": 30}`
+     – Hotbar unten wie im Spiel mit Herzen, Hunger und XP. Für Survival, „nur X Herzen“, besondere Inventare
+     (Item-IDs wie im Spiel, Blöcke erscheinen als Würfel).
+   - `{"art": "etikett", "text": "100% STRONGHOLDS", "platz": "oben"}` – Text auf einem Minecraft-Knopf, oben oder
+     unten. Für Titelzeilen, Preise („1000€“), Zähler.
+   - `{"art": "lupe", "ziel": "mob:0"}` – rote Lupe mit weißem Rand, vergrößert das Ziel („ich“, „mob:0“ oder [u, v]),
+     mit rotem Pfeil. Für versteckte oder kleine Dinge, die man sonst übersieht.
+   - `{"art": "abzeichen", "typ": "haken" | "kreuz" | "zahl", "zahl": 1, "ueber": "mob:0"}` – runder Knopf über einem
+     Kopf: grüner Haken / rotes Kreuz (richtig/falsch, echt/fake) oder farbige Zahl (Platz 1–4).
+   - `{"art": "grosstext", "zeilen": ["KEIN ANGREIFEN", "KEIN ABBAUEN"], "farbe": "rot"}` – großer gestapelter Text
+     neben Philip für Regeln/Verbote (2–4 kurze Zeilen). Dann `text` leer lassen.
+   Grafik ersetzt normalen Text: nutzt du `level`, `etikett` oder `grosstext`, bleibt `text` leer.
+8c. **Geteiltes Bild** (`split` der Variante) für Vergleiche und Steigerungen – bei Basti in 6 von 30 Bildern:
+   Preise („10€ / 100€ / 1000€“), Vorher/Nachher, Tag 1 / Tag 100, Noob / Pro, echt / fake. 2–3 Teile, jeder mit eigener
+   vollständiger `szene` (gleiche Figur, andere Welt, andere Pose oder anderes Ding – der Unterschied muss sofort
+   ins Auge springen) und kurzem `etikett` (1–2 Wörter oder ein Betrag). Die Hauptsache jedes Teils steht in der
+   Bildmitte (MoinStudio rahmt selbst); wähle eine Kamera, bei der die Figur ganz zu sehen ist (`brust` oder `ganz`).
+   `szene` der Variante = die Szene des ersten Teils. Höchstens eine Variante pro Plan als Split, und nur wenn die
+   Beschreibung wirklich einen Vergleich oder eine Steigerung enthält.
+   `{"split": {"teile": [{"szene": {…}, "etikett": "10€"}, {"szene": {…}, "etikett": "100€"}, {"szene": {…}, "etikett": "1000€"}]}}`
 9. **Kamera:** `kampf` bei zwei Kämpfern, `nah` bei Held plus Thema (Reaktionen, Gesichter), `ganz` wenn ein
    besonderer Ort oder eine Körperhaltung die Aussage ist (Yoga, Handstand, Klettern, Surfen, Reiten, Schlafen, Tanzen,
    Balancieren – die ganze Figur und der Ort müssen zu sehen sein), `gefahr` oder `tiefe` für Abgründe und Gruben (mit

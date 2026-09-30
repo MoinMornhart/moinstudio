@@ -404,7 +404,7 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     # Warnungen für die Selbstprüfung: Wichtiges muss im Bild sein
     warnungen = []
     for fid, f in info["figuren"].items():
-        if fid == szene["figuren"][0]["id"] and (_im_bild(f["kopf_box"]) < 0.999 or min(f["kopf_box"][0], f["kopf_box"][1]) < 0.01 or max(f["kopf_box"][2], f["kopf_box"][3]) > 0.99):
+        if fid == szene["figuren"][0]["id"] and (_im_bild(f["kopf_box"]) < 0.999 or min(f["kopf_box"][0], f["kopf_box"][1]) < 0.02 or max(f["kopf_box"][2], f["kopf_box"][3]) > 0.98):
             warnungen.append(f"Kopf von {fid} am Bildrand angeschnitten")
         elif _im_bild(f["kopf_box"]) < 0.6:
             warnungen.append(f"Kopf von {fid} kaum sichtbar")
@@ -585,7 +585,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         o, u = haupt.kopf_punkte()
         return mkamera.rahme(scene, cam, o, u, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
                              gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=haupt.kopf_ecken(), still=still,
-                             anpassung={n: k[n] for n in ("hoehe", "linse", "kopf_anteil") if n in k})
+                             anpassung={n: tuple(k[n]) if n.endswith("_uv") else k[n] for n in ("hoehe", "linse", "kopf_anteil", "kopf_uv", "thema_uv") if n in k})
 
     if szene["figuren"][0].get("blick") == "auto":
         # Wie ein Thumbnail-Künstler: die Figur so drehen, dass Gesicht (Dreiviertelprofil) und Thema zusammen passen
@@ -684,8 +684,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         scene.view_settings.look = "Medium High Contrast"
     except TypeError:
         pass
-    scene.view_settings.exposure = r.get("belichtung", -0.3)
-    mlook.farbkorrektur(scene, r.get("saettigung", 1.08), r.get("kontrast", 1.06), r.get("vignette", 0.45))
+    # heller, sauberer Look wie bei BastiGHG (Vergleich 30.09.: unsere Bilder zu dunkel und dunstig)
+    scene.view_settings.exposure = r.get("belichtung", 0.0)
+    mlook.farbkorrektur(scene, r.get("saettigung", 1.14), r.get("kontrast", 1.08), r.get("vignette", 0.22))
 
     info = _messen(scene, cam, szene, figuren, mobs, gehalten, fehler)
     if ausgabe:

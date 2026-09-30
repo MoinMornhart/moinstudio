@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ladeKatalog } from '../../src/main/thumbnail/katalog'
-import { ernsteWarnungen, ladeVorbilder, plane, planeThumbnail, pruefeSzene, type Szene } from '../../src/main/thumbnail/planung'
+import { ernsteWarnungen, ladeVorbilder, liesPlan, plane, planeThumbnail, pruefeSzene, type Szene } from '../../src/main/thumbnail/planung'
 
 const ROOT = resolve(__dirname, '../..')
 const FAKE = resolve(__dirname, '../fixtures/fake-claude.mjs')
@@ -105,5 +105,16 @@ describe('Thumbnail-Planung', () => {
     expect(plan.varianten[0]!.vorbild).toBe('gomme-helden3-schmockyyy')
     expect(plan.varianten[0]!.szene.figuren[0]!.pose).toBe('sturmangriff')
     expect(plan.varianten[0]!.szene.himmel).toBe('tag')
+  })
+})
+
+describe('Thumbnail-Plan: Grafik-Ebene', () => {
+  it('übernimmt nur bekannte Grafik-Elemente, höchstens drei', async () => {
+    const k = await katalog()
+    const vorbilder = await ladeVorbilder(join(ROOT, 'config'))
+    const szene = { welt: { art: 'wiese' }, figuren: [{ id: 'ich', pose: 'jubeln' }], kamera: { modus: 'nah' } }
+    const grafik = [{ art: 'level', zahl: 19 }, { art: 'feuerwerk' }, { art: 'hud', items: ['torch'] }, { art: 'lupe', ziel: 'ich' }, { art: 'abzeichen', typ: 'haken' }]
+    const { plan } = liesPlan({ varianten: [{ titel: 't', vorbild: vorbilder[0]!.id, warum: 'w', szene, grafik }] }, '', k, ['ich'], vorbilder)
+    expect(plan.varianten[0]!.grafik!.map((g) => g.art)).toEqual(['level', 'hud', 'lupe'])
   })
 })

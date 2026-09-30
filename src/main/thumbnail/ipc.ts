@@ -385,6 +385,8 @@ export function registerThumbnailIpc(
       configDir: resourceDir('config'),
       promptDatei: join(resourceDir('prompts'), 'thumbnail-planung.md'),
       logo: await logoFuerAuftrag(dir, start.logo, start.kanal ?? 'MoinMornhart'),
+      uv: (await tools.exePath(UV)) ?? undefined,
+      grafikPyDir: join(localRoot(), 'py', 'grafik'),
       ausgabe: join(dir, 'thumbnails', id),
       ...(start.videoName?.trim() ? { videoName: start.videoName.trim().slice(0, 120) } : {})
     }

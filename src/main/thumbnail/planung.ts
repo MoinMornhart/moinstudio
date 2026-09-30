@@ -31,7 +31,18 @@ export interface Variante {
   szene: Szene
   /** höchstens ein kurzer Text (1–3 Wörter), meist leer */
   text?: { text: string; farbe?: string }[]
+  /** Grafik-Ebene im BastiGHG-Stil: Hotbar, Level, Etikett, Lupe, Abzeichen, großer Text (blender/grafik_setzen.py) */
+  grafik?: GrafikElement[]
+  /** Geteiltes Bild (BastiGHG 02 „10€/100€/1000€“, Vorher/Nachher): 2–3 Szenen nebeneinander, je mit Etikett */
+  split?: { teile: { szene: Szene; etikett?: string }[] }
 }
+
+export interface GrafikElement {
+  art: 'hud' | 'level' | 'etikett' | 'lupe' | 'abzeichen' | 'grosstext'
+  [feld: string]: unknown
+}
+
+const GRAFIK_ARTEN = new Set(['hud', 'level', 'etikett', 'lupe', 'abzeichen', 'grosstext'])
 
 export interface Szene {
   welt: { art: string; bloecke?: { art: string; von: number[]; bis?: number[]; waende?: string }[]; [k: string]: unknown }
@@ -63,6 +74,8 @@ export const PLAN_SCHEMA = {
           vorbild: { type: 'string' },
           warum: { type: 'string' },
           text: { type: 'array', items: { type: 'object', required: ['text'], properties: { text: { type: 'string' }, farbe: { type: 'string' } } } },
+          grafik: { type: 'array', items: { type: 'object', required: ['art'], properties: { art: { type: 'string', enum: ['hud', 'level', 'etikett', 'lupe', 'abzeichen', 'grosstext'] } } } },
+          split: { type: 'object', required: ['teile'], properties: { teile: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'object', required: ['szene'], properties: { szene: { type: 'object' }, etikett: { type: 'string' } } } } } },
           szene: {
             type: 'object',
             required: ['welt', 'figuren', 'kamera'],
@@ -170,6 +183,20 @@ export function liesPlan(structured: unknown, text: string, k: Katalog, figurIds
     if (!bekannt.has(v.vorbild)) fehler.push(`Variante ${i + 1}: unbekanntes Vorbild „${v.vorbild}“`)
     // Stilbuch: höchstens ein Text mit 1–4 Wörtern – längere Texte werden gekürzt statt abgelehnt
     v.text = (v.text ?? []).slice(0, 1).map((t) => ({ ...t, text: t.text.split(/\s+/).slice(0, 4).join(' ') }))
+    // Grafik: nur bekannte Elemente, höchstens drei (sonst wird das Bild unruhig)
+    v.grafik = (v.grafik ?? []).filter((g) => g && GRAFIK_ARTEN.has(g.art)).slice(0, 3)
+    // Geteiltes Bild: 2–3 Teile, jede Teil-Szene muss gültig sein; die erste ist die Haupt-Szene der Variante
+    if (v.split) {
+      const teile = (v.split.teile ?? []).filter((t) => t?.szene).slice(0, 3)
+      if (teile.length < 2) delete v.split
+      else {
+        v.split = { teile: teile.map((t) => ({ szene: t.szene, ...(t.etikett ? { etikett: String(t.etikett).split(/\s+/).slice(0, 3).join(' ') } : {}) })) }
+        v.szene = teile[0]!.szene
+        teile.slice(1).forEach((t, n) => {
+          for (const f of pruefeSzene(t.szene, k, figurIds)) fehler.push(`Variante ${i + 1}, Teil ${n + 2}: ${f}`)
+        })
+      }
+    }
     for (const f of pruefeSzene(v.szene, k, figurIds)) fehler.push(`Variante ${i + 1}: ${f}`)
   })
   return { plan, fehler }
