@@ -339,7 +339,8 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
     for i, (f, fig) in enumerate(figuren):
         anteil = _gesicht_sichtbar(scene, cam, fig)
         info["figuren"][f["id"]]["gesicht_sichtbar"] = round(anteil, 2)
-        if anteil < (0.75 if i == 0 else 0.5):
+        # gesicht_frei: false = gewollt verdeckt (Hände vors Gesicht, Facepalm)
+        if anteil < (0.75 if i == 0 else 0.5) and f.get("gesicht_frei", True):
             warnungen.append(f"Gesicht von {f['id']} verdeckt oder abgewandt ({int(anteil * 100)} % sichtbar)")
     # Versperrt etwas die Sicht? Strahlen durch ein Bildraster: trifft ein Strahl Welt oder Objekt deutlich vor der
     # Hauptfigur, steht es zwischen Kamera und Szene (z. B. ein Block direkt vor der Linse)
@@ -380,7 +381,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     figuren = []
     for f in szene["figuren"]:
         fig = mfigur.baue_figur(f["id"], f["skin"], slim=f.get("slim"))
-        x, y = f.get("position", (0, 0))
+        x, y, *z = f.get("position", (0, 0))
+        if z and "hoehe" not in f:  # [x, y, z]: dritter Wert ist die Höhe
+            f["hoehe"] = z[0]
         fig.wurzel.location = (x * BLOCK, y * BLOCK, 0)
         p = _mische(POSEN[f.get("pose", "neutral")], f.get("posen_korrektur"))
         blick = f.get("blick", p.get("blick", 0))
@@ -405,7 +408,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             if art not in tab:
                 raise ValueError(f"Unbekannter Mob „{art}“ (bekannt: {', '.join(k for k in tab if not k.startswith('_'))})")
             mob = mmobs.baue_mob(art, tab[art], texturen, groesse=m.get("groesse", 1.0), pose=m.get("pose", "stand"), name=f"{art}{i}")
-            x, y = m.get("position", (4, 2))
+            x, y, *z = m.get("position", (4, 2))
+            if z and "hoehe" not in m:  # [x, y, z]: dritter Wert ist die Höhe
+                m["hoehe"] = z[0]
             z = m["hoehe"] * BLOCK if "hoehe" in m else _boden_hoehe(scene, x * BLOCK, y * BLOCK)
             mob.wurzel.location = (x * BLOCK, y * BLOCK, z)
             blick = m.get("blick", 0)

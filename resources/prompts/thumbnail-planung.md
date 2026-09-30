@@ -23,7 +23,9 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    traurig bei Verlust, müde nach langer Nacht, skeptisch bei Verrat, schreiend beim Angriff. Die Augen bleiben die
    echten Skin-Augen, die Mimik kommt über Lider, Augenringe und einen Mund im leichten Pixel-Stil. Gesten wie
    jubeln, kopfkratzen, achselzucken stehen bei den Posen.
-   **Gesichter bleiben immer frei.** Keine Arme oder Waffen vor Gesichtern. Philip schaut zur Kamera oder zum Gegner.
+   **Gesichter bleiben frei.** Keine Arme oder Waffen vor Gesichtern, Philip schaut zur Kamera oder zum Gegner. Einzige
+   Ausnahme: Die Beschreibung verlangt es ausdrücklich ("Hände vors Gesicht", Facepalm) – dann liegen die Hände am Gesicht,
+   und die Figur bekommt `"gesicht_frei": false`.
 4. **Waffen:** Schaut Philip zum Gegner (`blick` 55–75), hält er die Waffe in der rechten Hand (`"hand": "r"`), denn das ist
    dann die kameranahe Seite. Bei ruhigen Posen mit `blick` 0–35 nimmt er die linke Hand (`"hand": "l"`). Item-Namen sind
    Minecraft-IDs (diamond_sword, netherite_axe, bow, lantern, flint_and_steel …).
@@ -55,6 +57,8 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Balancieren – die ganze Figur und der Ort müssen zu sehen sein), `gefahr` oder `tiefe` für Abgründe und Gruben (mit
    `hoehe` 20–40 für die Aufsicht), `held` für Heldenposen von unten. Die Kamera schaut nie auf eine leere helle Fläche:
    hinter Philip steht immer erkennbare Umgebung.
+   **Gesten mit den Armen** (jubeln mit Armen oben, Schultern zucken, Hände vors Gesicht, zeigen, winken) brauchen
+   `brust` oder `ganz`: Bei `nah` sind die Arme nicht im Bild und die Geste geht verloren.
 10. **Freie Posen:** Passt keine Katalog-Pose genau, nimm die ähnlichste und forme sie mit `posen_korrektur` (je Figur) zur
    beschriebenen Haltung. Schlüssel: `kippen` (ganze Figur um die Füße, +90 = liegt auf dem Rücken, 180 = kopfüber für
    Handstand – dann `hoehe` ≈ 1.8), `kippen_seite`, `koerper` {vor, neigen, drehen}, `kopf` {nicken, neigen, drehen},
