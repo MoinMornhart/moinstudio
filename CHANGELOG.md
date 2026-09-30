@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-09-30
+
+> Thumbnail: ohne Vorbild-Hinweis
+
 ### Changed
 
 - Thumbnail: Der Hinweis „Orientiert sich an …“ unter den Varianten und in der Großansicht ist weg (Philips Wunsch).
