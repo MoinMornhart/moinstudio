@@ -154,6 +154,8 @@ def setze_text(bild_pfad, bericht, texte, assets, ausgabe):
         wichtig.append(f.get("box", f.get("kopf_box")))
     wichtig += [i["box"] for i in bericht.get("items", {}).values()]
     wichtig += [m["box"] for m in bericht.get("mobs", [])]
+    wichtig += bericht.get("grafik_boxen", [])  # Hotbar, Lupe, Etiketten … (Grafik wird vorher gesetzt)
+    wichtig.append([0.8, 0.82, 1.0, 1.0])  # unten rechts blendet YouTube die Videolänge ein
     wichtig = [[b[0] - 0.01, b[1] - 0.01, b[2] + 0.01, b[3] + 0.01] for b in wichtig if b]
     ergebnis, warnungen, belegt = [], [], []
     for t in texte:

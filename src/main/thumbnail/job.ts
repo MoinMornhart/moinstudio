@@ -123,9 +123,26 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
     const anteil = (x: number): number => Math.round(10 + ((i + x) / anzahl) * 88)
     const basis = join(p.ausgabe, `variante-${i + 1}`)
 
-    // Geteiltes Bild: jede Teil-Szene mit der Hauptsache in der Bildmitte (wird später als senkrechter Streifen genutzt)
-    const mitte = (s: Szene): Szene => ({ ...s, kamera: { ...(s.kamera as object), kopf_uv: [0.5, 0.5], thema_uv: [0.5, 0.3] } as Szene['kamera'] })
-    if (v.split) v.szene = mitte(v.szene)
+    // Geteiltes Bild: jede Teil-Szene wird später als senkrechter Streifen um die Bildmitte genutzt (bei n Teilen 1/n
+    // der Breite). Kopf und Thema stehen nebeneinander in diesem Streifen – lagen beide genau in der Mitte, verdeckte
+    // der Kopf das Haus (Test „Noob-Haus gegen Pro-Haus“, 01.10.). Ein Bauwerk als Thema braucht die ganze Figur.
+    const mitte = (s: Szene, n: number): Szene => {
+      const k = (s.kamera ?? {}) as { seite?: string; thema?: unknown; modus?: string }
+      const halb = (0.5 / n) * 0.55
+      const links = k.seite !== 'rechts'
+      const mitThema = k.thema !== undefined && k.thema !== null
+      const bauwerk = Array.isArray(k.thema) && ['nah', 'brust'].includes(k.modus ?? '')
+      return {
+        ...s,
+        kamera: {
+          ...(s.kamera as object),
+          ...(bauwerk ? { modus: 'ganz' } : {}),
+          kopf_uv: mitThema ? [0.5 + (links ? -halb : halb), 0.45] : [0.5, 0.45],
+          thema_uv: [0.5 + (links ? halb : -halb), 0.5]
+        } as Szene['kamera']
+      }
+    }
+    if (v.split) v.szene = mitte(v.szene, v.split.teile.length)
     let szeneAktuell: Szene = v.szene
     let bestes: { versuch: number; ernst: string[]; warnungen: string[] } | null = null
     let renderFehler: string | null = null
@@ -178,7 +195,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         const teilBilder: [string, string][] = [[bild, v.split.teile[0]!.etikett ?? '-']]
         for (const [n, teil] of v.split.teile.slice(1).entries()) {
           const tpfad = `${basis}.teil${n + 2}`
-          const tszene = structuredClone(mitte(teil.szene)) as Szene & { figuren: { id: string; skin?: string; slim?: boolean | null }[] }
+          const tszene = structuredClone(mitte(teil.szene, v.split.teile.length)) as Szene & { figuren: { id: string; skin?: string; slim?: boolean | null }[] }
           for (const f of tszene.figuren) {
             const s = skins.get(f.id)
             f.skin = s?.skin ?? join(mc.textures, 'entity', 'player', 'wide', 'steve.png')
@@ -202,12 +219,36 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
           }
         }
       }
+      let grafikBoxen: number[][] = []
+      const grafik = v.split ? [] : (v.grafik ?? [])
+      if (grafik.length && p.uv && p.grafikPyDir) {
+        ctx.progress(anteil(0.9), `Variante ${i + 1}: Grafik setzen …`)
+        try {
+          const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
+          await sicherePakete(p.uv, python, 'PIL, numpy', ['pillow', 'numpy'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+          await writeFile(`${basis}.grafik.json`, JSON.stringify(grafik))
+          const aus = await lauf(python, [join(p.blenderDir, 'grafik_setzen.py'), bild, `${pfad}.bericht.json`, `${basis}.grafik.json`, mc.assets, `${basis}.grafik.png`], ctx as JobContext<unknown>)
+          const zeile = /MOIN_GRAFIK (.*)/.exec(aus)?.[1]
+          bild = `${basis}.grafik.png`
+          grafikBoxen = (zeile ? (JSON.parse(zeile) as { boxen?: number[][] }).boxen : []) ?? []
+        } catch (err) {
+          warnungen.push(`Grafik konnte nicht gesetzt werden: ${err instanceof Error ? err.message.slice(0, 120) : String(err)}`)
+        }
+      }
+      // Text nach der Grafik: Hotbar, Level und Etiketten haben feste Plätze, der Text sucht sich freie Stellen und
+      // weicht ihnen aus (vorher lag die Grafik manchmal über dem Text)
       const texte = v.split ? [] : p.merkmal?.length ? p.merkmal : (v.text ?? [])
       let textBoxen: unknown = []
       if (texte.length) {
-        ctx.progress(anteil(0.9), `Variante ${i + 1}: Text setzen …`)
+        ctx.progress(anteil(0.93), `Variante ${i + 1}: Text setzen …`)
         await writeFile(`${basis}.texte.json`, JSON.stringify(texte))
-        const t = await renderAufruf('text_setzen.py', [`${pfad}.png`, `${pfad}.bericht.json`, `${basis}.texte.json`, mc.assets, `${basis}.png`])
+        let berichtPfad = `${pfad}.bericht.json`
+        if (grafikBoxen.length) {
+          const bericht = JSON.parse(await readFile(berichtPfad, 'utf8')) as Record<string, unknown>
+          berichtPfad = `${basis}.textbericht.json`
+          await writeFile(berichtPfad, JSON.stringify({ ...bericht, grafik_boxen: grafikBoxen }))
+        }
+        const t = await renderAufruf('text_setzen.py', [bild, berichtPfad, `${basis}.texte.json`, mc.assets, `${basis}.png`])
         const zeile = /MOIN_TEXT (.*)/.exec(t.output)?.[1]
         if (t.code === 0 && zeile) {
           bild = `${basis}.png`
@@ -216,21 +257,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
           textBoxen = gesetzt.texte ?? []
         } else warnungen.push('Text konnte nicht gesetzt werden')
       }
-      const grafik = v.split ? [] : (v.grafik ?? [])
-      if (grafik.length && p.uv && p.grafikPyDir) {
-        ctx.progress(anteil(0.93), `Variante ${i + 1}: Grafik setzen …`)
-        try {
-          const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
-          await sicherePakete(p.uv, python, 'PIL, numpy', ['pillow', 'numpy'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
-          await writeFile(`${basis}.grafik.json`, JSON.stringify(grafik))
-          const aus = await lauf(python, [join(p.blenderDir, 'grafik_setzen.py'), bild, `${pfad}.bericht.json`, `${basis}.grafik.json`, mc.assets, `${basis}.grafik.png`], ctx as JobContext<unknown>)
-          const zeile = /MOIN_GRAFIK (.*)/.exec(aus)?.[1]
-          bild = `${basis}.grafik.png`
-          textBoxen = [...(Array.isArray(textBoxen) ? textBoxen : []), ...((zeile ? (JSON.parse(zeile) as { boxen?: unknown[] }).boxen : []) ?? []).map((box) => ({ box }))]
-        } catch (err) {
-          warnungen.push(`Grafik konnte nicht gesetzt werden: ${err instanceof Error ? err.message.slice(0, 120) : String(err)}`)
-        }
-      }
+      textBoxen = [...(Array.isArray(textBoxen) ? textBoxen : []), ...grafikBoxen.map((box) => ({ box }))]
       let logo: VarianteLogo | undefined
       if (p.logo) {
         ctx.progress(anteil(0.95), `Variante ${i + 1}: Logo setzen …`)

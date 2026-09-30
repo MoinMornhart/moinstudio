@@ -10,7 +10,7 @@ grafik.json: Liste von Elementen, z. B.
   {"art": "hud", "items": ["diamond_pickaxe", "torch", "bread"], "auswahl": 0, "herzen": 7, "hunger": 10, "level": 30}
   {"art": "level", "zahl": 19}                     – „Level 19“ mit XP-Leiste, oben mittig
   {"art": "etikett", "text": "100% STRONGHOLDS", "platz": "oben"}
-  {"art": "lupe", "ziel": "mob:0" | "ich" | [u, v]}
+  {"art": "lupe", "ziel": "mob:0" | "objekt:0" | "item:ich" | "ich" | [u, v]}
   {"art": "abzeichen", "typ": "haken" | "kreuz" | "zahl", "zahl": 1, "ueber": "ich" | "mob:0" | [u, v]}
   {"art": "grosstext", "zeilen": ["KEIN ANGREIFEN", "KEIN ABBAUEN"], "farbe": "rot"}
 Schreibt „MOIN_GRAFIK {…}“ mit den belegten Kästen (für Logo und Prüfung).
@@ -79,10 +79,34 @@ class Leinwand:
         f = faktor or self.s
         return img.resize((img.width * f, img.height * f), Image.NEAREST)
 
+    def _sichtbar(self, b):
+        """Kasten (u0, v0, u1, v1) auf den sichtbaren Bildteil beschnitten, oder None."""
+        b = (max(0.0, b[0]), max(0.0, b[1]), min(1.0, b[2]), min(1.0, b[3]))
+        return b if b[2] > b[0] and b[3] > b[1] else None
+
+    def _ding_box(self, ref):
+        """„objekt:0“ → Kasten des Blocks/Modells, „item:ich“ → Werkzeug in der Hand (sichtbarer Teil)."""
+        if not isinstance(ref, str):
+            return None
+        if ref.startswith("objekt:"):
+            nr = ref[7:]
+            for o in self.bericht.get("objekte") or []:
+                if str(o.get("nr")) == nr and o.get("box"):
+                    return self._sichtbar(o["box"])
+        if ref.startswith("item:"):
+            it = (self.bericht.get("items") or {}).get(ref[5:] or "ich")
+            if it and it.get("box"):
+                return self._sichtbar(it["box"])
+        return None
+
     def punkt(self, ref):
-        """„ich“/Figuren-ID → Kopfmitte, „mob:0“ → Mob-Mitte, [u, v] → Bildpunkt."""
+        """„ich“/Figuren-ID → Kopfmitte, „mob:0“ → Mob-Mitte, „objekt:0“/„item:ich“ → Mitte des sichtbaren Teils,
+        [u, v] → Bildpunkt. Früher landeten Objekt-Ziele auf Philips Kopf (Lupe aufs Auge statt auf den Diamanten)."""
         if isinstance(ref, (list, tuple)) and len(ref) == 2:
             return int(ref[0] * self.w), int(ref[1] * self.h)
+        b = self._ding_box(ref)
+        if b:
+            return int((b[0] + b[2]) / 2 * self.w), int((b[1] + b[3]) / 2 * self.h)
         figuren = self.bericht.get("figuren") or {}
         if isinstance(ref, str) and ref.startswith("mob:"):
             mobs = self.bericht.get("mobs") or []
@@ -100,6 +124,9 @@ class Leinwand:
 
     def kopf_box(self, ref):
         figuren = self.bericht.get("figuren") or {}
+        ding = self._ding_box(ref)
+        if ding:
+            return self._px(ding)
         if isinstance(ref, str) and ref.startswith("mob:"):
             mobs = self.bericht.get("mobs") or []
             i = int(ref[4:]) if ref[4:].isdigit() else 0
@@ -325,10 +352,26 @@ class Leinwand:
         zx, zy = self.punkt(e.get("ziel", "mob:0"))
         r = int(self.h * float(e.get("groesse", 0.2)))
         ausschnitt = max(8, int(r / float(e.get("zoom", 2.2))))
+        ding = self._ding_box(e.get("ziel"))
+        if ding:  # großer Block: ein gutes Stück davon zeigen statt zwei Texturpixel
+            bw, bh = (ding[2] - ding[0]) * self.w, (ding[3] - ding[1]) * self.h
+            ausschnitt = min(r, max(ausschnitt, int(min(bw, bh) * 0.3)))
         quelle = self.bild.crop((zx - ausschnitt, zy - ausschnitt, zx + ausschnitt, zy + ausschnitt)).resize((2 * r, 2 * r), Image.LANCZOS)
-        # Lupe auf der Seite mit mehr Platz, auf gleicher Höhe wie das Ziel
-        kandidaten = [(int(self.w * f), min(max(zy, r + 10), self.h - r - 10)) for f in (0.18, 0.82, 0.3, 0.7)]
-        cx, cy = min(kandidaten, key=lambda p: (self.frei((p[0] - r, p[1] - r, p[0] + r, p[1] + r)), -abs(p[0] - zx)))
+        # Platz für die Lupe: nie über einem Gesicht, nie über dem Ziel selbst, möglichst auf freier Fläche und nicht
+        # zu weit weg (Test 01.10.: Lupe lag über Philips Gesicht, weil nur vier Stellen auf Zielhöhe probiert wurden)
+        ys = {min(max(y, r + 10), self.h - r - 10) for y in (zy, int(self.h * 0.28), int(self.h * 0.7))}
+        kandidaten = [(int(self.w * f), y) for f in (0.15, 0.3, 0.5, 0.7, 0.85) for y in ys]
+
+        def wertung(p):
+            box = (p[0] - r, p[1] - r, p[0] + r, p[1] + r)
+            f = max(1, 4 * r * r)
+            gesicht = sum(self._schnitt(box, g) for g in self.geschuetzt) / f
+            ueber_ziel = max(0.0, 1.0 - math.hypot(p[0] - zx, p[1] - zy) / (r + ausschnitt * 1.5))
+            ecke = 1.0 if box[2] > self.w * 0.8 and box[3] > self.h * 0.8 else 0.0  # Videolänge unten rechts
+            weg = math.hypot(p[0] - zx, p[1] - zy) / self.w
+            return gesicht * 5 + self.frei(box) + ueber_ziel * 2 + ecke + weg * 0.3
+
+        cx, cy = min(kandidaten, key=wertung)
         g = 3
         maske = Image.new("L", (2 * r * g, 2 * r * g), 0)
         ImageDraw.Draw(maske).ellipse((0, 0, 2 * r * g - 1, 2 * r * g - 1), fill=255)

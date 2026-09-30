@@ -17,6 +17,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Fixed
 
+- Minecraft-Thumbnails: Die Lupe zeigt auf das richtige Ding (Block, Werkzeug in der Hand) statt auf Philips Auge, liegt nie über einem Gesicht und zeigt bei großen Blöcken ein gutes Stück davon.
+- Minecraft-Thumbnails: Text wird nach der Grafik gesetzt und weicht Hotbar, Lupe und Etiketten aus; unten rechts (Videolänge) bleibt frei.
+- Minecraft-Thumbnails: Geteilte Bilder (Noob/Pro, 10€/100€/1000€) zeigen Figur und Thema nebeneinander – vorher verdeckte der Kopf das Haus.
+- Werkzeuge landen nicht mehr im Kopf: Legt eine Pose die Hand an Kopf oder Brust (Kopfkratzen, Heldenpose, Panik …), wandert das Werkzeug in die freie Hand oder wird locker vor dem Körper gehalten.
 - Mobs: Piglin- und Hoglin-Ohren stehen wieder seitlich ab statt im Kopf zu stecken, Drachenflügel sind ausgebreitet (Drehrichtung beim Einlesen der Bedrock-Modelle war vertauscht); der Fuchs hat keinen schwarzen Schlafkopf-Kasten mehr, und Geschosse wie Pfeil, Schneeball oder Erfahrungsflasche tauchen nicht mehr als „Mob“ auf. Hauchdünne Flossen und Flügel (Kabeljau, Lachs, Kugelfisch, Kaulquappe) sind nicht mehr schwarz. Der Tropenfisch ist orange statt weiß.
 - Blender blieb manchmal nach dem fertigen Bild beim Photoshop-Maskenschritt hängen und renderte bei einem Absturz dort das ganze Bild ein zweites Mal.
 

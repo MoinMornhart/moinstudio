@@ -330,6 +330,31 @@ def _bildpunkt(scene, cam, p):
     return [round(v.x, 3), round(1 - v.y, 3)]  # Bildkoordinaten: 0,0 oben links
 
 
+def _arm_blockiert(arm):
+    """Arm an Kopf oder Brust: Hand am Kopf (Kopfkratzen, Panik) oder verschränkt (Held, genervt, nachdenken). Ein
+    Werkzeug in dieser Hand steckt im Kopf oder quer vor der Brust."""
+    arm = arm or {}
+    am_kopf = arm.get("heben", 0) >= 100 and arm.get("beugen", 0) >= 90
+    verschraenkt = arm.get("heben", 0) >= 55 and arm.get("seitlich", 0) <= -15 and arm.get("beugen", 0) >= 60
+    return am_kopf or verschraenkt
+
+
+def _werkzeughand(p, item):
+    """Werkzeug nie in einer Hand, die die Pose an Kopf oder Brust legt (Test 01.10.: Schaufel hinter dem Kopf beim
+    Kopfkratzen, Axt am Gesicht in der Heldenpose). Ist die andere Hand frei, wandert das Werkzeug dorthin, sonst hält
+    der Werkzeugarm es locker vor dem Körper."""
+    seite = item.get("hand", "l")
+    arm, anderer = f"arm_{seite}", "arm_" + ("r" if seite == "l" else "l")
+    if not _arm_blockiert(p.get(arm)):
+        return p
+    if not _arm_blockiert(p.get(anderer)):
+        item["hand"] = "r" if seite == "l" else "l"
+        return p
+    p = dict(p)
+    p[arm] = {"heben": 35, "seitlich": 12, "drehen": 0, "beugen": 45}
+    return p
+
+
 def _items_anhaengen(figuren, texturen, cam, k):
     gehalten = {}
     for f, fig in figuren:
@@ -556,6 +581,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         if f.get("spiegeln", isinstance(blick, (int, float)) and blick < -30):
             p = _spiegeln(p)
         p["blick"] = 0 if blick == "auto" else blick
+        if f.get("item"):
+            p = _werkzeughand(p, f["item"])
         mfigur.pose(fig, p)
         if f.get("mimik"):
             mmimik.setze_mimik(fig, f["mimik"])

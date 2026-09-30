@@ -70,7 +70,7 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
      (Item-IDs wie im Spiel, Blöcke erscheinen als Würfel).
    - `{"art": "etikett", "text": "100% STRONGHOLDS", "platz": "oben"}` – Text auf einem Minecraft-Knopf, oben oder
      unten. Für Titelzeilen, Preise („1000€“), Zähler.
-   - `{"art": "lupe", "ziel": "mob:0"}` – rote Lupe mit weißem Rand, vergrößert das Ziel („ich“, „mob:0“ oder [u, v]),
+   - `{"art": "lupe", "ziel": "mob:0"}` – rote Lupe mit weißem Rand, vergrößert das Ziel („ich“, „mob:0“, „objekt:0“ für einen Block/ein Modell aus `objekte`, „item:ich“ für das Werkzeug in der Hand oder [u, v]),
      mit rotem Pfeil. Für versteckte oder kleine Dinge, die man sonst übersieht.
    - `{"art": "abzeichen", "typ": "haken" | "kreuz" | "zahl", "zahl": 1, "ueber": "mob:0"}` – runder Knopf über einem
      Kopf: grüner Haken / rotes Kreuz (richtig/falsch, echt/fake) oder farbige Zahl (Platz 1–4).
