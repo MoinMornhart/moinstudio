@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.5] - 2026-09-30
+
+> Thumbnail: Gesten und Positionen
+
 ### Behoben
 
 - Thumbnail: Gesten mit den Armen (Jubeln, Schulterzucken, Hände vors Gesicht) bekommen eine Kamera, in der die Arme zu sehen sind. Eine gewollte Facepalm-Geste gilt nicht mehr als verdecktes Gesicht. Positionen mit drei Werten [x, y, Höhe] führen nicht mehr zum Absturz.
