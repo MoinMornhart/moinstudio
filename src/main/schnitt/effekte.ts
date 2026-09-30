@@ -19,8 +19,15 @@ export type Effekt =
   | { art: 'geraeusch'; bei: number; klang: string; lautstaerke?: number }
   | { art: 'zensur'; von: number; bis: number }
   | { art: 'lautstaerke'; von: number; bis: number; faktor: number }
+  /** Vorspann (ROADMAP E.3): Clips und Titelkarten vor dem Video; klang: false schaltet die automatischen Geräusche ab */
+  | { art: 'intro'; teile: IntroTeil[]; klang?: boolean }
 
-export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'geraeusch', 'zensur', 'lautstaerke'] as const
+/** Teil eines Intros: kurzer Moment aus dem Video (Schnittzeit) oder Titelkarte in Minecraft-Schrift */
+export type IntroTeil =
+  | { art: 'clip'; von: number; bis: number; tempo?: number }
+  | { art: 'karte'; text: string; dauer?: number; farbe?: string; hintergrund?: 'unscharf' | 'schwarz' | 'bild'; bei?: number; bild?: string; klang?: string }
+
+export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'geraeusch', 'zensur', 'lautstaerke', 'intro'] as const
 
 /** Stück der neuen Zeitleiste: normal (ggf. mit Tempo) oder ein eingefrorenes Standbild */
 export type Stueck = { a: number; b: number; faktor: number } | { frieren: number; dauer: number }
@@ -122,26 +129,52 @@ export interface EffektOptionen {
   audio: boolean
   /** automatische Zooms (Schnittzeit), wie bisher */
   autoZooms: Bereich[]
-  /** fertige Text-Bilder je Effekt-Index (PNG in Minecraft-Schrift) */
-  textBilder: Record<number, { datei: string; breite: number; hoehe: number }>
+  /** fertige Text-Bilder (PNG in Minecraft-Schrift) je Effekt-Index, bei Intro-Karten „Effekt.Teil“ (z. B. „0.2“) */
+  textBilder: Record<string, { datei: string; breite: number; hoehe: number }>
   /** Geräusch-Dateien je Klang */
   klaenge: Record<string, string>
   untertitel: string | null
 }
 
-/** Filtergraph für alle Effekte: Zeitleiste (Tempo, Einfrieren), dann Bild, Einblendungen, Ton. */
+/** Dauer eines Intro-Teils in Sekunden */
+export function introDauer(t: IntroTeil): number {
+  return t.art === 'clip' ? Math.max(0.1, (t.bis - t.von) / klemme(t.tempo ?? 1, 0.25, 4)) : klemme(t.dauer ?? 2, 0.5, 6)
+}
+
+/** Filtergraph für alle Effekte: Intro, Zeitleiste (Tempo, Einfrieren), dann Bild, Einblendungen, Ton. */
 export function effektGraph(o: EffektOptionen): EffektGraph {
   const zl = zeitleiste(o.effekte, o.laenge)
-  const E = zl.endzeit
+  const introIndex = o.effekte.findIndex((e) => e.art === 'intro')
+  const intro = introIndex >= 0 ? (o.effekte[introIndex] as Extract<Effekt, { art: 'intro' }>) : null
+  const introTeile = intro?.teile ?? []
+  const introLaenge = introTeile.reduce((s, t) => s + introDauer(t), 0)
+  // Endzeit: erst das Intro, dann das Video mit seiner (ggf. veränderten) Zeitleiste
+  const E = (t: number): number => introLaenge + zl.endzeit(t)
   const teile: string[] = []
   const eingaben: EffektEingabe[] = []
+  const neueEingabe = (e: EffektEingabe): number => eingaben.push(e)
+  const format = `format=yuv420p,setsar=1`
   let v = 'vc'
   let a = 'ac'
+  // Ton einheitlich (48 kHz Stereo), sobald Stücke zusammengesetzt werden
+  if (o.audio && (zl.veraendert || introTeile.length)) {
+    teile.push(`[ac]aresample=48000,aformat=channel_layouts=stereo[acn]`)
+    a = 'acn'
+  }
+  // Das Intro braucht eine eigene Kopie des geschnittenen Videos
+  if (introTeile.length) {
+    teile.push(`[vc]split=2[vc0][vi]`)
+    v = 'vc0'
+    if (o.audio) {
+      teile.push(`[${a}]asplit=2[ac0][ai]`)
+      a = 'ac0'
+    }
+  }
   // 1. Zeitleiste: Stücke zerlegen, Tempo/Standbild anwenden, wieder zusammensetzen
   if (zl.veraendert) {
     const n = zl.stuecke.length
-    teile.push(`[vc]split=${n}${zl.stuecke.map((_, i) => `[vs${i}]`).join('')}`)
-    if (o.audio) teile.push(`[ac]aresample=48000,aformat=channel_layouts=stereo,asplit=${n}${zl.stuecke.map((_, i) => `[as${i}]`).join('')}`)
+    teile.push(`[${v}]split=${n}${zl.stuecke.map((_, i) => `[vs${i}]`).join('')}`)
+    if (o.audio) teile.push(`[${a}]asplit=${n}${zl.stuecke.map((_, i) => `[as${i}]`).join('')}`)
     zl.stuecke.forEach((st, i) => {
       if ('frieren' in st) {
         const p = Math.max(0, st.frieren - 1 / o.fps)
@@ -156,8 +189,62 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     v = 'vz'
     a = o.audio ? 'az' : a
   }
+  // Geräusche (Zeit im fertigen Video): aus Effekten und automatisch aus dem Intro
+  const klangEreignisse: { zeit: number; klang: string; lautstaerke: number }[] = []
+  // 2. Intro: Clips und Titelkarten vor das Video setzen
+  if (introTeile.length) {
+    const aufVideo = introTeile.filter((t) => t.art === 'clip' || (t.hintergrund ?? 'unscharf') === 'unscharf').length
+    const clips = introTeile.filter((t) => t.art === 'clip').length
+    if (aufVideo) teile.push(`[vi]split=${aufVideo}${Array.from({ length: aufVideo }, (_, i) => `[vi${i}]`).join('')}`)
+    else teile.push(`[vi]nullsink`)
+    if (o.audio) {
+      if (clips) teile.push(`[ai]asplit=${clips}${Array.from({ length: clips }, (_, i) => `[ai${i}]`).join('')}`)
+      else teile.push(`[ai]anullsink`)
+    }
+    let vk = 0
+    let ak = 0
+    let zeit = 0
+    introTeile.forEach((t, j) => {
+      const d = introDauer(t)
+      if (t.art === 'clip') {
+        const tempo = klemme(t.tempo ?? 1, 0.25, 4)
+        teile.push(`[vi${vk++}]trim=start=${z(t.von)}:end=${z(t.bis)},setpts=(PTS-STARTPTS)/${tempo},${format}[ip${j}v]`)
+        if (o.audio) teile.push(`[ai${ak++}]atrim=start=${z(t.von)}:end=${z(t.bis)},asetpts=PTS-STARTPTS,${atempoKette(tempo)}[ip${j}a]`)
+        if (j > 0 && intro?.klang !== false) klangEreignisse.push({ zeit, klang: 'whoosh', lautstaerke: 0.7 })
+      } else {
+        const hg = t.hintergrund ?? 'unscharf'
+        if (hg === 'unscharf') {
+          const b = klemme(t.bei ?? o.laenge / 2, 0, Math.max(0, o.laenge - 0.1))
+          teile.push(`[vi${vk++}]trim=start=${z(b)}:end=${z(b + 1 / o.fps)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${z(d)},trim=duration=${z(d)},boxblur=18:2,eq=brightness=-0.22,${format}[kb${j}]`)
+        } else if (hg === 'bild' && t.bild) {
+          const idx = neueEingabe({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(d)], datei: t.bild })
+          teile.push(`[${idx}:v]scale=${o.breite}:${o.hoehe}:force_original_aspect_ratio=increase,crop=${o.breite}:${o.hoehe},eq=brightness=-0.12,${format}[kb${j}]`)
+        } else {
+          teile.push(`color=c=0x101014:s=${o.breite}x${o.hoehe}:r=${o.fps}:d=${z(d)},${format}[kb${j}]`)
+        }
+        const tb = o.textBilder[`${introIndex}.${j}`]
+        if (tb) {
+          const idx = neueEingabe({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(d)], datei: tb.datei })
+          const zeilen = Math.max(1, t.text.split('\n').length)
+          const breite = Math.min(Math.round(o.breite * 0.9), Math.round(o.hoehe * 0.16 * (tb.breite / Math.max(1, tb.hoehe / zeilen))))
+          teile.push(`[${idx}:v]format=rgba,scale=w='${breite}*(0.5+0.5*min(1\\,t/0.18))':h=-1:eval=frame[kt${j}]`)
+          teile.push(`[kb${j}][kt${j}]overlay=x='(W-w)/2':y='(H-h)/2':shortest=1,${format}[ip${j}v]`)
+        } else {
+          teile.push(`[kb${j}]null[ip${j}v]`)
+        }
+        if (o.audio) teile.push(`aevalsrc=0|0:d=${z(d)}:s=48000[ip${j}a]`)
+        if (intro?.klang !== false) klangEreignisse.push({ zeit, klang: t.klang ?? 'boom', lautstaerke: 0.9 })
+      }
+      zeit += d
+    })
+    teile.push(`[${v}]${format}[vm]`)
+    const n = introTeile.length + 1
+    teile.push(`${introTeile.map((_, j) => `[ip${j}v]${o.audio ? `[ip${j}a]` : ''}`).join('')}[vm]${o.audio ? `[${a}]` : ''}concat=n=${n}:v=1:a=${o.audio ? 1 : 0}[vin]${o.audio ? '[ain]' : ''}`)
+    v = 'vin'
+    a = o.audio ? 'ain' : a
+  }
   const kette: string[] = []
-  // 2. Zoom und Wackeln: ein scale+crop mit Ausdrücken über die Endzeit
+  // 3. Zoom und Wackeln: ein scale+crop mit Ausdrücken über die Endzeit
   const zooms = [
     ...o.autoZooms.map((b) => ({ a: E(b.start), b: E(b.ende), f: 1.12, x: 0.5, y: 0.5 })),
     ...o.effekte.filter((e): e is Extract<Effekt, { art: 'zoom' }> => e.art === 'zoom').map((e) => ({ a: E(e.von), b: E(e.bis), f: klemme(e.faktor, 1, 4), x: klemme(e.x ?? 0.5, 0, 1), y: klemme(e.y ?? 0.5, 0, 1) }))
@@ -173,7 +260,7 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     kette.push(`scale=w='iw*(${faktor})':h=-2:eval=frame`)
     kette.push(`crop=${o.breite}:${o.hoehe}:x='clip((in_w-out_w)*(0.5+${lage('x')}/max(0.001\\,${summe}))${zitter('x')}\\,0\\,in_w-out_w)':y='clip((in_h-out_h)*(0.5+${lage('y')}/max(0.001\\,${summe}))${zitter('y')}\\,0\\,in_h-out_h)'`)
   }
-  // 3. Farbe: je Bereich eigene Filter mit enable
+  // 4. Farbe: je Bereich eigene Filter mit enable
   for (const e of o.effekte) {
     if (e.art !== 'farbe') continue
     const en = `enable='${zwischen(E(e.von), E(e.bis))}'`
@@ -186,7 +273,7 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     const ton = e.ton ? toene[e.ton] : undefined
     if (ton) kette.push(`colorbalance=${ton}:${en}`)
   }
-  // 4. Blitz und Übergänge: Helligkeit rauf (weiß) oder runter (schwarz), weich ein und aus
+  // 5. Blitz und Übergänge: Helligkeit rauf (weiß) oder runter (schwarz), weich ein und aus
   const hell = o.effekte
     .filter((e): e is Extract<Effekt, { art: 'blitz' | 'uebergang' }> => e.art === 'blitz' || e.art === 'uebergang')
     .map((e) => {
@@ -196,22 +283,21 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
       return `${vz}*max(0\\,1-abs(t-${z(m)})/${z(d / 2)})`
     })
   if (hell.length) kette.push(`eq=brightness='${hell.join('+')}':eval=frame`)
-  // 5. Zensur: Unschärfe
+  // 6. Zensur: Unschärfe
   for (const e of o.effekte) if (e.art === 'zensur') kette.push(`boxblur=20:5:enable='${zwischen(E(e.von), E(e.bis))}'`)
-  // 6. Untertitel (Zeiten sind beim Schreiben schon auf die Endzeit umgerechnet)
+  // 7. Untertitel (Zeiten sind beim Schreiben schon auf die Endzeit umgerechnet)
   if (o.untertitel) kette.push(`subtitles=${o.untertitel}`)
   teile.push(`[${v}]${kette.length ? kette.join(',') : 'null'}[vf]`)
   v = 'vf'
-  // 7. Text und Bilder als Einblendungen
+  // 8. Text und Bilder als Einblendungen
   o.effekte.forEach((e, i) => {
     if (e.art !== 'text' && e.art !== 'bild') return
-    const tb = e.art === 'text' ? o.textBilder[i] : null
+    const tb = e.art === 'text' ? o.textBilder[String(i)] : null
     const datei = e.art === 'text' ? tb?.datei : e.datei
     if (!datei) return
     const von = E(e.von)
     const bis = Math.max(von + 0.2, E(e.bis))
-    const idx = eingaben.length + 1
-    eingaben.push({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(bis + 0.1)], datei })
+    const idx = neueEingabe({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(bis + 0.1)], datei })
     // Größe: Text als Anteil der Bildhöhe je Zeile, Bild als Anteil der Breite
     const breite = e.art === 'text' ? Math.round(o.hoehe * klemme(e.groesse ?? 0.12, 0.04, 0.4) * ((tb?.breite ?? 1) / Math.max(1, (tb?.hoehe ?? 1) / Math.max(1, e.text.split('\n').length)))) : Math.round(o.breite * klemme(e.groesse ?? 0.3, 0.05, 1))
     const pop = e.art === 'text' && (e.animation ?? 'pop') === 'pop' ? `*(0.55+0.45*min(1\\,max(0\\,(t-${z(von)})/0.12)))` : ''
@@ -223,34 +309,32 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     v = `vo${i}`
   })
   teile.push(`[${v}]format=yuv420p[v]`)
-  // 8. Ton: Lautstärke, Zensur-Stille, Geräusche dazumischen
+  // 9. Ton: Lautstärke, Zensur-Stille, Geräusche dazumischen
   if (o.audio) {
     const lauter = o.effekte
       .filter((e): e is Extract<Effekt, { art: 'lautstaerke' | 'zensur' }> => e.art === 'lautstaerke' || e.art === 'zensur')
       .map((e) => `volume=${e.art === 'zensur' ? 0 : z(klemme(e.faktor, 0, 4))}:enable='${zwischen(E(e.von), E(e.bis))}'`)
-    const geraeusche = o.effekte
-      .map((e, i) => ({ e, i }))
-      .filter((x): x is { e: Extract<Effekt, { art: 'geraeusch' }>; i: number } => x.e.art === 'geraeusch' && !!o.klaenge[x.e.klang])
-    // Zensur bekommt automatisch ein Piep
-    const piepe = o.effekte.filter((e): e is Extract<Effekt, { art: 'zensur' }> => e.art === 'zensur' && !!o.klaenge['piep'])
+    for (const e of o.effekte) if (e.art === 'geraeusch') klangEreignisse.push({ zeit: E(e.bei), klang: e.klang, lautstaerke: klemme(e.lautstaerke ?? 1, 0, 3) })
     teile.push(`[${a}]${lauter.length ? lauter.join(',') : 'anull'}[al]`)
     const mix: string[] = ['[al]']
-    for (const { e, i } of geraeusche) {
-      const idx = eingaben.length + 1
-      eingaben.push({ vor: [], datei: o.klaenge[e.klang]! })
-      const ms = Math.round(E(e.bei) * 1000)
-      teile.push(`[${idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=${ms}:all=1,volume=${z(klemme(e.lautstaerke ?? 1, 0, 3))}[g${i}]`)
-      mix.push(`[g${i}]`)
-    }
-    piepe.forEach((e, j) => {
-      const idx = eingaben.length + 1
-      eingaben.push({ vor: ['-stream_loop', '-1', '-t', z(Math.max(0.1, E(e.bis) - E(e.von)))], datei: o.klaenge['piep']! })
-      teile.push(`[${idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=${Math.round(E(e.von) * 1000)}:all=1[p${j}]`)
-      mix.push(`[p${j}]`)
-    })
+    klangEreignisse
+      .filter((k) => o.klaenge[k.klang])
+      .forEach((k, j) => {
+        const idx = neueEingabe({ vor: [], datei: o.klaenge[k.klang]! })
+        teile.push(`[${idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=${Math.round(k.zeit * 1000)}:all=1,volume=${z(k.lautstaerke)}[g${j}]`)
+        mix.push(`[g${j}]`)
+      })
+    // Zensur bekommt automatisch ein Piep
+    o.effekte
+      .filter((e): e is Extract<Effekt, { art: 'zensur' }> => e.art === 'zensur' && !!o.klaenge['piep'])
+      .forEach((e, j) => {
+        const idx = neueEingabe({ vor: ['-stream_loop', '-1', '-t', z(Math.max(0.1, E(e.bis) - E(e.von)))], datei: o.klaenge['piep']! })
+        teile.push(`[${idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=${Math.round(E(e.von) * 1000)}:all=1[p${j}]`)
+        mix.push(`[p${j}]`)
+      })
     teile.push(mix.length > 1 ? `${mix.join('')}amix=inputs=${mix.length}:normalize=0:duration=first[a]` : '[al]anull[a]')
   }
-  return { graph: teile.join(';\n'), eingaben, laenge: zl.laenge, endzeit: E }
+  return { graph: teile.join(';\n'), eingaben, laenge: introLaenge + zl.laenge, endzeit: E }
 }
 
 /** Prüft eine Effektliste (von Claude oder aus der Datei): unbekannte Arten und unmögliche Werte fliegen raus. */
@@ -272,6 +356,26 @@ export function pruefeEffekte(roh: unknown, laenge: number): { effekte: Effekt[]
     }
     if ('bei' in e && zeit('bei') === null) {
       fehler.push(`Effekt ${i + 1} (${art}): ungültige Zeit`)
+      continue
+    }
+    if (art === 'intro') {
+      // Teile prüfen: Clips innerhalb des Videos, Karten mit Text; kaputte Teile fallen weg
+      const teile = (Array.isArray(e['teile']) ? e['teile'] : [])
+        .map((t: Record<string, unknown>) => {
+          if (t?.['art'] === 'clip' && typeof t['von'] === 'number' && typeof t['bis'] === 'number') {
+            const von = klemme(t['von'], 0, laenge)
+            const bis = klemme(t['bis'], 0, laenge)
+            return bis - von >= 0.2 ? { ...t, von, bis } : null
+          }
+          if (t?.['art'] === 'karte' && String(t['text'] ?? '').trim()) return { ...t, text: String(t['text']) }
+          return null
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+      if (!teile.length) {
+        fehler.push(`Effekt ${i + 1}: Intro ohne gültige Teile`)
+        continue
+      }
+      effekte.push({ ...(e as object), teile } as Effekt)
       continue
     }
     if (art === 'text' && !String(e['text'] ?? '').trim()) {

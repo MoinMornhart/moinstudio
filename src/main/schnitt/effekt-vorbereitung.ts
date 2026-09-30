@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { sichereMcAssets } from '../thumbnail/minecraft'
-import { pruefeEffekte, zeitleiste, type Effekt } from './effekte'
+import { introDauer, pruefeEffekte, zeitleiste, type Effekt } from './effekte'
 import { sichereKlaenge } from './klaenge'
 
 /** Was die Aufträge für Effekte brauchen (ROADMAP E.2) */
@@ -18,7 +18,7 @@ export interface EffektHilfe {
 
 export interface VorbereiteteEffekte {
   liste: Effekt[]
-  textBilder: Record<number, { datei: string; breite: number; hoehe: number }>
+  textBilder: Record<string, { datei: string; breite: number; hoehe: number }>
   klaenge: Record<string, string>
   endzeit: (t: number) => number
   laenge: number
@@ -35,19 +35,27 @@ export async function bereiteEffekteVor(daten: string, ordner: string, laenge: n
   if (!liste.length) return null
   const klaenge = await sichereKlaenge(hilfe.ffmpeg, join(hilfe.lokal, 'klaenge'))
   const textBilder: VorbereiteteEffekte['textBilder'] = {}
-  const texte = liste.map((e, i) => ({ e, i })).filter((x): x is { e: Extract<Effekt, { art: 'text' }>; i: number } => x.e.art === 'text')
+  // Texte der Effekte (Schlüssel „i“) und der Intro-Karten (Schlüssel „i.j“)
+  const texte: { schluessel: string; text: string; farbe?: string }[] = []
+  liste.forEach((e, i) => {
+    if (e.art === 'text') texte.push({ schluessel: String(i), text: e.text, farbe: e.farbe })
+    if (e.art === 'intro') e.teile.forEach((t, j) => t.art === 'karte' && texte.push({ schluessel: `${i}.${j}`, text: t.text, farbe: t.farbe ?? '#ffdd33' }))
+  })
   if (texte.length) {
     const mc = await sichereMcAssets(daten)
     await mkdir(join(ordner, 'effekte'), { recursive: true })
-    for (const { e, i } of texte) {
-      const datei = join(ordner, 'effekte', `text${i}.png`)
+    for (const { schluessel, text, farbe } of texte) {
+      const datei = join(ordner, 'effekte', `text${schluessel}.png`)
       const aus = await new Promise<string>((resolve, reject) =>
-        execFile(hilfe.python, [hilfe.textSkript, mc.assets, datei, e.text.replace(/\n/g, '\\n'), e.farbe ?? '#ffffff', '8'], { windowsHide: true, timeout: 60_000 }, (err, stdout) => (err ? reject(err) : resolve(stdout)))
+        execFile(hilfe.python, [hilfe.textSkript, mc.assets, datei, text.replace(/\n/g, '\\n'), farbe ?? '#ffffff', '8'], { windowsHide: true, timeout: 60_000 }, (err, stdout) => (err ? reject(err) : resolve(stdout)))
       )
       const m = /MOIN_TEXTBILD (\d+) (\d+)/.exec(aus)
-      if (m) textBilder[i] = { datei, breite: Number(m[1]), hoehe: Number(m[2]) }
+      if (m) textBilder[schluessel] = { datei, breite: Number(m[1]), hoehe: Number(m[2]) }
     }
   }
+  // gleiche Zeitabbildung wie im Graphen (Intro davor, dann Tempo/Standbild)
   const zl = zeitleiste(liste, laenge)
-  return { liste, textBilder, klaenge, endzeit: zl.endzeit, laenge: zl.laenge }
+  const intro = liste.find((e): e is Extract<Effekt, { art: 'intro' }> => e.art === 'intro')
+  const vorspann = (intro?.teile ?? []).reduce((s, t) => s + introDauer(t), 0)
+  return { liste, textBilder, klaenge, endzeit: (t) => vorspann + zl.endzeit(t), laenge: vorspann + zl.laenge }
 }

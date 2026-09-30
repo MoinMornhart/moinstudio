@@ -111,4 +111,36 @@ describe('Schnitt: Effekt-Bausteine (ROADMAP E.2)', () => {
     ])
     expect(r.fehler).toHaveLength(3)
   })
+
+  it('setzt ein Intro aus Clips und Titelkarte vor das Video und verschiebt alle Zeiten (E.3)', () => {
+    const g = effektGraph(
+      basis(
+        [
+          { art: 'intro', teile: [{ art: 'clip', von: 12, bis: 13.5 }, { art: 'clip', von: 16, bis: 17, tempo: 0.5 }, { art: 'karte', text: 'TAG 100', dauer: 2, hintergrund: 'unscharf', bei: 5 }] },
+          { art: 'text', von: 1, bis: 2, text: 'HALLO' }
+        ],
+        { textBilder: { '0.2': { datei: 'C:/t/karte.png', breite: 400, hoehe: 70 }, '1': { datei: 'C:/t/hallo.png', breite: 200, hoehe: 70 } }, klaenge: { whoosh: 'C:/k/whoosh.wav', boom: 'C:/k/boom.wav' } }
+      )
+    )
+    // Intro: 1,5 s + 2 s (1 s in Zeitlupe) + 2 s Karte = 5,5 s
+    expect(g.laenge).toBeCloseTo(25.5)
+    expect(g.endzeit(1)).toBeCloseTo(6.5)
+    expect(g.graph).toContain('[vc]split=2[vc0][vi]')
+    expect(g.graph).toContain('[vi]split=3[vi0][vi1][vi2]')
+    expect(g.graph).toContain('trim=start=16.000:end=17.000,setpts=(PTS-STARTPTS)/0.5')
+    expect(g.graph).toContain('boxblur=18:2')
+    expect(g.graph).toContain('[ip0v][ip0a][ip1v][ip1a][ip2v][ip2a][vm][ac0]concat=n=4:v=1:a=1[vin][ain]')
+    // Text des Videos rückt um das Intro nach hinten
+    expect(g.graph).toContain("enable='between(t\\,6.500\\,7.500)'")
+    // automatische Geräusche: Wusch vor dem zweiten Clip, Knall zur Karte
+    expect(g.graph).toContain('adelay=1500:all=1,volume=0.700')
+    expect(g.graph).toContain('adelay=3500:all=1,volume=0.900')
+    expect(g.eingaben.map((e) => e.datei)).toEqual(['C:/t/karte.png', 'C:/t/hallo.png', 'C:/k/whoosh.wav', 'C:/k/boom.wav'])
+  })
+
+  it('prüft Intro-Teile', () => {
+    const r = pruefeEffekte([{ art: 'intro', teile: [{ art: 'clip', von: 5, bis: 5.1 }, { art: 'karte', text: 'LOS' }, { art: 'quatsch' }] }, { art: 'intro', teile: [] }], 20)
+    expect(r.effekte).toEqual([{ art: 'intro', teile: [{ art: 'karte', text: 'LOS' }] }])
+    expect(r.fehler).toEqual(['Effekt 2: Intro ohne gültige Teile'])
+  })
 })

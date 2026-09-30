@@ -159,7 +159,7 @@ export interface RenderOptionen {
   encoder: string[]
   ausgabe: string
   /** Effekte (ROADMAP E.2) mit fertigen Text-Bildern und Geräuschen; Zeiten im geschnittenen Video */
-  effekte?: { liste: Effekt[]; textBilder: Record<number, { datei: string; breite: number; hoehe: number }>; klaenge: Record<string, string> }
+  effekte?: { liste: Effekt[]; textBilder: Record<string, { datei: string; breite: number; hoehe: number }>; klaenge: Record<string, string> }
   /** Mit Effekten: Schnittzeit → Endzeit und Länge des fertigen Videos */
   endzeit?: (t: number) => number
   laengeEnde?: number
