@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.37.0** (2026-09-30): Thumbnail-Änderungen als Verlauf
 - **0.36.2** (2026-09-30): ContentStudio-Prompt: eigene Vorbilder
 - **0.36.1** (2026-09-30): Prompt für ContentStudio
 - **0.36.0** (2026-09-30): Mobs und Posen nach Basti, Sicherheitsupdate
 - **0.35.1** (2026-09-30): Thumbnail: ohne Vorbild-Hinweis
-- **0.35.0** (2026-09-30): Thumbnail: Boot, Objekte, Fixes
 <!-- CHANGELOG:END -->
 
 ## Installation
