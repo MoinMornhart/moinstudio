@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.7] - 2026-09-30
+
+> Thumbnail: Reiten
+
 ### Behoben
 
 - Thumbnail: Reiten (Pferd, Kamel, Schreiter …) setzt Philip jetzt wirklich auf das Tier. Freiform-Test: 29 gut, 20 mittel, 1 schwach.
