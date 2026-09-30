@@ -344,6 +344,8 @@ def _items_anhaengen(figuren, texturen, cam, k):
             seite = it.get("hand", "l")
             ob = mitems.baue_item(it["name"], texturen, pixel=mfigur.PX)
             mitems.mc_halten(ob, fig, seite, ob["pixel"], mitems.haltung(it["name"], texturen, seite), groesse)
+            if cam is not None:
+                mitems.handgelenk_drehen(ob, fig, seite, cam)
             gehalten[f["id"]] = ob
     bpy.context.view_layer.update()
     return gehalten
@@ -632,11 +634,24 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     # weil die Hand unter dem Bildrand lag) – sie zählt wie die Kopf-Ecken, dazu ein Punkt eine Werkzeuglänge weiter
     haupt_item = (szene["figuren"][0].get("item") or {})
 
+    probe_item = {}
+
     def wichtige_punkte():
         punkte = list(haupt.kopf_ecken())
         if haupt_item.get("name"):
-            hand = haupt.hand(haupt_item.get("hand", "l"))
-            punkte += [hand, hand + (hand - haupt.kopf_mitte()).normalized() * 0.5 * BLOCK]
+            # Probe-Gegenstand in Spiel-Haltung (hängt nur am Arm, nicht an der Kamera): seine Ecken müssen ins Bild –
+            # sonst ragte z. B. das Schwert beim Hieb oben hinaus (Test 30.09.)
+            seite = haupt_item.get("hand", "l")
+            try:
+                if "ob" not in probe_item:
+                    probe_item["ob"] = mitems.baue_item(haupt_item["name"], texturen, pixel=mfigur.PX)
+                    probe_item["anzeige"] = mitems.haltung(haupt_item["name"], texturen, seite)
+                ob = probe_item["ob"]
+                mitems.mc_halten(ob, haupt, seite, ob["pixel"], probe_item["anzeige"])
+                punkte += [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+            except Exception as fehler:  # unbekanntes Item: dann wenigstens die Hand
+                print("MOIN_WARNUNG Probe-Item", fehler)
+                punkte.append(haupt.hand(seite))
         return punkte
 
     def rahmen(still=False):
@@ -673,6 +688,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             cam_data.lens = linse
             cam.matrix_world = matrix
             print("MOIN_KAMERA_WAHL azimut", az, "warnungen", len(w), "von", len(bewertet), "Vorschlägen")
+    if "ob" in probe_item:
+        bpy.data.objects.remove(probe_item["ob"], do_unlink=True)
     oben, unten = haupt.kopf_punkte()
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)

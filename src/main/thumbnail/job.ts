@@ -194,7 +194,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         if (teilBilder.length >= 2 && p.uv && p.grafikPyDir) {
           try {
             const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
-            await sicherePakete(p.uv, python, 'PIL', ['pillow'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+            await sicherePakete(p.uv, python, 'PIL, numpy', ['pillow', 'numpy'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
             await lauf(python, [join(p.blenderDir, 'split_setzen.py'), mc.assets, `${basis}.split.png`, ...teilBilder.flat()], ctx as JobContext<unknown>)
             bild = `${basis}.split.png`
           } catch (err) {
@@ -221,7 +221,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         ctx.progress(anteil(0.93), `Variante ${i + 1}: Grafik setzen …`)
         try {
           const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
-          await sicherePakete(p.uv, python, 'PIL', ['pillow'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+          await sicherePakete(p.uv, python, 'PIL, numpy', ['pillow', 'numpy'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
           await writeFile(`${basis}.grafik.json`, JSON.stringify(grafik))
           const aus = await lauf(python, [join(p.blenderDir, 'grafik_setzen.py'), bild, `${pfad}.bericht.json`, `${basis}.grafik.json`, mc.assets, `${basis}.grafik.png`], ctx as JobContext<unknown>)
           const zeile = /MOIN_GRAFIK (.*)/.exec(aus)?.[1]

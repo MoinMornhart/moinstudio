@@ -156,6 +156,45 @@ def mc_halten(item, figur, seite, pixel, anzeige, groesse=1.0):
     return item
 
 
+def handgelenk_drehen(item, figur, seite, kamera):
+    """Spiel-Haltung beibehalten, aber im Handgelenk drehen, wenn das Werkzeug so verdeckt oder aus dem Bild wäre
+    (Test 30.09.: beim Hieb mit hochgerissenem Arm zeigt die Klinge im Spiel nach hinten hinter den Kopf – Thumbnail-
+    Künstler drehen es dann nach vorn). Gedreht wird um die Unterarm-Achse durch die Faust; bewertet werden Sichtbarkeit
+    im Bild, ob die Spitze zur Kamera statt vom Betrachter weg zeigt, Gesicht frei und möglichst wenig Drehung."""
+    from bpy_extras.object_utils import world_to_camera_view
+
+    arm = figur.teile[f"arm_{seite}"]
+    m = arm.matrix_world @ _beuge_matrix(f"arm_{seite}", figur.beugung[f"arm_{seite}"])
+    achse = (m.to_3x3() @ Vector((0, 0, -1))).normalized()
+    faust = figur.hand(seite)
+    basis = item.matrix_world.copy()
+    zur_kamera = (kamera.matrix_world.translation - faust).normalized()
+    scene = bpy.context.scene
+
+    def wert(grad):
+        item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(grad), 4, achse) @ Matrix.Translation(-faust) @ basis
+        bpy.context.view_layer.update()
+        ecken = [item.matrix_world @ Vector(c) for c in item.bound_box]
+        mitte = sum(ecken, Vector()) / 8
+        weg = (mitte - faust)
+        vorn = weg.normalized().dot(zur_kamera) if weg.length > 1e-6 else 0.0
+        # verdeckt? Strahl von der Kamera zur Werkzeugmitte trifft zuerst die Figur
+        tiefe = bpy.context.evaluated_depsgraph_get()
+        start = kamera.matrix_world.translation
+        treffer, _, _, _, ob, _ = scene.ray_cast(tiefe, start, (mitte - start).normalized(), distance=(mitte - start).length - 0.02)
+        verdeckt = 1.0 if treffer and ob is not None and ob != item and ob.name.startswith(figur.wurzel.name.split(".")[0]) else 0.0
+        v = world_to_camera_view(scene, kamera, mitte)
+        drin = 1.0 if 0.02 < v.x < 0.98 and 0.02 < v.y < 0.98 and v.z > 0 else 0.0
+        return (1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5             + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + abs(grad) / 360
+
+    bester = min((0, 45, -45, 90, -90, 135, -135, 180), key=wert)
+    item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(bester), 4, achse) @ Matrix.Translation(-faust) @ basis
+    bpy.context.view_layer.update()
+    if bester:
+        print("MOIN_HANDGELENK", figur.wurzel.name, bester)
+    return item
+
+
 def in_die_hand(item, figur, seite, kamera, winkel=40.0):
     """Richtet ein gehaltenes Item nach Stilbuch 4 aus: Griff in der Faust von `figur` (Arm `seite` = "r"/"l"),
     Fläche zur Kamera, Klinge `winkel` Grad über der Bildhorizontalen, Spitze vom Gesicht weg."""
