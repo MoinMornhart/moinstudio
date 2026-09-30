@@ -295,6 +295,9 @@ Sieh dir beide Bilder an und prüfe streng, ob das Ergebnis dem Original entspri
 - Stimmt die Haltung des GANZEN Körpers (Arme, Beine, Neigung, Sprung, Klettern, Sitzen) und die Blickrichtung?
 - Sind Personen verbunden (Kette, Seil), ist die Verbindung da und hängt an den richtigen Stellen?
 - Sind Reste der alten Personen sichtbar (Geist, Hand, Kopf)?
+- Verdeckt eine Figur ein Spiel-Logo, einen Titel oder Schriftzug, der im Original VOR den Personen lag (auch wenn die
+  Person im Original nur eine Silhouette dahinter war)? Dann gib "titel": [{box: [x0, y0, x1, y1], farbe: "#rrggbb"}] für
+  diesen Schriftzug an (Farbe der Buchstaben, je Farbe ein Eintrag) – er wird wieder vor die Figuren gelegt.
 - Wirkt es wie ein fertiges Thumbnail (Figur gut sichtbar, Gesicht frei, nichts Seltsames)?
 
 Die Szene (Bildkoordinaten 0–1, oben links = 0,0; pose = Posen-Name oder Winkel arm_r/arm_l {heben, seitlich, drehen,
@@ -485,7 +488,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     ctx.progress(50 + versuch * 3, `Figur deckt die alte Person nur zu ${Math.round((pruefung.deckung ?? 0) * 100)} % ab – größer …`)
     spec.kopf_anteil = neu
   }
-  const boxen = titelArgumente(a)
+  let boxen = titelArgumente(a)
   const rendern = async (fortschritt: number): Promise<{ bild: string | null; code: number | null; bericht: { fehler?: string; deckung?: number } }> => {
     await writeFile(join(p.ausgabe, 'spec.json'), JSON.stringify(spec, null, 1))
     ctx.progress(fortschritt, 'Blender rendert …')
@@ -522,6 +525,12 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     probleme.splice(0, probleme.length, ...(urteil.probleme ?? []))
     if (urteil.passt || !urteil.korrektur || !Object.keys(urteil.korrektur).length) break
     korrigiere(spec, urteil.korrektur)
+    // Logo/Titel, das die Figur verdeckt: wieder vor die Figuren legen (Test 30.09.: Lethal Company, GTA)
+    const neueTitel = echteTitel({ titel: urteil.korrektur['titel'] as VorlagenAnalyse['titel'] })
+    if (neueTitel.length) {
+      a.titel = [...(a.titel ?? []), ...neueTitel]
+      boxen = titelArgumente(a)
+    }
     ;({ bild, code, bericht } = await rendern(78 + runde * 10))
   }
   const warnungen = [
