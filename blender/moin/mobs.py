@@ -30,7 +30,11 @@ def augen_textur(texturen_ordner, textur):
     return None
 
 
-def _material(name, bild, augen=None):
+# Mobs, deren Textur das Spiel erst beim Spielen einfärbt (Tropenfisch: weiße Grundtextur, Farbe je Variante)
+TOENUNG = {"tropicalfish": (0.95, 0.16, 0.01)}
+
+
+def _material(name, bild, augen=None, toenung=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nt = mat.node_tree
@@ -38,7 +42,14 @@ def _material(name, bild, augen=None):
     tex = nt.nodes.new("ShaderNodeTexImage")
     tex.image = bild
     tex.interpolation = "Closest"
-    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    if toenung:
+        mal = nt.nodes.new("ShaderNodeVectorMath")
+        mal.operation = "MULTIPLY"
+        mal.inputs[1].default_value = toenung
+        nt.links.new(tex.outputs["Color"], mal.inputs[0])
+        nt.links.new(mal.outputs[0], bsdf.inputs["Base Color"])
+    else:
+        nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
     if hasattr(mat, "blend_method"):
         mat.blend_method = "CLIP"
@@ -134,7 +145,7 @@ def baue_mob(art, eintrag, texturen_ordner, groesse=1.0, pose="stand", collectio
     augen = bpy.data.images.load(augen_pfad, check_existing=True) if augen_pfad else None
     if augen:
         augen.alpha_mode = "STRAIGHT"
-    mat = _material(f"mob.{art}", bild, augen)
+    mat = _material(f"mob.{art}", bild, augen, TOENUNG.get(art))
     skala = (eintrag.get("scale") or 1.0) * groesse
     name = name or art
     wurzel = bpy.data.objects.new(f"{name}.wurzel", None)
