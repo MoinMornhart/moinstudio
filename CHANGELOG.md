@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-09-30
+
+> Mobs und Posen nach Basti, Sicherheitsupdate
+
 ### Security
 
 - vitest 5.0 behebt zwei gemeldete Lücken (GHSA-5xrq-8626-4rwp kritisch, GHSA-82fw-gwwq-j7x9 mittel); npm audit: 0 Schwachstellen.

@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.36.0** (2026-09-30): Mobs und Posen nach Basti, Sicherheitsupdate
 - **0.35.1** (2026-09-30): Thumbnail: ohne Vorbild-Hinweis
 - **0.35.0** (2026-09-30): Thumbnail: Boot, Objekte, Fixes
 - **0.34.0** (2026-09-30): Thumbnail: Augen, Laser, Elytra
 - **0.33.0** (2026-09-30): Premiere: Effekte
-- **0.32.0** (2026-09-30): Schnitt: Wünsche und Effektliste
 <!-- CHANGELOG:END -->
 
 ## Installation
