@@ -338,9 +338,12 @@ def _items_anhaengen(figuren, texturen, cam, k):
             # Kampf: Waffen nah an der Kamera übergroß wie bei GommeHD (1,3–1,6-fach)
             # bei weiten Einstellungen wirkt ein maßstabsgetreues Werkzeug winzig (Test 30.09.: Goldaxt ein paar Pixel) –
             # die Vorbilder übertreiben es dann wie im Kampf
-            groesse = it.get("groesse", {"kampf": 1.4, "ganz": 1.6, "tiefe": 1.6, "abgrund": 1.6, "klippe_wand": 1.5, "brust": 1.15, "mob": 1.3}.get(k.get("modus"), 1.0))
-            ob = mitems.baue_item(it["name"], texturen, pixel=mitems.ITEM_PIXEL * groesse)
-            mitems.in_die_hand(ob, fig, it.get("hand", "l"), cam, it.get("winkel", 40))
+            # Haltung und Größe wie im Spiel (display.thirdperson aus der Modellkette), nur bei weiten Einstellungen etwas
+            # übertrieben wie bei den Vorbildern (sonst ist das Werkzeug dort ein paar Pixel groß)
+            groesse = it.get("groesse", {"kampf": 1.25, "ganz": 1.4, "tiefe": 1.4, "abgrund": 1.4, "klippe_wand": 1.3, "mob": 1.15}.get(k.get("modus"), 1.0))
+            seite = it.get("hand", "l")
+            ob = mitems.baue_item(it["name"], texturen, pixel=mfigur.PX)
+            mitems.mc_halten(ob, fig, seite, ob["pixel"], mitems.haltung(it["name"], texturen, seite), groesse)
             gehalten[f["id"]] = ob
     bpy.context.view_layer.update()
     return gehalten

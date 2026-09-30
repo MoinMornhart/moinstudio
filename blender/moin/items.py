@@ -9,7 +9,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 from .bloecke import _rgba_im_speicher
-from .figur import PX
+from .figur import PX, _beuge_matrix
 
 # Größe in der Hand: Stilbuch 4 – mitgehaltenes Schwert 1,3–1,6 Kopfgrößen (Diagonale), Kopf = 8 px
 ITEM_PIXEL = 1.45 * 8 * PX / (16 * math.sqrt(2))
@@ -39,12 +39,6 @@ def baue_item(name, texturen_ordner, pixel=ITEM_PIXEL, collection=None):
             return False
         return px[(j * w + i) * 4 + 3] > 0.5
 
-    # Werkzeuge (Axt, Hacke, Schaufel, Spitzhacke) füllen ihre Textur nicht ganz: nach sichtbarer Länge entlang der
-    # Diagonale auf Schwertlänge bringen (Philip, 30.09.: „die Axt ist falsch“ – sie wirkte winzig)
-    diag = [i + j for j in range(h) for i in range(w) if deckend(i, j)]
-    if diag:
-        spanne = max(diag) - min(diag) + 1
-        pixel *= min(1.35, max(1.0, 27 * w / 16 / spanne))
 
     verts, faces, uvs = [], [], []
     d = 0.5 * pixel
@@ -94,7 +88,72 @@ def baue_item(name, texturen_ordner, pixel=ITEM_PIXEL, collection=None):
     col.objects.link(ob)
     # Griff: bei Waffen und Werkzeugen liegt der Griff unten links in der Textur (Pixel ~ 3, 3)
     ob["griff"] = ((3.5 - w / 2) * pixel, 0.0, (3.5 - h / 2) * pixel)
+    ob["pixel"] = pixel * 16 / max(w, 1)  # Kantenlänge eines Spiel-Pixels (Texturen mit 32/64 px sind feiner)
     return ob
+
+
+def haltung(name, texturen_ordner, seite="r"):
+    """Wie das Spiel das Item in der Hand hält: `display.thirdperson_righthand/lefthand` aus der Modellkette
+    (models/item/<name>.json → parent …): Werkzeuge und Waffen erben von item/handheld (rotation [0, −90, 55],
+    translation [0, 4, 0.5], scale 0.85), gewöhnliche Items von item/generated ([0, 0, 0], [0, 3, 1], 0.55)."""
+    import json
+
+    modelle = os.path.join(os.path.dirname(texturen_ordner), "models")
+    schluessel = "thirdperson_righthand" if seite == "r" else "thirdperson_lefthand"
+    pfad = os.path.join(modelle, "item", f"{name}.json")
+    for _ in range(8):
+        if not os.path.exists(pfad):
+            break
+        with open(pfad, encoding="utf-8") as fh:
+            m = json.load(fh)
+        d = (m.get("display") or {}).get(schluessel)
+        if d:
+            return {"rotation": d.get("rotation", [0, 0, 0]), "translation": d.get("translation", [0, 0, 0]), "scale": d.get("scale", [1, 1, 1])}
+        eltern = m.get("parent", "")
+        if not eltern or eltern.startswith("builtin"):
+            break
+        eltern = eltern.split(":")[-1]
+        pfad = os.path.join(modelle, *eltern.split("/")) + ".json"
+    # Standard: wie ein Werkzeug (die meisten Dinge in Thumbnails sind Werkzeuge und Waffen)
+    return {"rotation": [0, -90, 55] if seite == "r" else [0, 90, -55], "translation": [0, 4.0, 0.5], "scale": [0.85, 0.85, 0.85]}
+
+
+def mc_halten(item, figur, seite, pixel, anzeige, groesse=1.0):
+    """Hält das Item exakt so wie Minecraft in der dritten Person (Philip, 30.09.: „die Werkzeuge passen immer noch
+    nicht, informiere dich ordentlich“). Nachgebaut aus dem Spiel:
+
+    ItemInHandLayer: translateToHand(Arm) → Rx(−90°) → Ry(180°) → translate(±1/16, 2/16, −10/16)
+    ItemTransform (display aus dem Modell): translate(t/16) → Rx·Ry·Rz(rotation) → scale → translate(−½, −½, −½)
+    Das Item-Modell liegt im Würfel 0…1 (Textur in x/y, 1 px dick um z = 0.5).
+
+    Unser Arm hat dieselbe Geometrie (12 px, Drehpunkt 2 px unter der Oberkante, rechter Arm auf −X, vorn = −Y).
+    Modell-Arm-Raum von Minecraft (y nach unten, vorn −z) → unser Arm-Raum: (x, y, z) → (x, z, −y), 1 Einheit = 1 Block.
+    Das Item folgt dem gebeugten Unterarm (Ellbogen) wie die Faust. `pixel`: Pixelgröße, mit der das Item gebaut ist."""
+    from .bloecke import BLOCK
+
+    arm = figur.teile[f"arm_{seite}"]
+    rechts = seite == "r"
+    rx, ry, rz = (math.radians(w) for w in anzeige["rotation"])
+    tx, ty, tz = (w / 16 for w in anzeige["translation"])
+    s = anzeige["scale"]
+    # 1. Minecraft: Item-Modell (0…1) → Modell-Arm-Raum (Einheit Block)
+    a = (Matrix.Rotation(math.radians(-90), 4, "X") @ Matrix.Rotation(math.radians(180), 4, "Y")
+         @ Matrix.Translation(((1 if rechts else -1) / 16, 2 / 16, -10 / 16))
+         @ Matrix.Translation((tx, ty, tz))
+         @ Matrix.Rotation(rx, 4, "X") @ Matrix.Rotation(ry, 4, "Y") @ Matrix.Rotation(rz, 4, "Z")
+         @ Matrix.Diagonal((s[0] * groesse, s[1] * groesse, s[2] * groesse, 1.0))
+         @ Matrix.Translation((-0.5, -0.5, -0.5)))
+    # 2. unser Item-Netz (Mitte im Ursprung, Textur in X/Z, vorn −Y, Kante `pixel`) → Item-Modell (0…1)
+    k = 1.0 / (16 * pixel)
+    q = Matrix(((k, 0, 0, 0.5), (0, 0, k, 0.5), (0, -k, 0, 0.5), (0, 0, 0, 1)))
+    # 3. Modell-Arm-Raum → unser Arm-Drehpunkt-Raum (Meter)
+    c = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1))) @ Matrix.Diagonal((BLOCK, BLOCK, BLOCK, 1.0))
+    # 4. Drehpunkt (Schulter) im Netz-Raum des Arms, dann Beugung des Unterarms und Weltlage des Arms
+    drehpunkt = -Vector(arm.location)  # Netz liegt um „mitte“ vom Gelenk versetzt
+    beuge = _beuge_matrix(f"arm_{seite}", figur.beugung[f"arm_{seite}"])
+    item.matrix_world = arm.matrix_world @ beuge @ Matrix.Translation(drehpunkt) @ c @ a @ q
+    bpy.context.view_layer.update()
+    return item
 
 
 def in_die_hand(item, figur, seite, kamera, winkel=40.0):
