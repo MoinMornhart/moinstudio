@@ -9,6 +9,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 ### Fixed
 
 - Spiele-Vorlage: Gibt es das gehaltene Ding nicht als freies 3D-Modell, nimmt MoinStudio ein ähnliches (Gewehr statt Schrotflinte, Pistole statt Revolver) statt leerer Hände.
+- Spiele-Vorlage: Lange Waffen (Gewehr, Schwert) haben ihre richtige Länge, Schusswaffen zielen nach vorn, und jedes 3D-Modell liegt richtig in der Hand; beim Einpassen bleibt der Kopf immer ganz im Bild.
 - Spiele-Vorlage: Die Schlussprüfung kann eine Rückansicht nicht mehr versehentlich in eine Frontansicht drehen.
 - Release-Skript: Zusammengeführte Zweige bringen das Hochladen nicht mehr durcheinander.
 

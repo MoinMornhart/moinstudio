@@ -47,6 +47,16 @@ def _requisit(pfad, knoten, laenge_m):
         if o not in behalten and o.type == "MESH":
             bpy.data.objects.remove(o, do_unlink=True)
     bpy.context.view_layer.update()
+    # Lauf/Klinge = längste Achse des Modells, auf +X drehen (Test Red Dead: das Gewehr von Poly Haven liegt längs Y
+    # bzw. Z und ragte dann senkrecht aus der Hand)
+    ecken = [o.matrix_world @ Vector(c) for o in behalten for c in o.bound_box]
+    ausdehnung = [max(e[i] for e in ecken) - min(e[i] for e in ecken) for i in range(3)]
+    achse = ausdehnung.index(max(ausdehnung))
+    if achse != 0:
+        dreh = Matrix.Rotation(math.radians(-90), 4, "Z") if achse == 1 else Matrix.Rotation(math.radians(90), 4, "Y")
+        for o in behalten:
+            o.matrix_world = dreh @ o.matrix_world
+        bpy.context.view_layer.update()
     ecken = [o.matrix_world @ Vector(c) for o in behalten for c in o.bound_box]
     lo = Vector((min(e.x for e in ecken), min(e.y for e in ecken), min(e.z for e in ecken)))
     hi = Vector((max(e.x for e in ecken), max(e.y for e in ecken), max(e.z for e in ecken)))
@@ -148,6 +158,13 @@ def _einpassen(scene, cam, fig, person, maske, name):
         if faktor < 1.03:
             break
         _skaliere_um_kopf(fig, faktor)
+        # der Kopf muss ganz im Bild bleiben (Test Red Dead: Kopf oben abgeschnitten) – sonst zurück und aufhören
+        from bpy_extras.object_utils import world_to_camera_view
+        ecken = [world_to_camera_view(scene, cam, e) for e in fig.kopf_ecken()]
+        if not all(0.0 < e.x < 1.0 and 0.0 < e.y < 1.0 for e in ecken):
+            _skaliere_um_kopf(fig, 1 / faktor)
+            schritte[-1]["faktor"] = 1.0
+            break
         gesamt *= faktor
     print("MOIN_EINPASSEN", name, schritte)
     return {"schritte": schritte, "faktor": round(gesamt, 3), "deckung": schritte[-1]["deckung"]}
@@ -261,6 +278,15 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         punkt = cam.location + strahl * abstand * (1.7 if spec.get("ansicht") == "hinten" else 0.85)
         info["ziel"] = [zu, zv]
         info["arm"] = _ziele(fig, p, (r or {}).get("hand", "r"), punkt)
+    elif r and r.get("zielen") and spec.get("ansicht") != "hinten":
+        # Schusswaffe ohne Zielpunkt: zielt wie auf Waffen-Thumbnails nach vorn zum Betrachter (Test Red Dead: sonst
+        # folgt das Gewehr dem gebeugten Unterarm und ragt senkrecht nach oben). Zielpunkt zwischen Hand und Kamera,
+        # leicht zur Bildmitte, damit der Lauf schräg zur Kamera zeigt und nicht genau in die Linse
+        seite = r.get("hand", "r")
+        mitte = cam.location + (cam.matrix_world.to_3x3() @ Vector((0, 0, -1))) * abstand
+        punkt = fig.hand(seite).lerp(cam.location, 0.45).lerp(mitte, 0.25)
+        info["ziel"] = "kamera"
+        info["arm"] = _ziele(fig, p, seite, punkt)
     if r and os.path.exists(r["gltf"]):
         seite = r.get("hand", "r")
         teil = fig.teile[f"arm_{seite}"]

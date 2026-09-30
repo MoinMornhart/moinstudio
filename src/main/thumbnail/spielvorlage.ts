@@ -194,6 +194,16 @@ const ERSATZ: [RegExp, string][] = [
   [/mace|club|keule/i, 'mace']
 ]
 
+/** Länge des gehaltenen Dings in Minecraft-Pixeln (Arm = 12): Pistole kurz, Gewehr und Schwert lang (Test Red Dead:
+ * das Gewehr verschwand in Pistolengröße hinter den Händen) */
+export function requisitLaenge(suchwort: string): number {
+  const w = suchwort.toLowerCase()
+  if (/shotgun|rifle|musket|sniper|gewehr|flinte|spear|speer|staff|stab|bat|schläger/.test(w)) return 24
+  if (/sword|katana|saber|sabre|schwert|axe|axt|hammer|mace|guitar|gitarre|shovel|schaufel/.test(w)) return 18
+  if (/dagger|knife|messer|dolch|wand|zauberstab|torch|flashlight|lamp/.test(w)) return 11
+  return 10
+}
+
 export function ersatzSuchwort(suchwort: string): string | null {
   return ERSATZ.find(([muster]) => muster.test(suchwort))?.[1] ?? null
 }
@@ -496,7 +506,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     ansicht: a.ansicht ?? 'vorn',
     ...(a.ziel?.length === 2 ? { ziel: a.ziel } : {}),
     ...(typeof a.blick === 'number' ? { blick: Math.max(-90, Math.min(90, a.blick)) } : {}),
-    requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: 10 } : undefined,
+    requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: requisitLaenge(a.gegenstand?.suchwort ?? ''), zielen: /gun|rifle|pistol|revolver|shotgun|musket|sniper|blaster|crossbow|bow|gewehr|pistole|flinte|armbrust/i.test(a.gegenstand?.suchwort ?? '') } : undefined,
     ...(p.freunde?.length ? { freunde: freundePlaetze(a, p.freunde).map((f, i) => (i < ersetzt && person.personen?.[i + 1] ? { ...f, person: mitMaske(person.personen[i + 1]) } : f)) } : {}),
     ...(person.personen ? { person: mitMaske(person.personen[0]) } : {}),
     ...(verbindungen.length ? { verbindungen, texturen } : {}),
