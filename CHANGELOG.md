@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Doku: ContentStudio-Prompt – Nutzer können jederzeit eigene Vorbild-Thumbnails hinzufügen, für den ganzen Kanal oder nur für einen Auftrag.
+
 ## [0.36.1] - 2026-09-30
 
 > Prompt für ContentStudio

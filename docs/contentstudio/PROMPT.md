@@ -113,7 +113,8 @@ Schritte (Reihenfolge so, Texte kurz, Beispiele statt Fachbegriffe):
 6. **Deine Vorbilder:** Der Nutzer nennt Kanäle, deren Stil er mag, oder lädt eigene und fremde Thumbnails als Referenz
    hoch. Die App analysiert sie lokal bzw. mit der gewählten KI (Bildaufbau, Posen, Farbe, Text ja/nein, Mob- oder
    Objekt-Größe) und schreibt ein **Stilbuch pro Kanal**, wie `docs/research/stilbuch.md` in MoinStudio, nur automatisch.
-   Fremde Bilder bleiben lokal und werden nie veröffentlicht.
+   Fremde Bilder bleiben lokal und werden nie veröffentlicht. Dieser Schritt ist nur der Anfang: Vorbilder lassen sich
+   jederzeit ergänzen (siehe 5.2 „Eigene Vorbilder“).
 7. **Marke:**
    - Logo(s)
    - Farben
@@ -198,12 +199,27 @@ erlaubt, soweit es die Lizenz von MoinStudio zulässt; prüfe `LICENSE` und nenn
   - Bild leer oder überstrahlt?
 
   Danach wird korrigiert, erst dann wird etwas gezeigt. Änderungswünsche in Worten.
+- **Eigene Vorbilder, jederzeit:** Der Nutzer kann beliebige Thumbnails hinzufügen, an denen sich die KI orientieren
+  soll: per Datei, per Drag-and-drop, aus der Zwischenablage oder per Video-Link (dann nur das öffentliche Thumbnail).
+  Zwei Ebenen:
+  - **Für den Kanal:** Das Bild kommt in die Vorbild-Sammlung des Kanals. Die App analysiert es (Bildaufbau, Posen,
+    Kamera, Farben, Licht, Text, Größe von Figur und Objekten) und ergänzt damit das Stilbuch. Die KI wählt bei jedem
+    Auftrag das passendste Vorbild aus dieser Sammlung.
+  - **Nur für diesen Auftrag:** Ein oder mehrere Bilder mit dem Hinweis „so ähnlich wie das hier“. Diese Vorbilder haben
+    für den Auftrag Vorrang vor dem Stilbuch. Der Nutzer kann dazuschreiben, was er daran mag („nur die Farben“, „genau
+    diese Pose“, „diesen Aufbau mit dem Mob rechts“), und die KI übernimmt gezielt das.
+
+  Vorbilder lassen sich ansehen, gewichten („mehr davon“ / „weniger davon“), deaktivieren und löschen. Aus fremden
+  Bildern übernimmt die KI nur Stil und Aufbau, nie Logos, Texte, Figuren oder Bildteile. Die Bilder bleiben lokal im
+  Datenordner und werden nie veröffentlicht oder mitgeliefert.
 - **Aus dem Video:** Video analysieren, Momente und Thumbnail-Ideen vorschlagen.
 - **Text:** passende Schrift aus der Marke, nie über Gesicht oder Wichtigem, lebendig platziert.
 - **Freunde:** in jeder Thumbnail-Art.
 - **Logo:** in jedem Projekt möglich.
 - **Export:** PNG/JPG in den Plattform-Formaten des Profils (16:9, 9:16 für Shorts/Reels, 1:1), PSD mit Ebenen.
-- **Keine Vorbild-Hinweise in der Oberfläche** („orientiert sich an …“); die Vorbilder wirken nur im Hintergrund.
+- **Vorbild-Hinweise in der Oberfläche** („orientiert sich an …“) sind standardmäßig aus und lassen sich in den
+  Einstellungen einschalten. Bei Vorbildern, die der Nutzer für einen Auftrag selbst hochgeladen hat, zeigt die Variante
+  auf Wunsch das Vorbild daneben.
 
 ### 5.3 Schnitt
 Alles aus MoinStudio (`src/main/schnitt/`):
