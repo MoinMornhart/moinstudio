@@ -1,6 +1,6 @@
 # Freiform-Test: 50 ungewöhnliche Beschreibungen
 
-Stand 30.09.2026, Version 0.29.5 (VM ohne GPU, Cycles auf der CPU mit 16 Samples, Claude über das Abo).
+Stand 30.09.2026, Version 0.29.7 (VM ohne GPU, Cycles auf der CPU mit 16 Samples, Claude über das Abo).
 
 Nach Philips Regel muss das Thumbnail jede frei formulierte Beschreibung umsetzen können. Keine feste Posen-, Orts- oder Requisitenliste darf die Grenze sein. Deshalb liefen 50 ungewöhnliche Beschreibungen aus seinen echten Inhalten durch den **echten Thumbnail-Auftrag**: Claude plant frei, Blender rendert, danach Selbstprüfung und Korrekturschleife. Die Beschreibungen umfassen:
 
@@ -18,7 +18,7 @@ Jedes Bild habe ich selbst angesehen und streng bewertet:
 
 Bilder und Szenen liegen nur lokal unter `test-output/freeform/`, nie im Repo. Der Test lässt sich mit `npx vitest run -c vitest.echt.config.ts tests/echt/freeform.test.ts` wiederholen.
 
-**Ergebnis: 28 gut, 21 mittel, 1 schwach.** Kein Fall bricht mehr ab. Im Schnitt dauert ein Fall 120 s mit einer Variante. Insgesamt gab es 25 Korrekturen durch die Selbstprüfung.
+**Ergebnis: 29 gut, 20 mittel, 1 schwach.** Kein Fall bricht mehr ab. Im Schnitt dauert ein Fall 120 s mit einer Variante. Insgesamt gab es 25 Korrekturen durch die Selbstprüfung.
 
 ## Verlauf
 
@@ -38,6 +38,7 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 | Facepalm galt als Fehler | Regel „Gesicht immer frei“ | Ausnahme mit `gesicht_frei: false` (0.29.5) |
 | Absturz bei Position `[x, y, z]` und Entity ohne Geometrie | fehlende Absicherung | dritter Wert als Höhe, leere Entities übersprungen (0.29.5) |
 | Warden in der Nacht unsichtbar | Fülllicht für Themen-Mobs zu schwach | Fülllicht verstärkt (0.29.6) |
+| Reiten ohne Reittier unter Philip | Claude kannte die Kombination nicht | Regel „Reiten = auf + Sitzpose“ (0.29.7) |
 
 ## Alle 50 Fälle (Endstand)
 
@@ -61,7 +62,7 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 | 16 | Handstand auf dem Kopf eines Creepers | Pose | gut | steht kopfüber auf dem Creeper |
 | 17 | Yoga auf einem Heuballen im Dorf | Pose | mittel | Yoga im Dorf, nicht auf dem Heuballen |
 | 18 | mit dem Boot einen Wasserfall hinunter | Pose | mittel | Wasserfall da, Boot nur als Gegenstand |
-| 19 | auf einem Schreiter über den Lavasee | Pose | mittel | Schreiter und Lava da, Philip reitet nicht |
+| 19 | auf einem Schreiter über den Lavasee | Pose | gut | reitet auf dem Schreiter (nach Regel „Reiten“, 0.29.7) |
 | 20 | Bett im Nether explodiert | Pose | mittel | Explosion wirft Philip, Bett kaum sichtbar |
 | 21 | Warden aus dem Wasser angeln | Pose | mittel | Warden und Angel da (nach stärkerem Fülllicht) |
 | 22 | Klettern am Gerüstturm | Pose | gut | Kletterpose am Turm |
@@ -79,7 +80,7 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 | 34 | Phantom greift in der Nacht an | Mob | **schwach** | Phantom nur als dunkle Silhouette |
 | 35 | Älterer Wächter feuert Laser | Mob | mittel | Wächter da, kein Laser |
 | 36 | Piglin-Barbar in der Bastion | Mob | gut | Barbar, Bastion, Lava |
-| 37 | Kamelritt in der Wüste, Husk jagt | Mob | gut | Kamel, Husk, Wüste |
+| 37 | Kamelritt in der Wüste, Husk jagt | Mob | gut | sitzt auf dem Kamel, Husk dahinter |
 | 38 | Ravager rammt die Holzhütte | Mob | gut | Ravager an der Hütte |
 | 39 | Elytra-Wettflug mit SimPell | Duo | mittel | beide in der Luft, Elytras nicht sichtbar |
 | 40 | SimPell zieht mich an der Leine hinter dem Boot | Duo | mittel | Leine und Wasser, Boot aus Blöcken |
@@ -97,6 +98,5 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 ## Bekannte Schwächen (werden weiter verbessert)
 
 - **Dunkle Mobs am Nachthimmel** (Phantom): trotz Fülllicht nur als Silhouette. Möglicher Ansatz ist Mondlicht als Randlicht auf fliegende Mobs.
-- **„Auf etwas sitzen oder reiten“** bei Tieren (Schreiter, Kamel): Das Feld `auf` wird noch nicht immer genutzt.
 - **Fahrzeuge und Betten:** Boot und Bett erscheinen nur als Gegenstand in der Hand oder als Block-Nachbau.
 - Claude wählt oft die Nahaufnahme. Das passt zum Stil großer Kanäle, lässt aber Nebenmobs klein wirken.

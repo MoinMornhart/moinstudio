@@ -71,6 +71,8 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    oder was er trägt, baust du als Block. Zwei Felder je Figur helfen dabei:
    `"auf": "mob:0"` bzw. `"auf": "objekt:0"` stellt die Figur mittig auf einen Mob oder ein Objekt (Handstand auf dem Creeper,
    Yoga auf dem Heuballen, im Boot aus Blöcken) – MoinStudio rechnet die Höhe selbst aus, `position` ist dann egal.
+   **Reiten** (Pferd, Kamel, Schreiter, Schwein …) = `"auf": "mob:N"` plus Sitzpose per `posen_korrektur`
+   ({"bein_r": {"vor": 70, "seitlich": 25}, "bein_l": {"vor": 70, "seitlich": 25}}); der Mob steht dann nah vorn im Bild.
    `"kopf": "carved_pumpkin"` setzt einen Block auf den Kopf (Kürbis-Verkleidung, Block-Helm); das Gesicht zeigt nach vorn.
 
 # Koordinaten
