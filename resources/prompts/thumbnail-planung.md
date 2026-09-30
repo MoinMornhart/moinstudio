@@ -77,6 +77,10 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    - `{"art": "grosstext", "zeilen": ["KEIN ANGREIFEN", "KEIN ABBAUEN"], "farbe": "rot"}` – großer gestapelter Text
      neben Philip für Regeln/Verbote (2–4 kurze Zeilen). Dann `text` leer lassen.
    Grafik ersetzt normalen Text: nutzt du `level`, `etikett` oder `grosstext`, bleibt `text` leer.
+   Dazu gehört in der Szene selbst (Feld `markierungen` der `szene`): ein leuchtender Rahmen auf dem Boden um die
+   Challenge-Zone (Basti 05/09: Philip steht in einem roten Quadrat), z. B.
+   `"markierungen": [{"von": [-3, -3], "bis": [3, 3], "farbe": "rot"}]` (Blöcke, Philip steht bei [0, 0]; Farben rot,
+   gelb, gruen, blau, weiss). Gut mit `level` oder `grosstext` und einer Kamera von schräg oben (`hoehe` 20–35).
 8c. **Geteiltes Bild** (`split` der Variante) für Vergleiche und Steigerungen – bei Basti in 6 von 30 Bildern:
    Preise („10€ / 100€ / 1000€“), Vorher/Nachher, Tag 1 / Tag 100, Noob / Pro, echt / fake. 2–3 Teile, jeder mit eigener
    vollständiger `szene` (gleiche Figur, andere Welt, andere Pose oder anderes Ding – der Unterschied muss sofort

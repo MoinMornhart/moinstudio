@@ -58,7 +58,9 @@ def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_
     # Thema: muss in seiner Bildhälfte liegen (Bereich statt Punkt), sanft zur Wunschstelle gezogen
     tx0, tx1 = (0.55, 0.95) if seite == "links" else (0.05, 0.45)
     raus = max(0.0, tx0 - pt.x) + max(0.0, pt.x - tx1) + max(0.0, 0.08 - pt.y) + max(0.0, pt.y - 0.75)
-    fehler += raus * raus * 8 + ((pt.x - thema_uv[0]) ** 2 + (pt.y - thema_uv[1]) ** 2) * 0.15
+    # das Thema ist der Grund des Bildes: liegt es außerhalb seines Bereichs, muss das mehr kosten als ein nicht ganz
+    # perfekter Gesichtswinkel (Test 30.09.: Riesen-Creeper am Rand, weil 5 % daneben nur 0,02 kostete)
+    fehler += raus * 30 + raus * raus * 40 + ((pt.x - thema_uv[0]) ** 2 + (pt.y - thema_uv[1]) ** 2) * 0.15
     fehler += ((po.y - pu.y) - m["kopf_anteil"]) ** 2 * 3
     if gesicht is not None:
         d = gesicht.dot((pos - kopf).normalized())
@@ -128,6 +130,13 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
         az, el = math.radians(az_deg), math.radians(el_deg)
         pos = kopf + Vector((math.sin(az) * math.cos(el), math.cos(az) * math.cos(el), math.sin(el))) * abstand
         KANDIDATEN.append((f, linse, _blick_matrix(pos, kopf + richtung * (i * 0.2) - pos), az_deg, el_deg))
+    # Thema (z. B. Riesen-Creeper) passt nicht ins Bild: mit kleinerem Kopf, also weiter weg, noch einmal suchen –
+    # höchstens zweimal (Test 30.09.: „Level 19 – Riesen-Creeper“ lag bei 104 % der Bildbreite, der Creeper fehlte)
+    tu, tv = beste[4]
+    stufe = (anpassung or {}).get("_weiter", 0)
+    if (tu < 0.03 or tu > 0.97 or tv < 0.03 or tv > 0.97) and stufe < 2:
+        weiter = dict(anpassung or {}, kopf_anteil=m["kopf_anteil"] * 0.72, _weiter=stufe + 1)
+        return rahme(scene, cam, kopf_oben, kopf_unten, thema, modus, seite, gesicht, erlaubt, kopf_ecken, still, weiter)
     cam.data.lens = beste[2]
     cam.matrix_world = beste[1]
     if not still:

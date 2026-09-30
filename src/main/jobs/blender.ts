@@ -27,6 +27,8 @@ export function looksLikeGpuFailure(code: number | null, output: string): boolea
  */
 export async function runBlender(run: BlenderRun, ctx: JobContext<unknown>): Promise<{ code: number | null; output: string; mesaFallback?: boolean }> {
   const first = await runBlenderOnce(run, ctx)
+  // Bild schon fertig (MOIN_BILD_OK), nur die Photoshop-Maske danach ist abgestürzt: kein zweiter Durchlauf mit Mesa
+  if (first.output.includes('MOIN_BILD_OK')) return first
   if (run.mesa || ctx.signal.aborted || !looksLikeGpuFailure(first.code, first.output) || !(await hasMesa(dirname(run.exe)))) return first
   ctx.progress(null, 'Grafik in dieser Sitzung nicht nutzbar – rendere mit Software-OpenGL …')
   return { ...(await runBlenderOnce({ ...run, mesa: true }, ctx)), mesaFallback: true }
@@ -42,8 +44,12 @@ function runBlenderOnce(run: BlenderRun, ctx: JobContext<unknown>): Promise<{ co
     })
     ctx.track(child)
     let output = ''
+    let wache: NodeJS.Timeout | undefined
     const collect = (d: Buffer): void => {
       output = (output + d.toString()).slice(-20_000)
+      // Nach dem fertigen Bild rechnet Blender nur noch die Photoshop-Maske (Workbench/OpenGL). Die hing auf manchen
+      // Rechnern ewig (Test 30.09.) – spätestens nach 90 s beenden, das Bild ist ja fertig
+      if (!wache && output.includes('MOIN_BILD_OK')) wache = setTimeout(() => child.kill(), 90_000)
     }
     child.stdout.on('data', collect)
     child.stderr.on('data', collect)
@@ -54,6 +60,7 @@ function runBlenderOnce(run: BlenderRun, ctx: JobContext<unknown>): Promise<{ co
     child.once('error', reject)
     child.once('exit', (code) => {
       ctx.signal.removeEventListener('abort', onAbort)
+      if (wache) clearTimeout(wache)
       resolve({ code, output })
     })
   })

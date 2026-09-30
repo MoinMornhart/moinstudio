@@ -143,6 +143,47 @@ def _pflanzen_vor_kamera_weg(cam, ziel, abstand=0.8):
     bm.free()
 
 
+def _markierungen(scene, liste):
+    """Leuchtende Rahmen auf dem Boden (BastiGHG 05/09: rotes Quadrat um die Challenge-Zone): [{"von": [x, y],
+    "bis": [x, y], "farbe": "rot"}] in Blöcken. Der Rahmen folgt dem Gelände (je Randstück auf der Bodenhöhe)."""
+    farben = {"rot": (1.0, 0.05, 0.05), "gelb": (1.0, 0.8, 0.0), "gruen": (0.1, 1.0, 0.2), "blau": (0.1, 0.4, 1.0), "weiss": (1, 1, 1)}
+    for n, m in enumerate(liste or []):
+        (x0, y0), (x1, y1) = m.get("von", (-3, -3)), m.get("bis", (3, 3))
+        x0, x1 = sorted((float(x0), float(x1)))
+        y0, y1 = sorted((float(y0), float(y1)))
+        mat = bpy.data.materials.new(f"markierung{n}")
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        farbe = farben.get(m.get("farbe", "rot"), farben["rot"])
+        bsdf.inputs["Base Color"].default_value = (*farbe, 1)
+        key = "Emission Color" if "Emission Color" in bsdf.inputs else "Emission"
+        bsdf.inputs[key].default_value = (*farbe, 1)
+        if "Emission Strength" in bsdf.inputs:
+            bsdf.inputs["Emission Strength"].default_value = 2.5
+        breite = 0.28 * BLOCK
+        schritt = 0.5
+        stuecke = []
+        for (ax, ay), (bx, by) in (((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))):
+            laenge = max(abs(bx - ax), abs(by - ay))
+            for i in range(max(1, int(laenge / schritt))):
+                t0, t1 = i / max(1, int(laenge / schritt)), (i + 1) / max(1, int(laenge / schritt))
+                px, py = ax + (bx - ax) * (t0 + t1) / 2, ay + (by - ay) * (t0 + t1) / 2
+                z = _boden_hoehe(scene, px * BLOCK, py * BLOCK)
+                stuecke.append(((px * BLOCK, py * BLOCK, z + 0.02 * BLOCK), abs(bx - ax) * (t1 - t0) * BLOCK + breite, abs(by - ay) * (t1 - t0) * BLOCK + breite))
+        import bmesh
+        bm = bmesh.new()
+        for (cx, cy, cz), sx, sy in stuecke:
+            erg = bmesh.ops.create_cube(bm, size=1.0)
+            bmesh.ops.scale(bm, vec=(sx, sy, 0.04 * BLOCK), verts=erg["verts"])
+            bmesh.ops.translate(bm, vec=(cx, cy, cz), verts=erg["verts"])
+        me = bpy.data.meshes.new(f"markierung{n}")
+        bm.to_mesh(me)
+        bm.free()
+        me.materials.append(mat)
+        ob = bpy.data.objects.new(f"markierung{n}", me)
+        scene.collection.objects.link(ob)
+
+
 def _boden_hoehe(scene, x, y, von=60.0, platz=2.0, nah_an=0.0):
     """Bodenfläche unter (x, y) in Metern: nach oben zeigende Fläche mit mindestens `platz` Metern Luft darüber
     (in Höhlen also der Boden, nicht das Dach). Bei mehreren die, die `nah_an` am nächsten liegt."""
@@ -492,6 +533,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
 
     _welt(szene.get("welt", {}), texturen, szene.get("himmel", "tag"))
     _objekte(szene.get("objekte"), texturen)
+    _markierungen(scene, szene.get("markierungen"))
     mhimmel.baue(scene, szene.get("himmel", "tag"))
 
     figuren = []
