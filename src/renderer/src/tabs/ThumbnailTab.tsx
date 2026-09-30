@@ -176,15 +176,6 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
               <div className="variant-title">
                 <strong>{x.titel}</strong>
               </div>
-              {x.vorbild && (
-                <span className="muted small">
-                  Orientiert sich an: {x.vorbild.kanal} –{' '}
-                  <a href={x.vorbild.url} target="_blank" rel="noreferrer">
-                    „{x.vorbild.titel}“
-                  </a>
-                </span>
-              )}
-              {!x.vorbild && x.warum && <span className="muted small">Grundlage: {x.warum}</span>}
               {x.fehler && <span className="own-bad small">{x.fehler}</span>}
               {x.warnungen.length > 0 && <span className="own-bad small">Hinweise: {x.warnungen.join(' · ')}</span>}
               {x.bild && (
@@ -241,12 +232,6 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
             <div className="lightbox-body">
               <div className="lightbox-image">{v.bild && <img src={v.bild} alt={v.titel} />}</div>
               <div className="lightbox-side">
-                <p className="lightbox-idea">{v.warum}</p>
-                {v.vorbild && (
-                  <p className="muted small">
-                    Vorbild: {v.vorbild.kanal} – „{v.vorbild.titel}“
-                  </p>
-                )}
                 <div className="lightbox-actions">
                   <button className="btn primary" onClick={() => void window.moin.thumbSpeichern(auftrag.id, gross!).then(setGespeichert)}>
                     Speichern …
