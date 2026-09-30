@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.29.6] - 2026-09-30
+
+> Freiform-Test mit 50 Beschreibungen
+
 ### Behoben
 
 - Thumbnail: stärkeres Fülllicht für Themen-Mobs in dunklen Szenen (z. B. Warden in der Nacht).
