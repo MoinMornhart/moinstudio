@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-30
+
+> Schnitt: Intro-Baukasten
+
 ### Hinzugefügt
 
 - Schnitt: Intro-Baukasten. Kurze Momente aus dem Video (auch in Zeitlupe) und Titelkarten in Minecraft-Schrift auf unscharfem Standbild, Schwarz oder einem Bild, mit automatischem Wusch und Knall (ROADMAP E.3).

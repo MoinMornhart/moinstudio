@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.31.0** (2026-09-30): Schnitt: Intro-Baukasten
 - **0.30.0** (2026-09-30): Schnitt: Effekt-Bausteine
 - **0.29.8** (2026-09-30): Plan: Effekte per Sprache
 - **0.29.7** (2026-09-30): Thumbnail: Reiten
 - **0.29.6** (2026-09-30): Freiform-Test mit 50 Beschreibungen
-- **0.29.5** (2026-09-30): Thumbnail: Gesten und Positionen
 <!-- CHANGELOG:END -->
 
 ## Installation
