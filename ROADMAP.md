@@ -23,6 +23,7 @@ Die vollständige, abhakbare Masterliste. Es wird **immer nur ein Schritt** bear
 | M4 Blender neu | → 0.3.0 | Figur, Posen, Welt, Grafik-Look, Kamera, Mobs/Items, Nachbau-Test | ⬜ |
 | M5 Thumbnail neu | → 0.4.0 | Planung, Text, strenge Selbstprüfung, Reiter, Video-Upload mit Vorschlägen, Abnahme | ⬜ |
 | M6 Schnitt | 0.14.0–0.21.0 | Import, Transkript, Rohschnitt, Untertitel, Export, Stream-Highlights | 🔄 (Abnahme offen) |
+| M6b Schnitt: Effekte per Sprache | ab 0.30.0 | Effekt-Bausteine, Intros, Wünsche in Worten, Premiere-Export | 🔄 |
 | M7 Planung | 0.22.0–0.25.0 | Board, Kalender, Verbindung zu Thumbnail und Schnitt, Ideen mit Claude | 🔄 (Abnahme offen) |
 | M8 Adobe (ungetestet) | ab 0.26.0 | Erkennung, Premiere-Sequenz (FCP7-XML), Photoshop-Datei mit Ebenen, Testpaket | 🔄 |
 | M9 Stabil | **1.0.0** | Politur, Release | ⬜ |
@@ -186,6 +187,33 @@ Rohvideos bleiben, wo sie liegen; im Projekt stehen nur Pfad, Größe und Prüfs
 - [x] **6.7 Export für YouTube:** Rendern mit dem Encoder aus dem Hardware-Profil nach YouTube-Vorgaben, Kapitel, Titel- und Beschreibungsvorschlag; Prüfung der Datei; Übergabe ans Thumbnail (Video-Vorschläge aus demselben Projekt). ✅ Export besteht die YouTube-Prüfung (Codec, Farbraum, Ton, Kapitel) — erledigt: Export aus dem Original mit Encoder aus dem Hardware-Profil nach YouTube-Empfehlung, alle 7 Prüfpunkte grün im Testvideo; Kapitel (repariert auf YouTube-Regeln), Titel und Beschreibung von Claude; Speichern unter; Thumbnail-Vorschläge aus dem fertigen Video.
 - [x] **6.8 Stream-Highlights und Shorts (MoinMorni):** Lange Streams → Höhepunkte (Lautstärkespitzen, Lachen, Transkript/Claude) → einzelne Clips und 9:16-Shorts mit Facecam-Layout. ✅ In einem langen Test-Stream werden die markierten Höhepunkte gefunden — erledigt: Test-Stream (98 s, Facecam, Explosion) → genau die beiden eingebauten Höhepunkte gefunden (Creeper-Panik 9/10, Diamanten 8/10), Facecam automatisch erkannt, Short 1080×1920 mit Facecam oben, Gameplay unten und Untertiteln Wort für Wort; gekürzte Pausen gelten auch in Clips.
 - [ ] **6.9 MCP und Abnahme:** ✓ MCP-Werkzeug `video_edit` für Claude Desktop (Projekte, Import, Schnitt ansehen, Änderung in Worten, Vorschau, Export, Highlights, Clips); offen: Abnahme mit Philips echten Videos. ✅ Freigabe.
+
+## M6b – Schnitt: Effekte und Intros per Sprache
+
+Ziel (Philip, 30.09.2026): Im Schnitt alles in Worten verlangen können, z. B. „mach mir ein geiles Intro“ oder „bau da
+Effekte ein“ („er soll alles können beim Schneiden“). Wie beim Thumbnail gilt: Keine feste Effektliste ist die Grenze.
+Effekte entstehen aus kombinierbaren **Bausteinen**:
+
+- Tempo (Zeitlupe, Zeitraffer)
+- Zoom und Kameraschwenk
+- Wackeln
+- Farbe (Sättigung, Kontrast, Schwarzweiß, Blitz)
+- Einfrieren
+- Text in Minecraft-Schrift
+- Bild-Einblendung
+- Übergang
+- Geräusch
+
+Claude setzt jeden Satz in diese Bausteine um. Das läuft lokal mit FFmpeg und funktioniert ohne Adobe. Was sich
+übertragen lässt, geht zusätzlich in den Premiere-Export. Geräusche werden lizenzfrei selbst erzeugt. Maßstab sind die
+Schnitte großer deutscher Minecraft- und Streamer-Kanäle.
+
+- [x] **E.1 Neu planen.** ✅ Plan steht hier.
+- [ ] **E.2 Effekt-Bausteine im Render:** Effektliste je Projekt (`effekte.json`, Zeiten im geschnittenen Video), Render aller Bausteine in einem FFmpeg-Durchgang (Tempo und Einfrieren verändern die Zeitleiste, Untertitel und Zooms rechnen mit), Geräusche lizenzfrei aus FFmpeg-Klangerzeugern (Whoosh, Boom, Ding, Piep). ✅ Unit-Tests je Baustein, Vorschau-Render mit allen Bausteinen, Standbilder geprüft.
+- [ ] **E.3 Intro-Baukasten:** Intro aus Bausteinen: Hook-Zusammenschnitt der stärksten Momente, Titelkarte in Minecraft-Schrift mit Animation, Thumbnail oder Skin-Render als Einblendung, Geräusch. ✅ Intro für die Testvideos, Standbilder geprüft.
+- [ ] **E.4 Wünsche → Effekte mit Claude:** Wunschfeld „Was soll passieren?“ versteht Schnitt und Effekte zusammen („mach ein geiles Intro“, „Zeitlupe, wenn der Creeper explodiert“, „mehr Action“); Prüfung gegen die Bausteine, Rückfrage nur bei echtem Widerspruch. ✅ 30 ungewöhnliche Wünsche (Freiform-Test wie beim Thumbnail), Ergebnis in `docs/tests/schnitt-freiform.md`.
+- [ ] **E.5 Oberfläche:** Effektliste unter dem Schnitt (ansehen, springen, an/aus, löschen), Vorschau mit Effekten. ✅ Aufnahme des Reiters.
+- [ ] **E.6 Premiere-Export und Claude Desktop:** Zoom, Tempo, Marker und Texte in die FCP7-Sequenz, Effekte per `video_edit` aus Claude Desktop. ✅ Unit-Tests, Sequenz mit Python-XML-Parser geprüft.
 
 ## M7 – Planung
 
