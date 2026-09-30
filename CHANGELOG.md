@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-30
+
+> Thumbnail: Boot, Objekte, Fixes
+
 ### Added
 
 - Thumbnail: das echte Minecraft-Boot mit Rudern (Mob `boat`), nachgebaut aus dem Java-Modell des Spiels, weil Mojangs Bedrock-Daten es nicht enthalten; Philip sitzt darin in Fahrtrichtung.
