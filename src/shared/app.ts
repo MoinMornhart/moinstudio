@@ -271,6 +271,12 @@ export interface ThumbAuftrag {
   step: string
   error: string | null
   createdAt: string
+  /** Änderung: Ursprungsauftrag, unter dem sie im Verlauf steht (null = eigener Auftrag) */
+  eltern: string | null
+  /** Änderung: der Wunsch in Philips Worten */
+  wunsch: string | null
+  /** Änderung: welcher Auftrag und welche Variante geändert wurden */
+  basis: { job: string; variante: number } | null
 }
 
 /** Video-Auswertung: Inhalt, Vorschläge (Freunde als Skin-IDs) und die Bildbögen, die Claude gesehen hat */
@@ -430,7 +436,7 @@ export interface MoinApi {
   thumbErgebnis(jobId: string): Promise<ThumbErgebnis | null>
   /** Änderungswunsch zu einer Variante → neuer Auftrag (ID) */
   thumbAendern(jobId: string, index: number, wunsch: string): Promise<string>
-  /** Auftrag samt Bildern löschen */
+  /** Auftrag samt Bildern löschen, beim Ursprungsauftrag mit allen Änderungen */
   thumbLoeschen(jobId: string): Promise<void>
   /** Schnitt: Projekte, Import per Dateidialog (null bei Abbruch), Wellenform, Löschen */
   schnittProjekte(): Promise<SchnittProjekt[]>

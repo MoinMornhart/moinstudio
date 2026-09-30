@@ -6,6 +6,14 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Thumbnail: Änderungen erscheinen jetzt als Verlauf wie in einem Chat unter ihrem Thumbnail statt als eigene Aufträge. Oben steht der Auftrag, darunter jede Änderung mit Wunsch und neuem Bild, ganz unten das Eingabefeld. Geändert wird das neueste Bild oder das per „Ändern“ gewählte. Wer den Auftrag löscht, löscht alle Änderungen mit; einzelne Änderungen lassen sich auch allein löschen.
+
+### Fixed
+
+- Thumbnail-Änderung: Neuer Text (z. B. „Schreib GIGANTISCH in Gelb“) kam nicht ins Bild, wenn die Variante vorher keinen Text hatte; bei einer Änderung an einer Änderung gingen die Texte verloren.
+
 ## [0.36.2] - 2026-09-30
 
 > ContentStudio-Prompt: eigene Vorbilder

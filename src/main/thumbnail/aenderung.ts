@@ -19,6 +19,10 @@ export type AenderungsArt = 'thumbnail' | 'reaktion' | 'spielvorlage'
 export interface AenderungPayload {
   art: AenderungsArt
   wunsch: string
+  /** Ursprungsauftrag: alle Änderungen hängen im Verlauf unter ihm und werden mit ihm gelöscht (Philip, 30.09.) */
+  eltern?: string
+  /** Auftrag und Variante, die geändert wurden */
+  basis?: { job: string; variante: number }
   /** bisheriges Bild und Szene (Spezifikation) der Variante */
   bild: string
   szene: string
@@ -47,6 +51,10 @@ requisit ({gltf, hand, laenge_px} – laenge_px = Größe des Gegenstands, wegla
 der Arm mit dem Gegenstand), linse (mm).`
 }
 
+const TEXT_HILFE = `
+Texte im Bild stehen im Feld „texte“ als Liste, z. B. [{"text": "GIGANTISCH", "farbe": "gelb"}] (farbe optional: weiss,
+gelb, gold, gruen, tuerkis, rot). Leere Liste = kein Text. Soll Text dazu, weg oder anders sein, ändere nur dieses Feld.`
+
 export function aenderungsPrompt(p: Pick<AenderungPayload, 'art' | 'wunsch' | 'bild' | 'formatHilfe'>, szene: string): string {
   return `Philip möchte an seinem Thumbnail etwas ändern. Sieh dir das aktuelle Bild an: ${p.bild}
 
@@ -57,14 +65,36 @@ ${szene}
 
 ${p.art === 'thumbnail' ? `Das Szenenformat und die Regeln stehen in dieser Anleitung (Auszug aus der Planung):\n${p.formatHilfe ?? ''}` : HILFE[p.art]}
 
-Ändere nur, was der Wunsch verlangt, alles andere bleibt genau so (Pfade, Skins, Größen, Kamera …). Wenn der Wunsch
-den Text betrifft und die Szene Texte in einem Feld „texte“ hat, ändere die dort.
+Ändere nur, was der Wunsch verlangt, alles andere bleibt genau so (Pfade, Skins, Größen, Kamera …).${p.art === 'thumbnail' ? TEXT_HILFE : ''}
 Antworte nur mit {"szene": <die vollständige geänderte Szene>}.`
 }
 
 const SCHEMA = { type: 'object', required: ['szene'], properties: { szene: { type: 'object' } } } as const
 
 const existiert = (p: string): Promise<boolean> => stat(p).then(() => true, () => false)
+
+/** Texte zur Szene: variante-N.v0.szene.json → variante-N.texte.json, aenderung.szene.json → aenderung.texte.json */
+export function textDatei(szene: string): string {
+  return `${szene.replace(/(\.v\d+)?\.szene\.json$/, '')}.texte.json`
+}
+
+async function ladeTexte(szene: string): Promise<{ text: string; farbe?: string }[]> {
+  const datei = textDatei(szene)
+  return (await existiert(datei)) ? normaleTexte(JSON.parse(await readFile(datei, 'utf8'))) : []
+}
+
+/** Claude liefert Texte manchmal als „text“ oder als einzelnes Wort: immer in die Liste [{text, farbe?}] bringen */
+export function normaleTexte(roh: unknown): { text: string; farbe?: string }[] {
+  const liste = Array.isArray(roh) ? roh : roh === undefined || roh === null || roh === '' ? [] : [roh]
+  return liste.flatMap((t: unknown) => {
+    if (typeof t === 'string') return t.trim() ? [{ text: t.trim() }] : []
+    if (t && typeof t === 'object' && typeof (t as { text?: unknown }).text === 'string' && (t as { text: string }).text.trim()) {
+      const { text, farbe } = t as { text: string; farbe?: unknown }
+      return [{ text: text.trim(), ...(typeof farbe === 'string' && farbe ? { farbe } : {}) }]
+    }
+    return []
+  })
+}
 
 function lauf(exe: string, args: string[], ctx: JobContext<unknown>): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -79,10 +109,9 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
   const c = ctx as JobContext<unknown>
   await mkdir(p.ausgabe, { recursive: true })
   const alt = JSON.parse(await readFile(p.szene, 'utf8')) as Record<string, unknown>
-  // Minecraft-Szenen: Texte liegen neben der Szene (variante-N.texte.json) und dürfen mitgeändert werden
-  const basis = p.szene.replace(/\.v\d+\.szene\.json$/, '')
-  const textDatei = `${basis}.texte.json`
-  if (p.art === 'thumbnail' && (await existiert(textDatei))) alt['texte'] = JSON.parse(await readFile(textDatei, 'utf8'))
+  // Minecraft-Szenen: Texte liegen neben der Szene (variante-N.texte.json bzw. aenderung.texte.json) und dürfen
+  // mitgeändert werden. Das Feld ist immer da, damit Claude auch neuen Text hinzufügen kann.
+  if (p.art === 'thumbnail') alt['texte'] = await ladeTexte(p.szene)
 
   ctx.progress(5, 'Claude setzt deinen Wunsch um …')
   const res = await runClaudeInJob(
@@ -101,8 +130,9 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
       if (a) Object.assign(f, { skin: a.skin, slim: a.slim })
     }
   }
-  const texte = neu['texte']
+  const texte = normaleTexte(neu['texte'] ?? neu['text'])
   delete neu['texte']
+  if (p.art === 'thumbnail') delete neu['text']
 
   await ctx.yield()
   ctx.progress(30, 'Blender rendert die geänderte Version …')
@@ -117,7 +147,7 @@ export async function aenderungJob(p: AenderungPayload, ctx: JobContext<{ claude
     // MOIN_BILD_OK: Bild fertig, nur die Maske für Photoshop ist gescheitert
     if (r.code === 0 || r.output.includes('MOIN_BILD_OK')) {
       bild = `${ziel}.roh.png`
-      if (Array.isArray(texte) && texte.length) {
+      if (texte.length) {
         ctx.progress(85, 'Text setzen …')
         await writeFile(`${ziel}.texte.json`, JSON.stringify(texte))
         const t = await blender('text_setzen.py', [`${ziel}.roh.png`, `${ziel}.bericht.json`, `${ziel}.texte.json`, mc.assets, `${ziel}.png`])

@@ -112,9 +112,12 @@ export function registerThumbnailIpc(
     if (!exe) throw new Error('Blender ist auf diesem Gerät nicht lauffähig oder nicht installiert.')
     const cli = await findClaudeCli()
     if (!cli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
+    const eltern = job.kind === 'aenderung' ? (queue.payload<AenderungPayload>(job.id)?.eltern ?? job.id) : job.id
     const payload: AenderungPayload = {
       art,
       wunsch: text,
+      eltern,
+      basis: { job: job.id, variante: Number(index) },
       bild: v.bild,
       szene: v.szene,
       claudeCli: cli,
@@ -129,11 +132,16 @@ export function registerThumbnailIpc(
   }
   ipcMain.handle(IPC.thumbAendern, (_e, jobId: unknown, index: unknown, wunsch: unknown) => starteAenderung(jobId, index, wunsch))
 
-  // Auftrag löschen (Philip, 29.09.): Eintrag und seine Bilder im Datenordner
+  // Auftrag löschen (Philip, 29.09.): Eintrag und seine Bilder im Datenordner – beim Ursprungsauftrag mit allen
+  // Änderungen aus seinem Verlauf (Philip, 30.09.)
   ipcMain.handle(IPC.thumbLoeschen, async (_e, jobId: unknown): Promise<void> => {
     const dir = await datenOrdner(settings)
-    const payload = (await queue.remove(String(jobId))) as { ausgabe?: string } | undefined
-    if (payload?.ausgabe && imOrdner(dir, payload.ausgabe) && resolve(payload.ausgabe) !== resolve(dir)) await rm(payload.ausgabe, { recursive: true, force: true })
+    const id = String(jobId)
+    const ids = [...queue.state().jobs.filter((j) => j.kind === 'aenderung' && queue.payload<AenderungPayload>(j.id)?.eltern === id).map((j) => j.id), id]
+    for (const x of ids) {
+      const payload = (await queue.remove(x)) as { ausgabe?: string } | undefined
+      if (payload?.ausgabe && imOrdner(dir, payload.ausgabe) && resolve(payload.ausgabe) !== resolve(dir)) await rm(payload.ausgabe, { recursive: true, force: true })
+    }
   })
 
   // Spiele-Vorlage (Philip, 27.09.): fremdes Spiele-Thumbnail wählen → Philip steht an der Stelle der Person
@@ -372,7 +380,22 @@ export function registerThumbnailIpc(
     queue
       .state()
       .jobs.filter((j) => ['thumbnail', 'reaktion', 'spielvorlage', 'aenderung', 'video-vorschlaege'].includes(j.kind))
-      .map((j) => ({ id: j.id, art: j.kind === 'video-vorschlaege' ? ('video' as const) : ('thumbnail' as const), titel: j.title, state: j.state, progress: j.progress, step: j.step, error: j.error ?? null, createdAt: j.createdAt }))
+      .map((j) => {
+        const p = j.kind === 'aenderung' ? queue.payload<AenderungPayload>(j.id) : undefined
+        return {
+          id: j.id,
+          art: j.kind === 'video-vorschlaege' ? ('video' as const) : ('thumbnail' as const),
+          titel: j.title,
+          state: j.state,
+          progress: j.progress,
+          step: j.step,
+          error: j.error ?? null,
+          createdAt: j.createdAt,
+          eltern: p?.eltern ?? null,
+          wunsch: p?.wunsch ?? null,
+          basis: p?.basis ?? null
+        }
+      })
       .reverse()
   )
 

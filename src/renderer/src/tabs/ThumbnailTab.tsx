@@ -128,12 +128,11 @@ function Skins({ skins, setSkins }: { skins: ThumbSkin[]; setSkins: (s: ThumbSki
   )
 }
 
-function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: string) => void }): React.JSX.Element {
+/** Varianten eines Auftrags oder einer Änderung. „Ändern“ wählt das Bild für die nächste Änderung im Verlauf. */
+function Ergebnis({ auftrag, gewaehlt, onWaehle }: { auftrag: ThumbAuftrag; gewaehlt: number | null; onWaehle: (i: number) => void }): React.JSX.Element {
   const [ergebnis, setErgebnis] = useState<ThumbErgebnis | null>(null)
   const [gross, setGross] = useState<number | null>(null)
   const [gespeichert, setGespeichert] = useState<string | null>(null)
-  const [aenderung, setAenderung] = useState<Record<number, string>>({})
-  const [aenderFehler, setAenderFehler] = useState<string | null>(null)
   const [versuch, setVersuch] = useState(0)
   useEffect(() => {
     if (auftrag.state === 'done') void window.moin.thumbErgebnis(auftrag.id).then(setErgebnis)
@@ -144,16 +143,6 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
     const t = setTimeout(() => setVersuch((n) => n + 1), 3000)
     return () => clearTimeout(t)
   }, [ergebnis, versuch])
-  const aendern = async (i: number): Promise<void> => {
-    setAenderFehler(null)
-    try {
-      const id = await window.moin.thumbAendern(auftrag.id, i, aenderung[i] ?? '')
-      setAenderung((a) => ({ ...a, [i]: '' }))
-      onNeu(id)
-    } catch (err) {
-      setAenderFehler(err instanceof Error ? err.message : String(err))
-    }
-  }
   if (auftrag.state === 'failed') return <p className="warn">Fehlgeschlagen: {auftrag.error}</p>
   if (auftrag.state !== 'done')
     return (
@@ -167,7 +156,7 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
     <>
       <div className="variant-grid">
         {ergebnis.varianten.map((x, i) => (
-          <figure key={i} className="variant">
+          <figure key={i} className={gewaehlt === i ? 'variant gewaehlt' : 'variant'}>
             <button className="variant-open" disabled={!x.bild} onClick={() => setGross(i)}>
               {x.bild ? <img src={x.bild} alt={x.titel} /> : <div className="thumb-placeholder">Kein Bild</div>}
               {x.bild && <span className="variant-zoom">Groß ansehen</span>}
@@ -180,6 +169,9 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
               {x.warnungen.length > 0 && <span className="own-bad small">Hinweise: {x.warnungen.join(' · ')}</span>}
               {x.bild && (
                 <div className="row">
+                  <button className={gewaehlt === i ? 'btn small primary' : 'btn small'} aria-pressed={gewaehlt === i} onClick={() => onWaehle(i)}>
+                    {gewaehlt === i ? '✏️ Gewählt' : '✏️ Ändern'}
+                  </button>
                   <button className="btn small" onClick={() => void window.moin.thumbSpeichern(auftrag.id, i).then(setGespeichert)}>
                     Speichern …
                   </button>
@@ -192,26 +184,11 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
                   </button>
                 </div>
               )}
-              {x.bild && (
-                <div className="row wrap">
-                  <input
-                    className="input"
-                    placeholder="Änderung, z. B. Text gelb, Kopf größer, schau wütender"
-                    value={aenderung[i] ?? ''}
-                    onChange={(e) => setAenderung((a) => ({ ...a, [i]: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && (aenderung[i] ?? '').trim() && void aendern(i)}
-                  />
-                  <button className="btn small" disabled={!(aenderung[i] ?? '').trim()} onClick={() => void aendern(i)}>
-                    Ändern
-                  </button>
-                </div>
-              )}
             </figcaption>
           </figure>
         ))}
       </div>
       {gespeichert && <p className="ok-note small">Gespeichert: {gespeichert}</p>}
-      {aenderFehler && <p className="warn small">{aenderFehler}</p>}
       {v && (
         <div className="lightbox" onClick={() => setGross(null)}>
           <div className="lightbox-panel" onClick={(e) => e.stopPropagation()}>
@@ -243,6 +220,88 @@ function Ergebnis({ auftrag, onNeu }: { auftrag: ThumbAuftrag; onNeu: (id: strin
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * Verlauf eines Thumbnails wie ein Chat (Philip, 30.09.): oben der Auftrag, darunter jede Änderung mit ihrem Ergebnis,
+ * ganz unten das Eingabefeld. Geändert wird das gewählte Bild, sonst das neueste.
+ */
+function Verlauf({ auftrag, aenderungen, onNeu }: { auftrag: ThumbAuftrag; aenderungen: ThumbAuftrag[]; onNeu: () => void }): React.JSX.Element {
+  const [wahl, setWahl] = useState<{ job: string; variante: number } | null>(null)
+  const [text, setText] = useState('')
+  const [fehler, setFehler] = useState<string | null>(null)
+  const [loeschen, setLoeschen] = useState<string | null>(null)
+  const schritte = [auftrag, ...aenderungen]
+  const neuestes = [...schritte].reverse().find((s) => s.state === 'done')
+  const basis = wahl && schritte.some((s) => s.id === wahl.job) ? wahl : neuestes ? { job: neuestes.id, variante: 0 } : null
+  const name = (b: { job: string; variante: number }): string => {
+    const n = schritte.findIndex((s) => s.id === b.job)
+    if (n < 0) return 'einer gelöschten Änderung'
+    return n === 0 ? `Variante ${b.variante + 1}` : `Änderung ${n}${b.variante > 0 ? `, Bild ${b.variante + 1}` : ''}`
+  }
+  const senden = async (): Promise<void> => {
+    if (!basis || !text.trim()) return
+    setFehler(null)
+    try {
+      await window.moin.thumbAendern(basis.job, basis.variante, text)
+      setText('')
+      setWahl(null)
+      onNeu()
+    } catch (err) {
+      setFehler(fehlerText(err))
+    }
+  }
+  return (
+    <div className="verlauf">
+      <Ergebnis auftrag={auftrag} gewaehlt={basis?.job === auftrag.id ? basis.variante : null} onWaehle={(i) => setWahl({ job: auftrag.id, variante: i })} />
+      {aenderungen.map((a, n) => {
+        // Nur sagen, woran geändert wurde, wenn es nicht einfach das Bild direkt darüber ist
+        const vorher = n === 0 ? auftrag.id : aenderungen[n - 1]!.id
+        const woran = a.basis && (a.basis.job !== vorher || n === 0) ? name(a.basis) : null
+        return (
+          <div key={a.id} className="verlauf-schritt">
+            <div className="verlauf-wunsch">
+              <span className="verlauf-nr">Änderung {n + 1}</span>
+              <span>„{a.wunsch}“</span>
+              {woran && <span className="muted small">an {woran}</span>}
+              <button
+                className="icon-btn"
+                title="Diese Änderung löschen"
+                onClick={() => {
+                  if (loeschen === a.id) void window.moin.thumbLoeschen(a.id).then(() => (setLoeschen(null), onNeu()))
+                  else setLoeschen(a.id)
+                }}
+              >
+                {loeschen === a.id ? 'Wirklich löschen?' : '🗑'}
+              </button>
+            </div>
+            <Ergebnis auftrag={a} gewaehlt={basis?.job === a.id ? basis.variante : null} onWaehle={(i) => setWahl({ job: a.id, variante: i })} />
+          </div>
+        )
+      })}
+      {basis && (
+        <div className="verlauf-eingabe">
+          <span className="muted small">
+            Ändert: {name(basis)}
+            {!wahl && schritte.length > 1 ? ' (neuestes Bild)' : ''}
+          </span>
+          <div className="row">
+            <input
+              className="input"
+              placeholder="Änderung, z. B. Text gelb, Kopf größer, schau wütender"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && text.trim() && void senden()}
+            />
+            <button className="btn primary" disabled={!text.trim()} onClick={() => void senden()}>
+              Ändern
+            </button>
+          </div>
+          {fehler && <p className="warn small">{fehler}</p>}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -399,6 +458,9 @@ export function ThumbnailTab(): React.JSX.Element {
       setFehler(fehlerText(err))
     }
   }
+  // Änderungen stehen im Verlauf ihres Ursprungsauftrags, nicht als eigene Aufträge in der Liste
+  const haupt = auftraege.filter((a) => !a.eltern || !auftraege.some((x) => x.id === a.eltern))
+  const zuAuftrag = (id: string): ThumbAuftrag[] => auftraege.filter((a) => a.eltern === id).sort((x, y) => x.createdAt.localeCompare(y.createdAt))
   const freundSkins = skins.filter((s) => s.rolle === 'freund')
   // Freunde mit aufs Bild – in jeder Art (Philip: z. B. Chained Together mit einem Freund)
   const freundWahl = freundSkins.length > 0 && (
@@ -542,18 +604,26 @@ export function ThumbnailTab(): React.JSX.Element {
         </Card>
         )}
         <Skins skins={skins} setSkins={setSkins} />
-        <Card title="Aufträge" badge={`${auftraege.length}`}>
-          {auftraege.length === 0 && <p className="muted">Noch keine Thumbnails erstellt.</p>}
-          {auftraege.map((a) => (
+        <Card title="Aufträge" badge={`${haupt.length}`}>
+          {haupt.length === 0 && <p className="muted">Noch keine Thumbnails erstellt.</p>}
+          {haupt.map((a) => {
+            const aenderungen = zuAuftrag(a.id)
+            const laeuft = [a, ...aenderungen].some((x) => !['done', 'failed', 'cancelled'].includes(x.state))
+            return (
             <div key={a.id} className="session">
               <div className="session-head" style={{ cursor: 'pointer' }} onClick={() => setOffen(offen === a.id ? null : a.id)}>
                 <strong className="session-title">{a.art === 'video' ? '🎬 ' : ''}{a.titel.replace(/^Thumbnail: /, '')}</strong>
+                {aenderungen.length > 0 && (
+                  <span className="muted small">
+                    {aenderungen.length} {aenderungen.length === 1 ? 'Änderung' : 'Änderungen'}
+                  </span>
+                )}
                 <span className={`status ${a.state === 'done' ? 'fertig' : a.state === 'failed' ? 'fehler' : 'rendert'}`}>
                   {a.state === 'done' ? 'fertig' : a.state === 'failed' ? 'Fehler' : a.state === 'paused' ? 'pausiert' : a.state === 'waiting-limit' ? 'wartet auf Claude-Limit' : 'läuft'}
                 </span>
                 <button
                   className="icon-btn"
-                  title="Auftrag löschen"
+                  title={aenderungen.length ? 'Auftrag mit allen Änderungen löschen' : 'Auftrag löschen'}
                   onClick={(e) => {
                     e.stopPropagation()
                     if (loeschen === a.id) void window.moin.thumbLoeschen(a.id).then(() => (setLoeschen(null), ladeAuftraege()))
@@ -563,7 +633,7 @@ export function ThumbnailTab(): React.JSX.Element {
                   {loeschen === a.id ? 'Wirklich löschen?' : '🗑'}
                 </button>
               </div>
-              {(offen === a.id || a.state !== 'done') &&
+              {(offen === a.id || laeuft) &&
                 (a.art === 'video' ? (
                   <VideoVorschlaege
                     auftrag={a}
@@ -574,16 +644,18 @@ export function ThumbnailTab(): React.JSX.Element {
                     }}
                   />
                 ) : (
-                  <Ergebnis
+                  <Verlauf
                     auftrag={a}
-                    onNeu={(id) => {
-                      setOffen(id)
+                    aenderungen={aenderungen}
+                    onNeu={() => {
+                      setOffen(a.id)
                       ladeAuftraege()
                     }}
                   />
                 ))}
             </div>
-          ))}
+            )
+          })}
         </Card>
       </div>
     </>

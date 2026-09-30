@@ -474,3 +474,11 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .effekt-liste { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .effekt { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .effekt.aus .satz { opacity: 0.45; text-decoration: line-through; }
+
+/* Thumbnail-Verlauf wie ein Chat: Auftrag, darunter jede Änderung, unten das Eingabefeld */
+.verlauf { display: flex; flex-direction: column; gap: 14px; }
+.verlauf-schritt { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
+.verlauf-wunsch { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; align-self: flex-start; max-width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px 12px 12px 4px; padding: 7px 12px; }
+.verlauf-nr { color: var(--accent); font-weight: 600; font-size: 12px; }
+.verlauf-eingabe { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 12px; }
+.variant.gewaehlt img { outline: 2px solid var(--accent); outline-offset: 2px; }
