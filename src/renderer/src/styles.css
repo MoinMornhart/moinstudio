@@ -461,6 +461,9 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .titel-vorschlag { display: flex; flex-direction: column; gap: 2px; text-align: left; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; padding: 7px 9px; cursor: pointer; }
 .titel-vorschlag:hover { border-color: var(--muted); }
 .titel-vorschlag.on { border-color: var(--accent); }
+.video-name { margin-bottom: 12px; }
+.video-name .input { flex: 1 1 260px; }
+.namen-vorschlaege { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .wochen-plan { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .plan-zeile { display: flex; flex-direction: column; gap: 3px; background: var(--panel); border-radius: 6px; padding: 7px 8px; }
 .plan-zeile .btn { align-self: flex-start; }

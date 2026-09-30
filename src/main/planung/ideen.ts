@@ -5,6 +5,7 @@ import { runClaudeInJob } from '../claude/run'
 import type { JobContext } from '../jobs/queue'
 import { liesAbschnitte } from '../schnitt/transkript'
 import { ladeKarten, type Karte } from './karten'
+import { ladeProjekt } from '../schnitt/projekt'
 
 /**
  * Planung mit Claude (ROADMAP 7.6): Ideenfinder je Kanal, Titelvorschläge für eine Karte, Wochenplan.
@@ -23,6 +24,8 @@ export interface PlanungClaudePayload {
   wunsch?: string
   /** Karte (nur titel) */
   karte?: string
+  /** Schnitt-Projekt (nur titel): Namensvorschläge fürs fertige Video statt für eine Karte */
+  projekt?: string
   /** Heute als „2026-09-29“ (für Tests fest vorgebbar) */
   heute?: string
   /** Nur für Tests: Skript vor den Claude-Argumenten (Attrappe der CLI) */
@@ -148,13 +151,13 @@ ${o.andere?.length ? `\nVideos des anderen Kanals (nicht wiederholen):\n${karten
 Antworte nur mit JSON: {"ideen":[{"titel":"…","idee":"…","warum":"…"}]}`
 }
 
-export function titelPrompt(o: { karte: Karte; transkript: string; vorbilder: string[]; andere: string[] }): string {
+export function titelPrompt(o: { karte: { kanal: string; titel: string; notizen: string }; transkript: string; vorbilder: string[]; andere: string[]; ganz?: boolean }): string {
   return `Schlage 5 YouTube-Titel für ein Video auf dem Kanal ${o.karte.kanal} vor.
 ${KANAL_BESCHREIBUNG[o.karte.kanal] ?? ''}
 
-Arbeitstitel: ${o.karte.titel}
+Arbeitstitel: ${o.karte.titel}${o.ganz ? ' (oft nur der Dateiname der Aufnahme – dann ignorieren)' : ''}
 Notizen: ${o.karte.notizen.trim() || '(keine)'}
-${o.transkript ? `Anfang des Transkripts:\n${o.transkript}\n` : ''}
+${o.transkript ? `${o.ganz ? 'Transkript des fertigen Videos (Ausschnitte über die ganze Länge)' : 'Anfang des Transkripts'}:\n${o.transkript}\n` : ''}
 Regeln: deutsch, höchstens 60 Zeichen, unterschiedliche Ansätze (Frage, Zahl, Gegensatz, Ich-Perspektive, Spannung), nur was im Video wirklich passiert. Nicht wie diese Titel klingen, die Philip schon hat: ${o.andere.slice(0, 15).join(' | ') || '(keine)'}
 Stil-Beispiele großer Kanäle (nicht kopieren): ${o.vorbilder.slice(0, 8).join(' | ')}
 „warum“: ein kurzer Satz.
@@ -199,6 +202,23 @@ export function pruefeWoche(roh: WochenPlan, karten: Karte[], frei: { kanal: str
   return { plan, aufnehmen, hinweis: roh.hinweis ?? '' }
 }
 
+/** Sätze gleichmäßig über das ganze Video verteilt, zusammen höchstens `max` Zeichen (Stunden-Streams passen sonst nicht) */
+export function transkriptProbe(saetze: string[], max: number): string {
+  const alle = saetze.filter(Boolean)
+  const ganz = alle.join(' ')
+  if (ganz.length <= max) return ganz
+  const schnitt = ganz.length / alle.length
+  const schritt = Math.ceil(alle.length / Math.max(1, Math.floor(max / schnitt)))
+  const probe: string[] = []
+  let laenge = 0
+  for (let i = 0; i < alle.length; i += schritt) {
+    if (laenge + alle[i]!.length + 5 > max) break
+    probe.push(alle[i]!)
+    laenge += alle[i]!.length + 5
+  }
+  return probe.join(' … ')
+}
+
 async function freundeAus(daten: string): Promise<string[]> {
   try {
     const skins = JSON.parse(await readFile(join(daten, 'skins', 'skins.json'), 'utf8')) as { name: string; rolle: string }[]
@@ -234,6 +254,14 @@ export async function planungClaudeJob(p: PlanungClaudePayload, ctx: JobContext<
   if (p.art === 'ideen') {
     ctx.progress(10, 'Claude sucht Ideen …')
     prompt = ideenPrompt({ kanal: p.kanal, karten: karten.filter((k) => k.kanal === p.kanal), andere: karten.filter((k) => k.kanal !== p.kanal), freunde: await freundeAus(p.daten), vorbilder, wunsch: p.wunsch?.trim() || undefined, heute, anzahl: 12 })
+  } else if (p.art === 'titel' && p.projekt) {
+    // Namensvorschläge im Schnitt: Inhalt aus dem ganzen Transkript, verknüpfte Karte (falls da) liefert die Notizen
+    const pr = await ladeProjekt(p.daten, p.projekt)
+    if (!pr) throw new Error('Projekt nicht gefunden.')
+    ctx.progress(10, 'Claude schreibt Namen fürs Video …')
+    const karte = karten.find((k) => k.schnitt === pr.id)
+    const texte = liesAbschnitte(await readFile(join(p.daten, 'schnitt', pr.id, 'transkript.jsonl'), 'utf8').catch(() => '')).map((a) => a.text.trim())
+    prompt = titelPrompt({ karte: { kanal: pr.kanal, titel: pr.name, notizen: karte?.notizen ?? '' }, transkript: transkriptProbe(texte, 5000), vorbilder, andere: karten.filter((k) => k.kanal === pr.kanal && k.id !== karte?.id).map((k) => k.titel), ganz: true })
   } else if (p.art === 'titel') {
     const karte = karten.find((k) => k.id === p.karte)
     if (!karte) throw new Error('Karte nicht gefunden.')

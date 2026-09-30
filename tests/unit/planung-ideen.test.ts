@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { JobContext } from '../../src/main/jobs/queue'
-import { aehnlichkeit, ideenPrompt, ohneWiederholung, planungClaudeJob, pruefeWoche, titelPrompt, wochenPrompt } from '../../src/main/planung/ideen'
+import { aehnlichkeit, ideenPrompt, ohneWiederholung, planungClaudeJob, pruefeWoche, titelPrompt, transkriptProbe, wochenPrompt } from '../../src/main/planung/ideen'
 import { neueKarte, type Karte } from '../../src/main/planung/karten'
 
 const ROOT = resolve(__dirname, '../..')
@@ -119,5 +119,22 @@ describe('Planung mit Claude (ROADMAP 7.6)', () => {
     const e = await planungClaudeJob({ art: 'ideen', daten, claudeCli: process.execPath, claudePrefix: [FAKE], configDir: join(ROOT, 'config'), kanal: 'MoinMornhart', heute: '2026-09-29' }, ctx())
     expect(e.art).toBe('ideen')
     if (e.art === 'ideen') expect(e.ideen.map((i) => i.titel)).toEqual(['Minecraft, aber jeder Block explodiert', 'Ich baue eine Falle für SimPell'])
+  })
+})
+
+describe('Namen fürs Video (Schnitt)', () => {
+  it('nimmt Sätze über die ganze Länge, nicht nur den Anfang', () => {
+    const saetze = Array.from({ length: 200 }, (_, i) => `Satz Nummer ${i} im Video.`)
+    const probe = transkriptProbe(saetze, 500)
+    expect(probe.length).toBeLessThanOrEqual(500)
+    expect(probe).toContain('Satz Nummer 0 ')
+    expect(Number(/Nummer (\d+)[^N]*$/.exec(probe)?.[1])).toBeGreaterThan(150)
+    expect(transkriptProbe(['kurz', '', 'da'], 500)).toBe('kurz da')
+  })
+  it('sagt Claude, dass der Arbeitstitel nur der Dateiname sein kann', () => {
+    const p = titelPrompt({ karte: { kanal: 'MoinMorni', titel: '2026-09-30 19-00-01', notizen: '' }, transkript: 'Hallo Leute', vorbilder: [], andere: [], ganz: true })
+    expect(p).toContain('MoinMorni')
+    expect(p).toContain('Dateiname')
+    expect(p).toContain('ganze Länge')
   })
 })

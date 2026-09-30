@@ -12,12 +12,15 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Logo-Bibliothek im Datenordner: Logos hochladen (PNG, JPG, SVG; ohne Transparenz wird der Hintergrund entfernt), umbenennen, löschen, als Standard-Logo für einen Kanal festlegen und als PNG in 512, 1024 oder 2048 px oder als YouTube-Wasserzeichen (150×150) speichern.
 - Thumbnail: In jedem Modus (Minecraft, Reaction, Gaming, Spiele-Vorlage) kann ein Logo mit aufs Bild – automatisch in einer freien Ecke oder in deiner Wunsch-Ecke, klein, mittel oder groß. Es steht nie über Figuren, Köpfen, Mobs, Text oder Titeln. Das Standard-Logo des Kanals ist vorausgewählt.
 - Thumbnail-Änderungen behalten das Logo; „Logo kleiner“, „Logo nach links“ oder „Logo weg“ gehen in Worten. In der Photoshop-Datei ist das Logo eine eigene Ebene.
+- Schnitt: Knopf „Namen vorschlagen“ im Projekt. Claude schlägt aus dem Transkript 5 Titel im Stil des Kanals vor, ein Klick übernimmt den Titel als Namen des Videos und als YouTube-Titel (im Export und in der verknüpften Planungskarte). Projekte lassen sich auch selbst umbenennen, auch aus Claude Desktop (`video_edit`, Aktion `umbenennen`).
 
 ### Changed
 
 - Spiele-Vorlage neu für jede Art von Bild: Jede Person bekommt einen eigenen Umriss (Segment Anything + Personenmodell, auch für Spielfiguren, Comic, Roboter), jede Figur wird in ihren Umriss eingepasst (dein Skin und jeder Freund), keine Geister mehr. Ganzkörperposen mit Beinen (klettern, Hechtsprung, hängen, sitzen, knien, fallen, liegen), Verbindungen wie im Original (echte Minecraft-Kette, Seil, Leine). Zum Schluss vergleicht Claude Original und Ergebnis und korrigiert bis zu zweimal, bevor du das Bild siehst. Testreihe mit 17 echten Spiele-Motiven.
 - Kämpfe: Du stehst nicht mehr automatisch riesig im Vordergrund. Beide Kämpfer gleich groß auf gleicher Höhe (Duell wie bei GommeHD), der Gegner rückt neben dich; bei Mobs genauso.
 - Nether neu nach den Biom-Daten des Spiels: riesige offene Höhle mit Lavameer, Lavafällen, Glowstone und Glut, dazu die Biome Ödland, Karmesinwald, Wirrwald, Seelensandtal und Basaltdeltas mit ihren Nebelfarben; die Figur wird nicht mehr rot eingefärbt.
+- Sprechende Dateinamen statt IDs: Thumbnails heißen beim Speichern `Thumbnail_2026-09-30_19-05.png` (Datum und Uhrzeit des Auftrags), mit `_V2` bei mehreren Varianten und `_Aenderung3` bei Änderungen. Gehört das Thumbnail zu einem Video oder einer Planungskarte, steht dessen Name vorne. Das gilt auch für die Photoshop-Datei.
+- Schnitt: Das fertige Video, die Premiere-Dateien und Shorts heißen wie das Video (`<Video>.mp4`, `<Video>_Short_1.mp4`, `<Video>_Clip_2.mp4`). Beim Speichern liegen Titel, Beschreibung und Kapitel gleich benannt als `<Video>.txt` daneben.
 
 ### Fixed
 

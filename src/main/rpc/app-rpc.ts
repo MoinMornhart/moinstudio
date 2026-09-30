@@ -96,7 +96,7 @@ export async function startAppRpc(deps: AppRpcDeps): Promise<RpcServer> {
   )
   // Schnitt aus Claude Desktop (ROADMAP 6.9): video_edit
   rpc.handle('schnitt', async (p) => {
-    const { aktion, projekt, pfad, kanal, wunsch, auswahl, index, aus, loeschen } = (p ?? {}) as { aktion?: string; projekt?: string; pfad?: string; kanal?: string; wunsch?: string; auswahl?: unknown; index?: number; aus?: boolean; loeschen?: boolean }
+    const { aktion, projekt, pfad, kanal, wunsch, auswahl, index, aus, loeschen, name } = (p ?? {}) as { aktion?: string; projekt?: string; pfad?: string; kanal?: string; wunsch?: string; auswahl?: unknown; index?: number; aus?: boolean; loeschen?: boolean; name?: string }
     // Effekte für Claude: Nummer, Zeit in der Originalaufnahme und Beschreibung in Worten (ROADMAP E.6)
     const effektListe = (l: SchnittEffekt[]): { index: number; beschreibung: string; von?: number; bis?: number; bei?: number; aus: boolean; daten: SchnittEffekt }[] =>
       l.map((e, i) => ({ index: i, beschreibung: effektText(e), von: e.von, bis: e.bis, bei: e.bei, aus: e.aus === true, daten: e }))
@@ -142,6 +142,9 @@ export async function startAppRpc(deps: AppRpcDeps): Promise<RpcServer> {
         return a(IPC.schnittHighlights, projekt)
       case 'clips':
         return { auftrag: await a(IPC.schnittClips, projekt, auswahl) }
+      case 'umbenennen':
+        if (!name) throw new Error('name fehlt')
+        return a(IPC.schnittUmbenennen, projekt, name, true)
       default:
         throw new Error(`Unbekannte Aktion: ${String(aktion)}`)
     }

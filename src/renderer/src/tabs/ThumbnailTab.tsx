@@ -336,7 +336,7 @@ function VideoVorschlaege({ auftrag, kanal, logo, onStart }: { auftrag: ThumbAuf
             <button
               className="btn small primary"
               onClick={() =>
-                void window.moin.thumbStart({ beschreibung: v.beschreibung, kanal, freunde: v.freunde, anzahl: 3, logo }).then(onStart, (err: unknown) => setFehler(fehlerText(err)))
+                void window.moin.thumbStart({ beschreibung: v.beschreibung, kanal, freunde: v.freunde, anzahl: 3, videoName: ergebnis.videoName || undefined, logo }).then(onStart, (err: unknown) => setFehler(fehlerText(err)))
               }
             >
               Dieses Thumbnail erstellen

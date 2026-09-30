@@ -22,6 +22,7 @@ import { ladeVorbilder } from './planung'
 import { reaktionJob, type ReaktionPayload } from './reaktion'
 import { videoVorschlaegeJob, type VideoPayload, type VideoVorschlag } from './video'
 import { ladeLogos, logoFuerAuftrag, logoPfad } from '../logo/bibliothek'
+import { thumbDateiname } from './dateiname'
 
 /**
  * Thumbnail-Reiter (ROADMAP 5.4): Skin-Bibliothek im Datenordner (Philip lädt seine Skins und die seiner Freunde selbst
@@ -269,7 +270,9 @@ export function registerThumbnailIpc(
     const res = queue.result<{ inhalt: string; vorschlaege: VideoVorschlag[]; boegen: string[] }>(String(jobId))
     if (!res) return null
     const skins = await ladeSkins(dir)
+    const p = queue.payload<VideoPayload>(String(jobId))
     return {
+      videoName: p?.titel ?? (p ? basename(p.video, extname(p.video)) : ''),
       inhalt: res.inhalt,
       vorschlaege: res.vorschlaege.map((v) => ({ ...v, freunde: v.freunde.map((n) => skins.find((x) => x.name === n)?.id).filter((x): x is string => !!x) })),
       boegen: (await Promise.all(res.boegen.filter((b) => imOrdner(dir, b)).map(async (b) => (await readFile(b).catch(() => null))?.toString('base64')))).filter((b): b is string => !!b).map((b) => `data:image/jpeg;base64,${b}`)
@@ -382,7 +385,8 @@ export function registerThumbnailIpc(
       configDir: resourceDir('config'),
       promptDatei: join(resourceDir('prompts'), 'thumbnail-planung.md'),
       logo: await logoFuerAuftrag(dir, start.logo, start.kanal ?? 'MoinMornhart'),
-      ausgabe: join(dir, 'thumbnails', id)
+      ausgabe: join(dir, 'thumbnails', id),
+      ...(start.videoName?.trim() ? { videoName: start.videoName.trim().slice(0, 120) } : {})
     }
     return queue.enqueue('thumbnail', `Thumbnail: ${beschreibung.slice(0, 50)}`, payload)
   }
@@ -439,7 +443,7 @@ export function registerThumbnailIpc(
     const v = res?.varianten[Number(index)]
     if (!v?.bild || !imOrdner(dir, v.bild)) return null
     const win = getWindow()
-    const opts = { title: 'Thumbnail speichern', defaultPath: `${v.titel.replace(/[\\/:*?"<>|]/g, '')}.png`, filters: [{ name: 'PNG', extensions: ['png'] }] }
+    const opts = { title: 'Thumbnail speichern', defaultPath: await thumbDateiname(queue, dir, String(jobId), Number(index), 'png'), filters: [{ name: 'PNG', extensions: ['png'] }] }
     const ziel = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)
     if (ziel.canceled || !ziel.filePath) return null
     await copyFile(v.bild, ziel.filePath)

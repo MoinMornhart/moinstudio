@@ -24,7 +24,10 @@ export interface QuellInfo {
 
 export interface Projekt {
   id: string
+  /** Name des Videos: anfangs der Dateiname der Aufnahme, umbenennbar; danach heißen Export, Shorts und Premiere-Dateien */
   name: string
+  /** Von Philip gewählter YouTube-Titel (Namensvorschlag); steht beim Export vor Claudes Titeln */
+  youtubeTitel?: string
   kanal: string
   erstellt: string
   quelle: QuellInfo | null

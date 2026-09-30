@@ -56,6 +56,8 @@ export interface ThumbnailPayload {
   merkmal?: { text: string; farbe?: string; platz?: string }[]
   /** Logo aus der Bibliothek (Philip, 30.09.) – kommt zuletzt in eine freie Ecke */
   logo?: LogoWahl
+  /** Name des Videos, zu dem das Thumbnail gehört (nur für den Dateinamen beim Speichern) */
+  videoName?: string
 }
 
 export interface ThumbnailVariante {
