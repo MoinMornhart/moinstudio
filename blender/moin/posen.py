@@ -32,11 +32,12 @@ POSEN = {
         "bein_r": {"seitlich": 3},
         "bein_l": {"seitlich": 3},
     },
-    # 8 Heldenstand: Arme verschränkt (beide ~80° vor, 45° nach innen), Beine 5–10° gespreizt
+    # 8 Heldenstand: Arme verschränkt vor der Brust, Beine 5–10° gespreizt. Oberarme nur leicht vor, Unterarme
+    # waagerecht – mit 80° Oberarm und 70° Beugung lagen die Hände vor dem Gesicht (Test 01.10.)
     "held": {
         "kopf": {"nicken": -3, "neigen": 3},
-        "arm_r": {"heben": 80, "seitlich": -45, "beugen": 70},
-        "arm_l": {"heben": 76, "seitlich": -45, "beugen": 70},
+        "arm_r": {"heben": 32, "seitlich": -38, "beugen": 62},
+        "arm_l": {"heben": 28, "seitlich": -38, "beugen": 66},
         "bein_r": {"seitlich": 6},
         "bein_l": {"seitlich": 6},
     },
@@ -285,8 +286,8 @@ POSEN = {
     # Genervt: Arme verschränkt, Kopf schief weg (dazu Mimik „skeptisch“)
     "genervt": {
         "kopf": {"neigen": -12, "drehen": -10, "nicken": 4},
-        "arm_r": {"heben": 78, "seitlich": -45, "beugen": 20},
-        "arm_l": {"heben": 74, "seitlich": -45, "beugen": 20},
+        "arm_r": {"heben": 34, "seitlich": -38, "beugen": 58},
+        "arm_l": {"heben": 30, "seitlich": -38, "beugen": 62},
         "bein_r": {"seitlich": 6},
         "bein_l": {"seitlich": 4},
     },

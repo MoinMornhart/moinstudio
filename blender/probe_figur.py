@@ -15,7 +15,7 @@ from moin.posen import POSEN  # noqa: E402
 from moin import items as mitems  # noqa: E402
 
 args = sys.argv[sys.argv.index("--") + 1:]
-skin, out, pose_name = args[0], args[1], args[2]
+skin, out, pose_name = args[0], os.path.abspath(args[1]), args[2]  # Blender deutet relative Pfade anders
 modus = args[3] if len(args) > 3 else "nah"
 
 # leere Szene

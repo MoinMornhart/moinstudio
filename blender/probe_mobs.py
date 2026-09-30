@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moin import mobs as mmobs  # noqa: E402
 
 args = sys.argv[sys.argv.index("--") + 1:]
-tabelle_pfad, texturen, aus = args[:3]
+tabelle_pfad, texturen, aus = args[0], args[1], os.path.abspath(args[2])  # Blender deutet relative Pfade anders
 von = int(args[3]) if len(args) > 3 else 0
 bis = int(args[4]) if len(args) > 4 else 9999
 os.makedirs(aus, exist_ok=True)

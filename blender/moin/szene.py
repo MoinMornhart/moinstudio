@@ -285,6 +285,32 @@ def _gegner_auf_die_buehne(scene, haupt, figuren, thema):
     bpy.context.view_layer.update()
 
 
+def _gegner_zur_kamera(fig, haupt, cam):
+    """Die Thema-Figur (Gegner, Freund) nach der Kamerawahl so drehen, dass sie zwischen Philip und die Kamera schaut:
+    Gesicht im Dreiviertelprofil sichtbar, trotzdem Philip zugewandt. Die Kamera kann nicht beide Gesichter frei wählen –
+    stand sie vor Philip, zeigte sie den Gegner im Profil von der Haarseite (Test 01.10.: „ich gegen SimPell“)."""
+    if fig is None or getattr(fig, "auf_etwas", False):
+        return
+    kopf = fig.kopf_mitte()
+    zu_cam = cam.matrix_world.translation - kopf
+    zu_haupt = haupt.kopf_mitte() - kopf
+    zu_cam.z = zu_haupt.z = 0
+    if zu_cam.length < 1e-3 or zu_haupt.length < 1e-3:
+        return
+    zu_cam.normalize()
+    zu_haupt.normalize()
+    jetzt = fig.gesicht_richtung()
+    jetzt.z = 0
+    if jetzt.length < 1e-3 or jetzt.normalized().dot(zu_cam) >= 0.55:
+        return
+    jetzt.normalize()
+    wunsch = (zu_cam * 0.6 + zu_haupt * 0.4).normalized()
+    delta = math.atan2(jetzt.x * wunsch.y - jetzt.y * wunsch.x, jetzt.dot(wunsch))
+    fig.wurzel.rotation_euler.z += delta
+    bpy.context.view_layer.update()
+    print("MOIN_BUEHNE Gegner zur Kamera gedreht um", round(math.degrees(delta)), "Grad")
+
+
 def _alle_objekte(fig):
     raus, offen = [], [fig.wurzel]
     while offen:
@@ -335,7 +361,7 @@ def _arm_blockiert(arm):
     Werkzeug in dieser Hand steckt im Kopf oder quer vor der Brust."""
     arm = arm or {}
     am_kopf = arm.get("heben", 0) >= 100 and arm.get("beugen", 0) >= 90
-    verschraenkt = arm.get("heben", 0) >= 55 and arm.get("seitlich", 0) <= -15 and arm.get("beugen", 0) >= 60
+    verschraenkt = arm.get("seitlich", 0) <= -15 and arm.get("heben", 0) + arm.get("beugen", 0) >= 80
     return am_kopf or verschraenkt
 
 
@@ -681,10 +707,13 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
                 punkte.append(haupt.hand(seite))
         return punkte
 
+    thema_figur = next((fig for f, fig in figuren if fig is not haupt and f.get("id") == k.get("thema")), None)
+
     def rahmen(still=False):
         o, u = haupt.kopf_punkte()
         return mkamera.rahme(scene, cam, o, u, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
                              gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=wichtige_punkte(), still=still,
+                             thema_gesicht=thema_figur.gesicht_richtung() if thema_figur else None,
                              anpassung={n: tuple(k[n]) if n.endswith("_uv") else k[n] for n in ("hoehe", "linse", "kopf_anteil", "kopf_uv", "thema_uv") if n in k})
 
     if szene["figuren"][0].get("blick") == "auto":
@@ -717,6 +746,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             print("MOIN_KAMERA_WAHL azimut", az, "warnungen", len(w), "von", len(bewertet), "Vorschlägen")
     if "ob" in probe_item:
         bpy.data.objects.remove(probe_item["ob"], do_unlink=True)
+    _gegner_zur_kamera(thema_figur, haupt, cam)
     oben, unten = haupt.kopf_punkte()
     cam_data.dof.aperture_fstop = r.get("blende", 2.0)
     _pflanzen_vor_kamera_weg(cam, (oben + unten) / 2)

@@ -49,7 +49,7 @@ def _blick_matrix(pos, richtung):
     return Matrix.Translation(pos) @ rot
 
 
-def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht):
+def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht, thema_gesicht=None):
     cam.matrix_world = _blick_matrix(pos, ziel - pos)
     pk = world_to_camera_view(scene, cam, kopf)
     pt = world_to_camera_view(scene, cam, thema)
@@ -72,6 +72,11 @@ def _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_
         rechts = cam.matrix_world.to_3x3() @ Vector((1, 0, 0))
         zur_mitte = gesicht.dot(rechts) * (1 if seite == "links" else -1)
         fehler += 6 if zur_mitte < 0.05 else 0
+    if thema_gesicht is not None:
+        # Ist das Thema eine Figur (Duell, „ich gegen SimPell“), muss auch ihr Gesicht zu sehen sein – sonst stand die
+        # Kamera vor Philip und zeigte den Gegner von hinten (Test 01.10.)
+        d2 = thema_gesicht.dot((pos - thema).normalized())
+        fehler += max(0.0, 0.45 - d2) ** 2 * 12 + (8 if d2 < 0.1 else 0)
     return fehler, (round(pk.x, 2), round(pk.y, 2)), (round(pt.x, 2), round(pt.y, 2)), round(po.y - pu.y, 2)
 
 
@@ -84,7 +89,7 @@ def _rand_strafe(scene, cam, ecken, rand=0.05):
     return strafe
 
 
-def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None, still=False, anpassung=None):
+def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", gesicht=None, erlaubt=None, kopf_ecken=None, still=False, anpassung=None, thema_gesicht=None):
     """Sucht Brennweite, Position und Blickrichtung. `seite`: wo die Figur im Bild steht (das Thema gegenüber).
     `gesicht`: Blickrichtung des Kopfes (Weltvektor); die Kamera sieht das Gesicht im Dreiviertelprofil, nie von
     hinten. `erlaubt(pos)`: optionale Vorgabe, wo die Kamera stehen darf (z. B. über dem Abgrund).
@@ -97,6 +102,7 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
     kopf_h = (kopf_oben - kopf_unten).length
     richtung = (thema - kopf).normalized()
     gesicht = gesicht.normalized() if gesicht is not None else None
+    thema_gesicht = thema_gesicht.normalized() if thema_gesicht is not None else None
     sensor_h = cam.data.sensor_width * scene.render.resolution_y / scene.render.resolution_x
     beste = None
     alle = []
@@ -120,7 +126,7 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
                 wand = 20.0 if versperrt else 0.0
                 for i in range(16):  # Blickziel: 0–3 m vom Kopf Richtung Thema
                     ziel = kopf + richtung * (i * 0.2)
-                    r = _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht)
+                    r = _bewerte(scene, cam, pos, ziel, kopf, kopf_oben, kopf_unten, thema, m, kopf_uv, thema_uv, seite, gesicht, thema_gesicht)
                     if r and kopf_ecken:
                         r = (r[0] + 25.0 * _rand_strafe(scene, cam, kopf_ecken),) + tuple(r[1:])
                     if r and wand:
@@ -148,7 +154,7 @@ def rahme(scene, cam, kopf_oben, kopf_unten, thema, modus="nah", seite="links", 
     stufe = (anpassung or {}).get("_weiter", 0)
     if (tu < 0.03 or tu > 0.97 or tv < 0.03 or tv > 0.97) and stufe < 2:
         weiter = dict(anpassung or {}, kopf_anteil=m["kopf_anteil"] * 0.72, _weiter=stufe + 1)
-        return rahme(scene, cam, kopf_oben, kopf_unten, thema, modus, seite, gesicht, erlaubt, kopf_ecken, still, weiter)
+        return rahme(scene, cam, kopf_oben, kopf_unten, thema, modus, seite, gesicht, erlaubt, kopf_ecken, still, weiter, thema_gesicht)
     cam.data.lens = beste[2]
     cam.matrix_world = beste[1]
     if not still:
