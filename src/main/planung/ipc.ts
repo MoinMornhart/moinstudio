@@ -108,7 +108,7 @@ export function registerPlanungIpc(settings: SettingsStore, getWindow: () => Bro
     const k = await karte(d, id)
     const notiz = k.notizen.trim()
     const beschreibung = (notiz ? `${k.titel}. ${notiz}` : k.titel).slice(0, 600)
-    const auftrag = await v.starteThumbnail({ beschreibung, kanal: k.kanal })
+    const auftrag = await v.starteThumbnail({ beschreibung, kanal: k.kanal, videoName: k.titel })
     return mitBild(d, await aendereKarte(d, k.id, { thumbnail: { auftrag, bild: null, gewaehlt: false } }))
   })
   biete(IPC.planungThumbVarianten, async (id: string): Promise<PlanungThumbStand> => {
@@ -150,12 +150,14 @@ export function registerPlanungIpc(settings: SettingsStore, getWindow: () => Bro
   // Planung mit Claude (ROADMAP 7.6): Ideen, Titel, Wochenplan als Auftrag über das Abo
   v.queue.register('planung-claude', planungClaudeJob)
   const ART_TITEL: Record<PlanungClaudeArt, string> = { ideen: 'Ideen', titel: 'Titelvorschläge', woche: 'Wochenplan' }
-  biete(IPC.planungClaude, async (art: PlanungClaudeArt, o: { kanal?: string; wunsch?: string; karte?: string } = {}): Promise<string> => {
+  // Titelvorschläge auch für ein Schnitt-Projekt (Namen fürs Video, Philip 30.09.2026) – derselbe Auftrag, nur mit `projekt`
+  biete(IPC.planungClaude, async (art: PlanungClaudeArt, o: { kanal?: string; wunsch?: string; karte?: string; projekt?: string } = {}): Promise<string> => {
     if (!(art in ART_TITEL)) throw new Error('Unbekannte Anfrage.')
     const claudeCli = await findClaudeCli()
     if (!claudeCli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
-    const payload: PlanungClaudePayload = { art, daten: await daten(), claudeCli, configDir: resourceDir('config'), kanal: o.kanal ?? 'MoinMornhart', wunsch: o.wunsch, karte: o.karte }
-    return v.queue.enqueue('planung-claude', `Planung: ${ART_TITEL[art]}${art === 'ideen' ? ` für ${payload.kanal}` : ''}`, payload)
+    const payload: PlanungClaudePayload = { art, daten: await daten(), claudeCli, configDir: resourceDir('config'), kanal: o.kanal ?? 'MoinMornhart', wunsch: o.wunsch, karte: o.karte, projekt: o.projekt }
+    const titel = art === 'titel' && o.projekt ? `Schnitt: Namen fürs Video` : `Planung: ${ART_TITEL[art]}${art === 'ideen' ? ` für ${payload.kanal}` : ''}`
+    return v.queue.enqueue('planung-claude', titel, payload)
   })
   biete(IPC.planungClaudeStand, async (auftrag: string): Promise<PlanungClaudeStand | null> => {
     const job = v.queue.get(String(auftrag))

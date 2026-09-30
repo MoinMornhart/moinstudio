@@ -52,6 +52,8 @@ export interface ThumbnailPayload {
   ausgabe: string
   /** Fester Text (z. B. Folgennummer) – kommt auf jede Variante, Claudes eigener Text entfällt dann */
   merkmal?: { text: string; farbe?: string; platz?: string }[]
+  /** Name des Videos, zu dem das Thumbnail gehört (nur für den Dateinamen beim Speichern) */
+  videoName?: string
 }
 
 export interface ThumbnailVariante {

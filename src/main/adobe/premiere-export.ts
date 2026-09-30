@@ -10,6 +10,7 @@ import { premiereXml, srt } from './premiere'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
 import { effekteInSchnittzeit } from '../schnitt/effekte'
 import { ladeEffekte } from '../schnitt/effekt-vorbereitung'
+import { sichererName, videoName } from '../dateinamen'
 
 /** Breite und Höhe aus dem PNG-Kopf (IHDR); null, wenn es kein PNG ist */
 export function pngGroesse(b: Buffer): { breite: number; hoehe: number } | null {
@@ -26,12 +27,8 @@ export async function premiereDateien(daten: string, id: string): Promise<{ xml:
   const abschnitte = liesAbschnitte(await readFile(join(ordner, 'transkript.jsonl'), 'utf8').catch(() => ''))
   const wellen = p.wellenform ? (JSON.parse(await readFile(join(ordner, 'wellenform.json'), 'utf8')) as { aufloesung: number; werte: number[] }) : null
   const exp = p.export ? (JSON.parse(await readFile(join(ordner, 'export.json'), 'utf8').catch(() => 'null')) as ExportErgebnis | null) : null
-  // ohne Emojis und verbotene Zeichen: Dateiname und Sequenzname müssen überall funktionieren
-  const name =
-    (exp?.titel[0] ?? p.name)
-      .replace(/\p{Extended_Pictographic}|\uFE0F|[\\/:*?"<>|]/gu, '')
-      .replace(/\s+/g, ' ')
-      .trim() || p.id
+  // Name des Videos, ohne Emojis und verbotene Zeichen: Dateiname und Sequenzname müssen überall funktionieren
+  const name = sichererName(videoName({ name: p.name, quelle: p.quelle.pfad }))
   const ziel = join(ordner, 'premiere')
   await mkdir(ziel, { recursive: true })
   const xml = join(ziel, `${name}.xml`)

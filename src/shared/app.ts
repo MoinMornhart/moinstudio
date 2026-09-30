@@ -68,6 +68,7 @@ export const IPC = {
   schnittImport: 'schnitt:import',
   schnittWellenform: 'schnitt:wellenform',
   schnittLoeschen: 'schnitt:loeschen',
+  schnittUmbenennen: 'schnitt:umbenennen',
   schnittTranskript: 'schnitt:transkript',
   schnittTranskriptStart: 'schnitt:transkript-start',
   schnittRohschnittStart: 'schnitt:rohschnitt-start',
@@ -259,6 +260,8 @@ export interface ThumbStart {
   /** Skin-IDs der Freunde, die mit ins Bild sollen */
   freunde?: string[]
   anzahl?: number
+  /** Name des Videos, zu dem das Thumbnail gehört (für den Dateinamen beim Speichern) */
+  videoName?: string
 }
 
 export interface ThumbAuftrag {
@@ -281,6 +284,8 @@ export interface ThumbAuftrag {
 
 /** Video-Auswertung: Inhalt, Vorschläge (Freunde als Skin-IDs) und die Bildbögen, die Claude gesehen hat */
 export interface ThumbVideoErgebnis {
+  /** Name des Videos (Titel oder Dateiname) */
+  videoName: string
   inhalt: string
   vorschlaege: { beschreibung: string; warum: string; freunde: string[]; zeitpunkt?: string }[]
   boegen: string[]
@@ -443,6 +448,8 @@ export interface MoinApi {
   schnittImport(kanal?: string): Promise<string | null>
   schnittWellenform(id: string): Promise<{ aufloesung: number; werte: number[] } | null>
   schnittLoeschen(id: string): Promise<void>
+  /** Projekt umbenennen: wird Name des Videos und der Export-Dateien; mit `youtube` auch YouTube-Titel (Export, Karte) */
+  schnittUmbenennen(id: string, name: string, youtube?: boolean): Promise<SchnittProjekt>
   /** Transkript (Abschnitte mit Wortzeiten) oder null, falls noch keins da ist; Neustart des Transkripts */
   schnittTranskript(id: string): Promise<SchnittAbschnitt[] | null>
   schnittTranskriptStart(id: string): Promise<string>
@@ -484,8 +491,8 @@ export interface MoinApi {
   planungThumbnail(id: string): Promise<PlanungKarte>
   planungThumbVarianten(id: string): Promise<PlanungThumbStand>
   planungThumbWaehlen(id: string, pfad: string): Promise<PlanungKarte>
-  /** Claude: Ideen (kanal, wunsch), Titel (karte), Wochenplan; liefert die Auftrags-ID */
-  planungClaude(art: PlanungClaudeArt, o?: { kanal?: string; wunsch?: string; karte?: string }): Promise<string>
+  /** Claude: Ideen (kanal, wunsch), Titel (karte oder Schnitt-projekt), Wochenplan; liefert die Auftrags-ID */
+  planungClaude(art: PlanungClaudeArt, o?: { kanal?: string; wunsch?: string; karte?: string; projekt?: string }): Promise<string>
   planungClaudeStand(auftrag: string): Promise<PlanungClaudeStand | null>
   /** Adobe (ROADMAP M8, ungetestet); neu = erneut suchen */
   adobeStatus(neu?: boolean): Promise<AdobeStatus>

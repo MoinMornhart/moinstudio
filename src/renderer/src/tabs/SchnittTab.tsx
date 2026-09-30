@@ -3,6 +3,7 @@ import type { SchnittAbschnitt, SchnittExport, SchnittHighlight, SchnittListe, S
 import { Card, PageHeader } from '../components/Panel'
 import { EffektListe, WunschFeld } from '../components/SchnittWunsch'
 import { abholen, OEFFNE_EREIGNIS } from '../navigation'
+import { Fortschritt, useClaudeAuftrag } from '../components/PlanungClaude'
 
 /**
  * Schnitt-Reiter (ROADMAP 6.x): Rohvideo rein, fertiges Video raus. 6.2: Projekte, Import mit Vorschau, Wellenform
@@ -170,7 +171,7 @@ function Export({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): R
   const [meldung, setMeldung] = useState<string | null>(null)
   useEffect(() => {
     if (p.exportiert && !p.auftrag) void window.moin.schnittExportInfo(p.id).then(setInfo)
-  }, [p.id, p.exportiert, p.auftrag])
+  }, [p.id, p.exportiert, p.auftrag, p.name])
   const kopieren = (t: string): void => void navigator.clipboard.writeText(t).then(() => setMeldung('Kopiert.'))
   return (
     <div className="schnitt-fertig">
@@ -291,7 +292,7 @@ function Highlights({ p, springe, neuLaden }: { p: SchnittProjekt; springe: (s: 
         <>
           <div className="clip-raster">
             {clips.map((c) => (
-              <figure key={c.name} className={c.name.includes('short') ? 'hoch' : ''}>
+              <figure key={c.name} className={/(_Short_\d+|-short)\.mp4$/i.test(c.name) ? 'hoch' : ''}>
                 <video src={c.url} controls preload="metadata" />
                 <figcaption className="muted small">{c.name}</figcaption>
               </figure>
@@ -301,6 +302,53 @@ function Highlights({ p, springe, neuLaden }: { p: SchnittProjekt; springe: (s: 
             Ordner mit den Clips öffnen
           </button>
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Name des Videos (Philip, 30.09.2026): umbenennen oder Claude 5 Titel aus dem Transkript vorschlagen lassen (derselbe
+ * Auftrag wie die Titelvorschläge der Planung). Nach dem Namen heißen Export, Shorts und Premiere-Dateien; ein gewählter
+ * Vorschlag wird zusätzlich YouTube-Titel.
+ */
+function VideoName({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): React.JSX.Element {
+  const a = useClaudeAuftrag('titel')
+  const [name, setName] = useState(p.name)
+  const [stand, setStand] = useState(p.name)
+  const [fehler, setFehler] = useState<string | null>(null)
+  if (stand !== p.name) {
+    setStand(p.name)
+    setName(p.name)
+  }
+  const setze = (neu: string, youtube: boolean): void => {
+    setFehler(null)
+    window.moin.schnittUmbenennen(p.id, neu, youtube).then(neuLaden, (e: unknown) => setFehler(String(e)))
+  }
+  const geaendert = !!name.trim() && name.trim() !== p.name
+  return (
+    <div className="video-name">
+      <div className="row wrap" style={{ marginTop: 0 }}>
+        <input className="input" aria-label="Name des Videos" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && geaendert && setze(name, false)} />
+        <button className="btn" disabled={!geaendert} onClick={() => setze(name, false)}>
+          Umbenennen
+        </button>
+        <button className="btn" disabled={a.laeuft || !p.transkript} title={p.transkript ? 'Claude schlägt 5 Titel aus dem Inhalt des Videos vor' : 'Geht, sobald das Transkript fertig ist'} onClick={() => a.starte({ projekt: p.id, kanal: p.kanal })}>
+          {a.ergebnis ? 'Neue Vorschläge' : 'Namen vorschlagen'}
+        </button>
+      </div>
+      <p className="muted small">So heißen das fertige Video, die Shorts und die Dateien für Premiere. Ein gewählter Vorschlag wird auch der YouTube-Titel.</p>
+      {a.laeuft && <Fortschritt stand={a.stand} text="Claude schreibt Namen fürs Video …" />}
+      {(fehler ?? a.fehler) && <p className="warn small">{fehler ?? a.fehler}</p>}
+      {a.ergebnis && (
+        <div className="namen-vorschlaege">
+          {a.ergebnis.titel.map((t) => (
+            <button key={t.titel} className={`titel-vorschlag${t.titel === p.name ? ' on' : ''}`} title="Übernehmen" onClick={() => setze(t.titel, true)}>
+              <span>{t.titel}</span>
+              <span className="muted small">{t.warum}</span>
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -337,6 +385,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
           {sicher ? 'Wirklich löschen? (Rohvideo bleibt)' : 'Projekt löschen'}
         </button>
       </div>
+      <VideoName p={p} neuLaden={neuLaden} />
       {p.auftrag && (
         <p className={p.auftrag.state === 'failed' ? 'warn' : 'muted'}>
           {p.auftrag.state === 'failed' ? `Fehler: ${p.auftrag.error}` : `${p.auftrag.step || 'Wartet …'}${p.auftrag.progress !== null ? ` (${Math.round(p.auftrag.progress)} %)` : ''}`}

@@ -12,6 +12,7 @@ import type { SettingsStore } from '../data/settings'
 import { premiereDateien } from './premiere-export'
 import { IPC, type AdobeStatus } from '@shared/app'
 import { findeAdobe } from './erkennung'
+import { thumbDateiname } from '../thumbnail/dateiname'
 
 /** Adobe (ROADMAP M8, ungetestet): Erkennung für die Einstellungen; das Ergebnis wird bis zum nächsten „Neu suchen“ gemerkt. */
 export function registerAdobeIpc(settings: SettingsStore, queue: JobQueue, getWindow: () => BrowserWindow | undefined, tools: ToolManager): void {
@@ -33,7 +34,8 @@ export function registerAdobeIpc(settings: SettingsStore, queue: JobQueue, getWi
     const v = queue.result<{ varianten: ThumbnailVariante[] }>(String(jobId))?.varianten[Number(index)]
     if (!v?.bild) return null
     const win = getWindow()
-    const opts = { title: 'Als Photoshop-Datei speichern', defaultPath: `${v.titel.replace(/[\\/:*?"<>|]/g, '')}.psd`, filters: [{ name: 'Photoshop', extensions: ['psd'] }] }
+    const daten = process.env['MOIN_TEST_DATEN'] ?? (await settings.load()).dataDir
+    const opts = { title: 'Als Photoshop-Datei speichern', defaultPath: await thumbDateiname(queue, daten, String(jobId), Number(index), 'psd'), filters: [{ name: 'Photoshop', extensions: ['psd'] }] }
     // Prüfabläufe (MOIN_TEST_ZIEL) speichern ohne Dialog
     const test = process.env['MOIN_TEST_ZIEL']
     const ziel = test ? { canceled: false, filePath: test } : win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)

@@ -5,12 +5,12 @@ import { teileTermin, WOCHENTAGE_KURZ } from '@shared/kalender'
 const fehlerText = (e: unknown): string => (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 
 /** Startet einen Claude-Auftrag der Planung und verfolgt ihn, bis er fertig ist. */
-function useClaudeAuftrag<A extends PlanungClaudeArt>(art: A): {
+export function useClaudeAuftrag<A extends PlanungClaudeArt>(art: A): {
   stand: PlanungClaudeStand | null
   ergebnis: Extract<PlanungClaudeErgebnis, { art: A }> | null
   laeuft: boolean
   fehler: string | null
-  starte: (o?: { kanal?: string; wunsch?: string; karte?: string }) => void
+  starte: (o?: { kanal?: string; wunsch?: string; karte?: string; projekt?: string }) => void
 } {
   const [auftrag, setAuftrag] = useState<string | null>(null)
   const [stand, setStand] = useState<PlanungClaudeStand | null>(null)
@@ -34,7 +34,7 @@ function useClaudeAuftrag<A extends PlanungClaudeArt>(art: A): {
   }
 }
 
-function Fortschritt({ stand, text }: { stand: PlanungClaudeStand | null; text: string }): React.JSX.Element {
+export function Fortschritt({ stand, text }: { stand: PlanungClaudeStand | null; text: string }): React.JSX.Element {
   const wartet = stand?.state === 'queued' || stand?.state === 'waiting-limit'
   return (
     <p className="muted small claude-laeuft">

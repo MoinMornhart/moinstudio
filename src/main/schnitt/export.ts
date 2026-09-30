@@ -215,6 +215,8 @@ Antworte nur mit JSON nach dem Schema.`
       text = { titel: a.titel?.length ? a.titel : text.titel, beschreibung: a.beschreibung ?? '', kapitel: repariereKapitel(a.kapitel ?? [], laenge) }
     }
   }
+  // Den Titel, den Philip selbst gewählt hat, nicht durch Claudes Vorschläge verdrängen
+  if (pr.youtubeTitel) text.titel = [pr.youtubeTitel, ...text.titel.filter((t) => t !== pr.youtubeTitel)]
 
   await ctx.yield()
   await writeFile(join(ordner, 'export-filter.txt'), filterGraph(plan))

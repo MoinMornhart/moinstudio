@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runClaudeInJob } from '../claude/run'
 import type { JobContext } from '../jobs/queue'
@@ -11,6 +11,7 @@ import { filterGraph, renderArgs, untertitelAss, zeitAbbildung, type RenderOptio
 import type { Bereich, Schnittliste } from './rohschnitt'
 import { liesAbschnitte, type Abschnitt } from './transkript'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
+import { clipDateiname, videoName } from '../dateinamen'
 
 /**
  * Stream-Highlights und Shorts (ROADMAP 6.8, MoinMorni): Höhepunkte aus langen Streams finden (laute Spitzen +
@@ -179,13 +180,18 @@ export async function clipsJob(p: ClipsPayload, ctx: JobContext<unknown>): Promi
     const breite = hoch ? 1080 : Math.min(1920, pr.quelle.breite || 1920)
     const hoehe = hoch ? 1920 : Math.round((breite * 9) / 16 / 2) * 2
     const fps = Math.min(60, Math.round(pr.quelle.fps) || 30)
+    // Arbeitsdateien (Filter, Untertitel) intern, das fertige Video heißt wie das Video: „<Video>_Short_1.mp4“
     const name = `${String(a.index + 1).padStart(2, '0')}-${a.art}`
+    const datei = clipDateiname(videoName({ name: pr.name, quelle: pr.quelle.pfad }), a.art, a.index + 1)
+    // ältere Fassung desselben Höhepunkts (alter Name oder altes Schema „01-short.mp4“) ersetzen
+    const alt = new RegExp(`(_${a.art === 'short' ? 'Short' : 'Clip'}_${a.index + 1}|^${name})\\.mp4$`)
+    for (const n of await readdir(join(ordner, 'clips')).catch(() => [] as string[])) if (alt.test(n)) await rm(join(ordner, 'clips', n), { force: true })
     let untertitel: string | null = null
     if (hoch && abschnitte.length) {
       untertitel = `clips/${name}.ass`
       await writeFile(join(ordner, untertitel), untertitelAss(abschnitte, kurz, { breite, hoehe, karaoke: true, woerter: 3, unten: 0.28 }))
     }
-    const o: RenderOptionen = { quelle: pr.quelle.pfad, liste: kurz, zooms: [], untertitel, breite, hoehe, fps, audio: pr.quelle.audio, encoder: encoderArgs(p.encoder, hoehe, fps), ausgabe: `clips/${name}.mp4`, ...(hoch ? { hoch: { cam: cam ?? null } } : {}) }
+    const o: RenderOptionen = { quelle: pr.quelle.pfad, liste: kurz, zooms: [], untertitel, breite, hoehe, fps, audio: pr.quelle.audio, encoder: encoderArgs(p.encoder, hoehe, fps), ausgabe: `clips/${datei}`, ...(hoch ? { hoch: { cam: cam ?? null } } : {}) }
     await writeFile(join(ordner, 'clips', `${name}.filter.txt`), filterGraph(o))
     const { laenge } = zeitAbbildung(kurz.behalten)
     await ffmpegMitFortschritt(p.ffmpeg, renderArgs(o, `clips/${name}.filter.txt`), ctx, laenge, (x) => ctx.progress(5 + ((n + x) / p.auswahl.length) * 94, `${hoch ? 'Short' : 'Clip'} ${n + 1}/${p.auswahl.length}: ${h.titel}`), ordner)

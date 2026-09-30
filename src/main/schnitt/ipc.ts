@@ -25,6 +25,8 @@ import { medienUrl } from './medien'
 import type { EffektHilfe } from './effekt-vorbereitung'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
+import { videoDateiname, videoName } from '../dateinamen'
+import { aendereKarte, ladeKarten } from '../planung/karten'
 
 /** Schnitt-Reiter (ROADMAP 6.x): Projekte, Import, Vorschau. */
 
@@ -251,10 +253,16 @@ export function registerSchnittIpc(
     const p = await ladeProjekt(daten, String(id))
     if (!p?.export) return null
     const win = getWindow()
-    const opts = { title: 'Fertiges Video speichern', defaultPath: `${p.name}.mp4`, filters: [{ name: 'Video', extensions: ['mp4'] }] }
+    const opts = { title: 'Fertiges Video speichern', defaultPath: videoDateiname(videoName({ name: p.name, quelle: p.quelle?.pfad }), 'mp4'), filters: [{ name: 'Video', extensions: ['mp4'] }] }
     const wahl = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)
     if (wahl.canceled || !wahl.filePath) return null
     await copyFile(join(projektOrdner(daten, p.id), 'export.mp4'), wahl.filePath)
+    // Titel, Beschreibung und Kapitel gleich benannt daneben (Video.mp4 → Video.txt), fertig zum Einfügen bei YouTube
+    const e = JSON.parse(await readFile(join(projektOrdner(daten, p.id), 'export.json'), 'utf8').catch(() => 'null')) as ExportErgebnis | null
+    if (e) {
+      const text = [e.titel[0] ?? p.name, '', e.beschreibung, ...(e.kapitel.length ? ['', kapitelText(e.kapitel)] : [])].join('\r\n')
+      await writeFile(wahl.filePath.replace(/\.[^.\\/]+$/, '') + '.txt', text, 'utf8')
+    }
     return wahl.filePath
   })
   // Übergabe ans Thumbnail: Claude sieht sich das fertige Video an und schlägt Thumbnails vor
@@ -310,6 +318,23 @@ export function registerSchnittIpc(
     const daten = await datenOrdner(settings)
     const text = await liesMitKonfliktkopien(join(projektOrdner(daten, String(id)), 'schnitt.json')).catch(() => null)
     return text === null ? null : (JSON.parse(text) as Schnittliste)
+  })
+  // Umbenennen (Philip, 30.09.2026): der Name gilt für Export, Shorts und Premiere; ein gewählter Namensvorschlag wird
+  // zusätzlich YouTube-Titel – im letzten Export und in der verknüpften Planungskarte
+  biete(IPC.schnittUmbenennen, async (id: unknown, name: unknown, youtube: unknown): Promise<SchnittProjekt> => {
+    const neu = typeof name === 'string' ? name.replace(/\s+/g, ' ').trim().slice(0, 120) : ''
+    if (!neu) throw new Error('Bitte einen Namen eingeben.')
+    const daten = await datenOrdner(settings)
+    const p = await aendereProjekt(daten, String(id), () => ({ name: neu, ...(youtube === true ? { youtubeTitel: neu } : {}) }))
+    if (!p) throw new Error('Projekt nicht gefunden.')
+    if (youtube === true) {
+      const datei = join(projektOrdner(daten, p.id), 'export.json')
+      const e = JSON.parse(await readFile(datei, 'utf8').catch(() => 'null')) as ExportErgebnis | null
+      if (e) await writeFile(datei, JSON.stringify({ ...e, titel: [neu, ...e.titel.filter((t) => t !== neu)] }, null, 1))
+      const karte = (await ladeKarten(daten)).find((k) => k.schnitt === p.id)
+      if (karte?.youtube) await aendereKarte(daten, karte.id, { youtube: { ...karte.youtube, titel: neu } })
+    }
+    return alsAnsicht(daten, p)
   })
   biete(IPC.schnittLoeschen, async (id: unknown): Promise<void> => {
     const daten = await datenOrdner(settings)

@@ -91,6 +91,7 @@ const api: MoinApi = {
   schnittImport: (kanal?: string) => ipcRenderer.invoke(IPC.schnittImport, kanal),
   schnittWellenform: (id: string) => ipcRenderer.invoke(IPC.schnittWellenform, id),
   schnittLoeschen: (id: string) => ipcRenderer.invoke(IPC.schnittLoeschen, id),
+  schnittUmbenennen: (id: string, name: string, youtube?: boolean) => ipcRenderer.invoke(IPC.schnittUmbenennen, id, name, youtube),
   schnittTranskript: (id: string) => ipcRenderer.invoke(IPC.schnittTranskript, id),
   schnittTranskriptStart: (id: string) => ipcRenderer.invoke(IPC.schnittTranskriptStart, id),
   schnittRohschnittStart: (id: string) => ipcRenderer.invoke(IPC.schnittRohschnittStart, id),
