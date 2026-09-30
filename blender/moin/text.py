@@ -165,8 +165,9 @@ def setze_text(bild_pfad, bericht, texte, assets, ausgabe):
         breite_px = max(m.shape[1] for m in masken)
         grad = rng.uniform(3.0, 7.0) * rng.choice((-1, 1)) if t.get("neigung", "auto") == "auto" else float(t["neigung"])
         wahl = None
-        # Größe: Zeilenhöhe 16 % der Bildhöhe, bei Platzmangel schrittweise bis 7 %
-        for anteil in (0.16, 0.14, 0.12, 0.10, 0.085, 0.07):
+        # Größe: Zeilenhöhe 16 % der Bildhöhe, bei Platzmangel schrittweise bis 8,5 % – kleiner ist in der
+        # Handy-Ansicht (Thumbnail 168×94) unter 8 Pixel hoch und nicht mehr lesbar
+        for anteil in (0.16, 0.14, 0.12, 0.10, 0.085):
             k = max(1, int(round(anteil * H / glyph_h)))
             bw = (breite_px + 1) * k / W
             bh = (glyph_h * len(zeilen) + 1) * k * 1.15 / H
@@ -187,9 +188,11 @@ def setze_text(bild_pfad, bericht, texte, assets, ausgabe):
                     frei = [b for b in unten if sum(_ueberlappung(b, w) for w in wichtig + belegt) == 0]
             if frei:
                 wahl = (k, rng.choice(frei), "frei")
+                if anteil < 0.1:
+                    warnungen.append(f"Text „{t['text']}“ ist auf dem Handy klein – kürzer fassen oder mehr Platz lassen")
                 break
         if not wahl:  # kein freier Platz: kleinste Größe, geringste Überdeckung, Warnung
-            k = max(1, int(round(0.07 * H / glyph_h)))
+            k = max(1, int(round(0.085 * H / glyph_h)))
             bw, bh = (breite_px + 1) * k / W, (glyph_h * len(zeilen) + 1) * k * 1.15 / H
             box, p = min(((_box_fuer(p, bw, bh), p) for p in PLAETZE), key=lambda bp: sum(_ueberlappung(bp[0], w) for w in wichtig))
             wahl = (k, box, p)

@@ -23,6 +23,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Werkzeuge landen nicht mehr im Kopf: Legt eine Pose die Hand an Kopf oder Brust (Kopfkratzen, Heldenpose, Panik …), wandert das Werkzeug in die freie Hand oder wird locker vor dem Körper gehalten.
 - Duelle und Freunde im Bild: Die zweite Figur (z. B. SimPell) dreht sich nach der Kamerawahl so, dass man ihr Gesicht sieht und sie trotzdem Philip anschaut – vorher war sie oft nur von der Seite oder von hinten zu sehen. Die Kamera achtet dafür auch auf das Gesicht des Gegenübers.
 - Verschränkte Arme (Heldenpose, „genervt“) liegen vor der Brust statt vor dem Gesicht.
+- Text auf Thumbnails wird nie kleiner als 8,5 % der Bildhöhe (auf dem Handy etwa 8 Pixel); unter 10 % gibt es eine Warnung.
 - Mobs: Piglin- und Hoglin-Ohren stehen wieder seitlich ab statt im Kopf zu stecken, Drachenflügel sind ausgebreitet (Drehrichtung beim Einlesen der Bedrock-Modelle war vertauscht); der Fuchs hat keinen schwarzen Schlafkopf-Kasten mehr, und Geschosse wie Pfeil, Schneeball oder Erfahrungsflasche tauchen nicht mehr als „Mob“ auf. Hauchdünne Flossen und Flügel (Kabeljau, Lachs, Kugelfisch, Kaulquappe) sind nicht mehr schwarz. Der Tropenfisch ist orange statt weiß.
 - Blender blieb manchmal nach dem fertigen Bild beim Photoshop-Maskenschritt hängen und renderte bei einem Absturz dort das ganze Bild ein zweites Mal.
 
