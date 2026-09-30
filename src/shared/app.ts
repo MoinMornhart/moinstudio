@@ -7,6 +7,7 @@ export const TABS = [
   { id: 'thumbnail', label: 'Thumbnail', icon: '🎨' },
   { id: 'schnitt', label: 'Schnitt', icon: '✂️' },
   { id: 'planung', label: 'Planung', icon: '🗂️' },
+  { id: 'logo', label: 'Logo', icon: '🏷️' },
   { id: 'einstellungen', label: 'Einstellungen', icon: '⚙️' }
 ] as const
 
@@ -106,8 +107,65 @@ export const IPC = {
   adobeStatus: 'adobe:status',
   schnittPremiere: 'schnitt:premiere',
   thumbPhotoshop: 'thumb:photoshop',
-  adobeSelbsttest: 'adobe:selbsttest'
+  adobeSelbsttest: 'adobe:selbsttest',
+  logoListe: 'logo:liste',
+  logoBild: 'logo:bild',
+  logoHochladen: 'logo:hochladen',
+  logoEintrag: 'logo:eintrag',
+  logoStart: 'logo:start',
+  logoAuftraege: 'logo:auftraege',
+  logoErgebnis: 'logo:ergebnis',
+  logoAendern: 'logo:aendern',
+  logoLoeschen: 'logo:loeschen',
+  logoMerken: 'logo:merken',
+  logoExport: 'logo:export'
 } as const
+
+/** Logos (Philip, 30.09.): Platz und Größe im Thumbnail */
+export const LOGO_POSITIONEN = [
+  { id: 'auto', name: 'Automatisch' },
+  { id: 'oben_links', name: 'Oben links' },
+  { id: 'oben_rechts', name: 'Oben rechts' },
+  { id: 'unten_links', name: 'Unten links' },
+  { id: 'unten_rechts', name: 'Unten rechts' }
+] as const
+export type LogoPosition = (typeof LOGO_POSITIONEN)[number]['id']
+/** winzig und riesig gibt es nur über Änderungen in Worten („Logo noch kleiner“) */
+export type LogoGroesse = 'winzig' | 'klein' | 'mittel' | 'gross' | 'riesig'
+export const LOGO_GROESSEN: { id: LogoGroesse; name: string }[] = [
+  { id: 'klein', name: 'Klein' },
+  { id: 'mittel', name: 'Mittel' },
+  { id: 'gross', name: 'Groß' }
+]
+/** Logo für ein Thumbnail: id aus der Bibliothek oder „standard“ (Standard-Logo des Kanals) */
+export interface ThumbLogoWahl {
+  id: string
+  position: LogoPosition
+  groesse: LogoGroesse
+}
+/** Logo in der Bibliothek (Datenordner/logos) */
+export interface LogoEintrag {
+  id: string
+  name: string
+  datei: string
+  quelle: 'erstellt' | 'hochgeladen'
+  erstellt: string
+  breite: number
+  hoehe: number
+  /** Kanäle, für die dieses Logo das Standard-Logo ist */
+  standard: string[]
+}
+export interface LogoStart {
+  beschreibung: string
+  kanal?: string
+  anzahl?: number
+}
+export interface LogoErgebnis {
+  varianten: { titel: string; bild: string | null; warnungen: string[]; fehler: string | null }[]
+}
+/** Export-Größen: längste Seite in Pixeln oder YouTube-Wasserzeichen (150×150) */
+export type LogoExportGroesse = 512 | 1024 | 2048 | 'wasserzeichen'
+export type LogoQuelle = { logo: string } | { job: string; variante: number }
 
 /** Planung (ROADMAP 7.2/7.3): Spalten des Boards in fester Reihenfolge */
 export const PLANUNG_SPALTEN = [
@@ -259,6 +317,7 @@ export interface ThumbStart {
   /** Skin-IDs der Freunde, die mit ins Bild sollen */
   freunde?: string[]
   anzahl?: number
+  logo?: ThumbLogoWahl
 }
 
 export interface ThumbAuftrag {
@@ -503,6 +562,26 @@ export interface MoinApi {
   thumbVideoErgebnis(jobId: string): Promise<ThumbVideoErgebnis | null>
   /** Reaction-Thumbnail: Dateidialog fürs Original, dann Job; liefert die Job-ID oder null */
   /** Spiele-Vorlage: Dateidialog, dann Auftrag; null bei Abbruch */
-  thumbSpielvorlage(o: { wunsch?: string; freunde?: string[] }): Promise<string | null>
-  thumbReaktion(o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[] }): Promise<string | null>
+  thumbSpielvorlage(o: { wunsch?: string; freunde?: string[]; logo?: ThumbLogoWahl }): Promise<string | null>
+  thumbReaktion(o: { gefuehl?: string; wort?: string; kanal: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[]; logo?: ThumbLogoWahl }): Promise<string | null>
+  /** Logo-Bibliothek (Datenordner/logos) */
+  logoListe(): Promise<LogoEintrag[]>
+  logoBild(id: string): Promise<string | null>
+  /** Bild als PNG-Data-URL (SVG/JPG wandelt die Oberfläche vorher um); ohne Transparenz wird freigestellt */
+  logoHochladen(name: string, png: string): Promise<LogoEintrag[]>
+  /** Umbenennen, als Standard-Logo eines Kanals an- oder abwählen, löschen */
+  logoEintrag(id: string, patch: { name?: string; standard?: { kanal: string; an: boolean }; entfernen?: boolean }): Promise<LogoEintrag[]>
+  /** Logo aus einer Beschreibung erstellen (Claude plant, Blender rendert); liefert die Auftrags-ID */
+  logoStart(start: LogoStart): Promise<string>
+  /** Logo-Aufträge und ihre Änderungen, neueste zuerst */
+  logoAuftraege(): Promise<ThumbAuftrag[]>
+  logoErgebnis(jobId: string): Promise<LogoErgebnis | null>
+  /** Änderungswunsch zu einer Variante → neuer Auftrag im Verlauf (ID) */
+  logoAendern(jobId: string, index: number, wunsch: string): Promise<string>
+  /** Auftrag löschen, beim Ursprungsauftrag mit allen Änderungen */
+  logoLoeschen(jobId: string): Promise<void>
+  /** Variante in die Bibliothek übernehmen */
+  logoMerken(jobId: string, index: number, name: string): Promise<LogoEintrag[]>
+  /** PNG in einer Größe speichern (Speichern-Dialog); liefert den Pfad oder null */
+  logoExport(quelle: LogoQuelle, groesse: LogoExportGroesse): Promise<string | null>
 }

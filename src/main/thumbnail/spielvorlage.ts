@@ -7,6 +7,7 @@ import type { JobContext } from '../jobs/queue'
 import type { ThumbnailVariante } from './job'
 import { MIMIKEN, posenBeispiele, posenNamen } from './reaktion'
 import { sicherePakete, sichereUmgebung } from '../python'
+import { logoAufsetzen, sperrenVorlage, type LogoWahl } from '../logo/setzen'
 
 /**
  * Spiele-Vorlage (Philip, 27.09.): Philip in ein vorhandenes Spiele-Thumbnail anderer Creator setzen, genau an die
@@ -24,6 +25,8 @@ export interface SpielvorlagePayload {
   wunsch?: string
   /** Freunde: ersetzen weitere Personen der Vorlage, sonst stehen sie neben Philip */
   freunde?: { skin: string; slim?: boolean | null; name: string }[]
+  /** Logo aus der Bibliothek – kommt zuletzt in eine freie Ecke */
+  logo?: LogoWahl
   claudeCli: string
   blender: { exe: string; mesa: boolean; geraet: string; samples: number }
   /** uv.exe zum Einrichten der Python-Umgebung (rembg, OpenCV) */
@@ -361,6 +364,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     await lauf(python, [join(p.blenderDir, 'vorlage_titel.py'), vorlage, render, fertig, ...boxen, `--maske=${join(p.ausgabe, 'maske.png')}`], c)
     bild = fertig
   }
+  const logo = bild && p.logo ? await logoAufsetzen({ bild, logo: p.logo, sperren: await sperrenVorlage(join(p.ausgabe, 'bericht.json'), join(p.ausgabe, 'analyse.json'), spec), ausgabe: join(p.ausgabe, 'mit-logo.png'), blender: p.blender, blenderDir: p.blenderDir }, c) : null
   ctx.progress(100, 'Fertig')
   return {
     varianten: [
@@ -368,9 +372,10 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
         titel: `Spiele-Vorlage: ${a.inhalt ?? ''}`.slice(0, 80),
         vorbild: 'spiele-vorlage',
         warum: requisit ? `Mit echtem 3D-Modell (${a.gegenstand?.suchwort}) von Poly Haven` : a.inhalt ?? '',
-        bild,
+        bild: logo?.bild ?? bild,
         szene: join(p.ausgabe, 'spec.json'),
-        warnungen,
+        warnungen: [...warnungen, ...(logo?.warnungen ?? [])],
+        ...(logo?.logo ? { logo: logo.logo } : {}),
         ...(bild ? {} : { fehler: bericht.fehler ?? `Blender Exit ${code}` })
       }
     ]

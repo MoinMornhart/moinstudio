@@ -1,6 +1,6 @@
 import { nativeImage } from 'electron'
 import { stat, writeFile } from 'node:fs/promises'
-import { schreibePsd, thumbnailEbenen } from './psd'
+import { logoEbene, schreibePsd, thumbnailEbenen } from './psd'
 
 /**
  * Thumbnail als Photoshop-Datei (ROADMAP 8.4, ungetestet in Photoshop). Sucht zum fertigen Bild das Bild ohne Text und
@@ -26,16 +26,20 @@ function rgba(pfad: string, breite: number, hoehe: number): Uint8Array | null {
   return out
 }
 
-export async function thumbnailPsd(o: { bild: string; szene: string | null; ziel: string }): Promise<{ ebenen: string[] }> {
+export async function thumbnailPsd(o: { bild: string; szene: string | null; ziel: string; ohneLogo?: string | null }): Promise<{ ebenen: string[] }> {
   const fertigBild = nativeImage.createFromPath(o.bild)
   if (fertigBild.isEmpty()) throw new Error('Das Bild ist nicht lesbar.')
   const { width: breite, height: hoehe } = fertigBild.getSize()
-  const fertig = rgba(o.bild, breite, hoehe)!
+  const gesamt = rgba(o.bild, breite, hoehe)!
+  // Mit Logo: Ebenen aus dem Bild ohne Logo, das Logo kommt als eigene Ebene obendrauf
+  const ohneLogo = o.ohneLogo && (await gibtEs(o.ohneLogo)) ? rgba(o.ohneLogo, breite, hoehe) : null
+  const fertig = ohneLogo ?? gesamt
+  const fertigPfad = ohneLogo ? o.ohneLogo! : o.bild
   // Bild ohne Text: <basis>.roh.png (Änderung) oder <basis>.png (Variante), nie das fertige Bild selbst
   const basis = o.szene?.replace(/\.szene\.json$/, '') ?? null
   let ohneTextPfad: string | null = null
   for (const k of basis ? [`${basis}.roh.png`, `${basis}.png`] : []) {
-    if (k.toLowerCase() !== o.bild.toLowerCase() && (await gibtEs(k))) {
+    if (k.toLowerCase() !== fertigPfad.toLowerCase() && k.toLowerCase() !== o.bild.toLowerCase() && (await gibtEs(k))) {
       ohneTextPfad = k
       break
     }
@@ -44,6 +48,8 @@ export async function thumbnailPsd(o: { bild: string; szene: string | null; ziel
   const maskePfad = ohneTextPfad ? ohneTextPfad.replace(/\.png$/, '.maske.png') : null
   const maske = maskePfad && (await gibtEs(maskePfad)) ? rgba(maskePfad, breite, hoehe) : null
   const ebenen = thumbnailEbenen({ fertig, ohneText, maske }, breite * hoehe)
-  await writeFile(o.ziel, schreibePsd(breite, hoehe, ebenen, fertig))
+  const logo = ohneLogo ? logoEbene(gesamt, ohneLogo, breite * hoehe) : null
+  if (logo) ebenen.push(logo)
+  await writeFile(o.ziel, schreibePsd(breite, hoehe, ebenen, gesamt))
   return { ebenen: ebenen.map((e) => e.name) }
 }

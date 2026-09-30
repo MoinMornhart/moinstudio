@@ -38,7 +38,7 @@ export function registerAdobeIpc(settings: SettingsStore, queue: JobQueue, getWi
     const test = process.env['MOIN_TEST_ZIEL']
     const ziel = test ? { canceled: false, filePath: test } : win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)
     if (ziel.canceled || !ziel.filePath) return null
-    const r = await thumbnailPsd({ bild: v.bild, szene: v.szene ?? null, ziel: ziel.filePath })
+    const r = await thumbnailPsd({ bild: v.bild, szene: v.szene ?? null, ziel: ziel.filePath, ohneLogo: v.logo?.ohneLogo ?? null })
     shell.showItemInFolder(ziel.filePath)
     return { datei: ziel.filePath, ebenen: r.ebenen }
   })

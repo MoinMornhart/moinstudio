@@ -6,6 +6,8 @@ import type { JobContext } from '../jobs/queue'
 import { ladeKatalog } from './katalog'
 import { sichereMcAssets } from './minecraft'
 import { sichereMobs } from './mobimport'
+import { logoAufsetzen, type LogoWahl, type VarianteLogo } from '../logo/setzen'
+import { wichtigeBoxen } from '../logo/platz'
 import {
   ernsteWarnungen,
   korrekturPrompt,
@@ -52,6 +54,8 @@ export interface ThumbnailPayload {
   ausgabe: string
   /** Fester Text (z. B. Folgennummer) – kommt auf jede Variante, Claudes eigener Text entfällt dann */
   merkmal?: { text: string; farbe?: string; platz?: string }[]
+  /** Logo aus der Bibliothek (Philip, 30.09.) – kommt zuletzt in eine freie Ecke */
+  logo?: LogoWahl
 }
 
 export interface ThumbnailVariante {
@@ -64,6 +68,8 @@ export interface ThumbnailVariante {
   fehler?: string
   /** Wie oft Claude die Szene nach der Bildprüfung korrigiert hat */
   korrekturen?: number
+  /** Logo im Bild (Platz, Größe, Bild ohne Logo) */
+  logo?: VarianteLogo
 }
 
 interface Checkpoint {
@@ -158,6 +164,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
       let bild = `${pfad}.png`
       const warnungen = [...bestes.warnungen]
       const texte = p.merkmal?.length ? p.merkmal : (v.text ?? [])
+      let textBoxen: unknown = []
       if (texte.length) {
         ctx.progress(anteil(0.9), `Variante ${i + 1}: Text setzen …`)
         await writeFile(`${basis}.texte.json`, JSON.stringify(texte))
@@ -165,10 +172,21 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         const zeile = /MOIN_TEXT (.*)/.exec(t.output)?.[1]
         if (t.code === 0 && zeile) {
           bild = `${basis}.png`
-          warnungen.push(...((JSON.parse(zeile) as { warnungen?: string[] }).warnungen ?? []))
+          const gesetzt = JSON.parse(zeile) as { warnungen?: string[]; texte?: unknown }
+          warnungen.push(...(gesetzt.warnungen ?? []))
+          textBoxen = gesetzt.texte ?? []
         } else warnungen.push('Text konnte nicht gesetzt werden')
       }
-      fertig.push({ titel: v.titel, vorbild: v.vorbild, warum: v.warum, bild, szene: `${pfad}.szene.json`, warnungen, korrekturen: bestes.versuch })
+      let logo: VarianteLogo | undefined
+      if (p.logo) {
+        ctx.progress(anteil(0.95), `Variante ${i + 1}: Logo setzen …`)
+        const bericht = JSON.parse(await readFile(`${pfad}.bericht.json`, 'utf8').catch(() => '{}')) as unknown
+        const l = await logoAufsetzen({ bild, logo: p.logo, sperren: [...wichtigeBoxen(bericht), ...wichtigeBoxen({ texte: textBoxen })], ausgabe: `${basis}.logo.png`, blender: p.blender, blenderDir: p.blenderDir }, ctx as JobContext<unknown>)
+        bild = l.bild
+        logo = l.logo ?? undefined
+        warnungen.push(...l.warnungen)
+      }
+      fertig.push({ titel: v.titel, vorbild: v.vorbild, warum: v.warum, bild, szene: `${pfad}.szene.json`, warnungen, korrekturen: bestes.versuch, ...(logo ? { logo } : {}) })
     }
     await ctx.save({ ...(ctx.checkpoint ?? {}), plan, fertig })
   }

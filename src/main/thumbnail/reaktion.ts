@@ -4,6 +4,8 @@ import { runClaudeInJob } from '../claude/run'
 import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import type { ThumbnailVariante } from './job'
+import { wichtigeBoxen } from '../logo/platz'
+import { logoAufsetzen, type LogoWahl } from '../logo/setzen'
 
 /**
  * Reaction-Thumbnails (Stilbuch 14, Vorbilder BastiGHGs Zweitkanal „Bastian“ und Zarbex): Philip lädt das Thumbnail
@@ -28,6 +30,8 @@ export interface ReaktionPayload {
   ohneExtras?: boolean
   /** Freunde, die mit aufs Bild sollen (z. B. bei Koop-Spielen wie Chained Together) */
   freunde?: { skin: string; slim?: boolean | null; name: string }[]
+  /** Logo aus der Bibliothek – kommt zuletzt in eine freie Ecke (Philip, 30.09.) */
+  logo?: LogoWahl
   claudeCli: string
   blender: { exe: string; mesa: boolean; geraet: string; samples: number }
   blenderDir: string
@@ -219,14 +223,18 @@ Antworte nur mit JSON nach dem Schema.`
       ctx as JobContext<unknown>
     )
     const bericht = JSON.parse(await readFile(`${basis}.bericht.json`, 'utf8').catch(() => '{}')) as { fehler?: string }
+    const ok = code === 0 && !bericht.fehler
+    // Logo in eine freie Ecke: nie über Figuren, Wort, Pfeil, Spielname oder Wichtigem im Original (sperren)
+    const logo = ok && p.logo ? await logoAufsetzen({ bild: `${basis}.png`, logo: p.logo, sperren: [...wichtigeBoxen(bericht), ...wichtigeBoxen({ sperren: spec.sperren })], ausgabe: `${basis}.logo.png`, blender: p.blender, blenderDir: p.blenderDir }, ctx as JobContext<unknown>) : null
     varianten.push({
       titel: pl.titel,
       vorbild: 'reaction-zarbex-bastian',
       warum: a.inhalt ?? '',
-      bild: code === 0 && !bericht.fehler ? `${basis}.png` : null,
+      bild: ok ? (logo?.bild ?? `${basis}.png`) : null,
       szene: `${basis}.spec.json`,
-      warnungen: [],
-      ...(code !== 0 || bericht.fehler ? { fehler: bericht.fehler ?? `Blender Exit ${code}` } : {})
+      warnungen: logo?.warnungen ?? [],
+      ...(logo?.logo ? { logo: logo.logo } : {}),
+      ...(ok ? {} : { fehler: bericht.fehler ?? `Blender Exit ${code}` })
     })
   }
   ctx.progress(100, 'Fertig')

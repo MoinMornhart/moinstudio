@@ -2,7 +2,7 @@ import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, extname, join, resolve, sep } from 'node:path'
-import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
+import { IPC, type ThumbAuftrag, type ThumbErgebnis, type ThumbLogoWahl, type ThumbSkin, type ThumbStart, type ThumbVideoErgebnis } from '@shared/app'
 import { findClaudeCli } from '../claude/cli'
 import { readJson, writeJsonAtomic } from '../data/jsonfile'
 import type { SettingsStore } from '../data/settings'
@@ -21,6 +21,7 @@ import { thumbnailJob, type ThumbnailPayload, type ThumbnailVariante } from './j
 import { ladeVorbilder } from './planung'
 import { reaktionJob, type ReaktionPayload } from './reaktion'
 import { videoVorschlaegeJob, type VideoPayload, type VideoVorschlag } from './video'
+import { ladeLogos, logoFuerAuftrag, logoPfad } from '../logo/bibliothek'
 
 /**
  * Thumbnail-Reiter (ROADMAP 5.4): Skin-Bibliothek im Datenordner (Philip lädt seine Skins und die seiner Freunde selbst
@@ -29,7 +30,7 @@ import { videoVorschlaegeJob, type VideoPayload, type VideoVorschlag } from './v
 
 const SkinListe = z.array(z.object({ id: z.string(), name: z.string(), datei: z.string(), rolle: z.enum(['ich', 'freund']), slim: z.boolean().nullable().default(null) }))
 
-async function datenOrdner(settings: SettingsStore): Promise<string> {
+export async function datenOrdner(settings: SettingsStore): Promise<string> {
   // Integrationstests von der Kommandozeile schreiben in einen eigenen Ordner, nie in Philips echte Bibliothek
   if (process.env.MOIN_TEST_DATEN) return process.env.MOIN_TEST_DATEN
   const dir = (await settings.load()).dataDir
@@ -47,7 +48,7 @@ async function freundeAus(dir: string, ids: string[] | undefined): Promise<{ ski
     .map((s) => ({ skin: join(dir, 'skins', s.datei), slim: s.slim, name: s.name }))
 }
 
-async function ladeSkins(dir: string): Promise<ThumbSkin[]> {
+export async function ladeSkins(dir: string): Promise<ThumbSkin[]> {
   const res = await readJson(join(dir, 'skins', 'skins.json'), SkinListe)
   return res.ok ? res.value : []
 }
@@ -57,13 +58,13 @@ async function speichereSkins(dir: string, skins: ThumbSkin[]): Promise<void> {
 }
 
 /** Nur Dateien innerhalb des Datenordners herausgeben (kein Lesen beliebiger Pfade über IPC). */
-function imOrdner(dir: string, pfad: string): boolean {
+export function imOrdner(dir: string, pfad: string): boolean {
   const r = resolve(pfad)
   return r.startsWith(resolve(dir) + sep)
 }
 
 /** Bild als data:-URL. iCloud sperrt frisch geschriebene Dateien kurz zum Hochladen – deshalb mehrere Versuche. */
-async function alsDataUrl(pfad: string): Promise<string | null> {
+export async function alsDataUrl(pfad: string): Promise<string | null> {
   for (let versuch = 0; versuch < 6; versuch++) {
     try {
       return `data:image/png;base64,${(await readFile(pfad)).toString('base64')}`
@@ -74,6 +75,8 @@ async function alsDataUrl(pfad: string): Promise<string | null> {
   return null
 }
 
+type ReaktionStart = { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[]; logo?: ThumbLogoWahl }
+
 export function registerThumbnailIpc(
   queue: JobQueue,
   settings: SettingsStore,
@@ -83,8 +86,8 @@ export function registerThumbnailIpc(
 ): {
   starteThumbnail: (start: ThumbStart) => Promise<string>
   starteVideo: (video: string, kanal: string, titel?: string) => Promise<string>
-  starteReaktion: (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[] }) => Promise<string>
-  starteSpielvorlage: (vorlage: string, wunsch?: string, freunde?: string[]) => Promise<string>
+  starteReaktion: (original: string, o: ReaktionStart) => Promise<string>
+  starteSpielvorlage: (vorlage: string, wunsch?: string, freunde?: string[], logo?: ThumbLogoWahl) => Promise<string>
   starteAenderung: (jobId: unknown, index: unknown, wunsch: unknown) => Promise<string>
 } {
   queue.register('thumbnail', thumbnailJob)
@@ -113,7 +116,13 @@ export function registerThumbnailIpc(
     const cli = await findClaudeCli()
     if (!cli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
     const eltern = job.kind === 'aenderung' ? (queue.payload<AenderungPayload>(job.id)?.eltern ?? job.id) : job.id
+    // Logo bleibt bei Änderungen erhalten und ist in Worten änderbar; „Logo dazu“ nimmt das Standard-Logo des Kanals
+    const kanal = queue.payload<{ kanal?: string }>(eltern)?.kanal ?? 'MoinMorni'
+    const logos = await ladeLogos(dir)
     const payload: AenderungPayload = {
+      logo: v.logo ? { datei: v.logo.datei, name: v.logo.name, position: v.logo.position, groesse: v.logo.groesse } : undefined,
+      logoBibliothek: logos.map((l) => ({ name: l.name, datei: logoPfad(dir, l) })),
+      logoStandard: await logoFuerAuftrag(dir, { id: 'standard', position: 'auto', groesse: 'mittel' }, kanal),
       art,
       wunsch: text,
       eltern,
@@ -145,7 +154,7 @@ export function registerThumbnailIpc(
   })
 
   // Spiele-Vorlage (Philip, 27.09.): fremdes Spiele-Thumbnail wählen → Philip steht an der Stelle der Person
-  const starteSpielvorlage = async (vorlage: string, wunsch?: string, freundIds?: string[]): Promise<string> => {
+  const starteSpielvorlage = async (vorlage: string, wunsch?: string, freundIds?: string[], logo?: ThumbLogoWahl): Promise<string> => {
     const dir = await datenOrdner(settings)
     const ich = (await ladeSkins(dir)).find((x) => x.rolle === 'ich')
     if (!ich) throw new Error('Bitte zuerst deinen eigenen Skin hochladen (Skins → „Mein Skin“).')
@@ -165,6 +174,7 @@ export function registerThumbnailIpc(
       slim: ich.slim,
       wunsch: wunsch?.trim() || undefined,
       freunde: await freundeAus(dir, freundIds),
+      logo: await logoFuerAuftrag(dir, logo, 'MoinMorni'),
       claudeCli: cli,
       blender: { exe, mesa: config.blenderMesa, geraet: config.final.engine === 'CYCLES' ? config.final.device : 'CPU', samples: Math.max(32, Math.min(96, config.final.samples)) },
       uv,
@@ -180,12 +190,12 @@ export function registerThumbnailIpc(
     const opts = { title: 'Spiele-Thumbnail mit Person wählen', filters: [{ name: 'Bild', extensions: ['jpg', 'jpeg', 'png', 'webp'] }], properties: ['openFile' as const] }
     const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
     if (wahl.canceled || !wahl.filePaths[0]) return null
-    const o = (typeof raw === 'string' ? { wunsch: raw } : (raw ?? {})) as { wunsch?: string; freunde?: string[] }
-    return starteSpielvorlage(wahl.filePaths[0], o.wunsch, o.freunde)
+    const o = (typeof raw === 'string' ? { wunsch: raw } : (raw ?? {})) as { wunsch?: string; freunde?: string[]; logo?: ThumbLogoWahl }
+    return starteSpielvorlage(wahl.filePaths[0], o.wunsch, o.freunde, o.logo)
   })
 
   // Reaction-Thumbnail (Stilbuch 14): Original wählen, Claude wertet aus, Blender baut mit Philips Skin
-  const starteReaktion = async (original: string, o: { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[] }): Promise<string> => {
+  const starteReaktion = async (original: string, o: ReaktionStart): Promise<string> => {
     const dir = await datenOrdner(settings)
     const ich = (await ladeSkins(dir)).find((x) => x.rolle === 'ich')
     if (!ich) throw new Error('Bitte zuerst deinen eigenen Skin hochladen (Skins → „Mein Skin“).')
@@ -208,6 +218,7 @@ export function registerThumbnailIpc(
       wunsch: o.wunsch?.trim() || undefined,
       ohneExtras: o.ohneExtras || undefined,
       freunde: await freundeAus(dir, o.freunde),
+      logo: await logoFuerAuftrag(dir, o.logo, o.kanal ?? 'MoinMorni'),
       claudeCli: cli,
       blender: { exe, mesa: config.blenderMesa, geraet: config.final.engine === 'CYCLES' ? config.final.device : 'CPU', samples: Math.max(24, Math.min(64, config.final.samples)) },
       blenderDir: resourceDir('blender'),
@@ -221,7 +232,7 @@ export function registerThumbnailIpc(
     const opts = { title: 'Original-Thumbnail oder Spielbild wählen', filters: [{ name: 'Bild', extensions: ['jpg', 'jpeg', 'png', 'webp'] }], properties: ['openFile' as const] }
     const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
     if (wahl.canceled || !wahl.filePaths[0]) return null
-    return starteReaktion(wahl.filePaths[0], (raw ?? {}) as { gefuehl?: string; wort?: string; kanal?: string; spiel?: string; wunsch?: string; ohneExtras?: boolean; freunde?: string[] })
+    return starteReaktion(wahl.filePaths[0], (raw ?? {}) as ReaktionStart)
   })
 
   // Video hochladen → Vorschläge (ROADMAP 5.5)
@@ -370,6 +381,7 @@ export function registerThumbnailIpc(
       minecraftDir: resourceDir('minecraft'),
       configDir: resourceDir('config'),
       promptDatei: join(resourceDir('prompts'), 'thumbnail-planung.md'),
+      logo: await logoFuerAuftrag(dir, start.logo, start.kanal ?? 'MoinMornhart'),
       ausgabe: join(dir, 'thumbnails', id)
     }
     return queue.enqueue('thumbnail', `Thumbnail: ${beschreibung.slice(0, 50)}`, payload)

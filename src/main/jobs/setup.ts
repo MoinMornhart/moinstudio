@@ -14,6 +14,7 @@ import { registerThumbnailIpc } from '../thumbnail/ipc'
 import { registerSchnittIpc } from '../schnitt/ipc'
 import { registerPlanungIpc } from '../planung/ipc'
 import { registerAdobeIpc } from '../adobe/ipc'
+import { registerLogoIpc } from '../logo/ipc'
 
 /**
  * Legt die Warteschlange an, registriert Job-Arten und IPC. Fundament (Neustart 28.09.): nur der Probe-Render als
@@ -25,7 +26,7 @@ export function setupJobs(
   hardware: HardwareController,
   settings: SettingsStore,
   getWindow: () => BrowserWindow | undefined
-): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion']; starteSpielvorlage: ReturnType<typeof registerThumbnailIpc>['starteSpielvorlage']; starteAenderung: ReturnType<typeof registerThumbnailIpc>['starteAenderung']; starteImport: ReturnType<typeof registerSchnittIpc>['starteImport']; starteWunsch: ReturnType<typeof registerSchnittIpc>['starteWunsch']; schnitt: ReturnType<typeof registerSchnittIpc>; planung: ReturnType<typeof registerPlanungIpc> } {
+): { queue: JobQueue; enqueueProbe: () => Promise<string>; starteThumbnail: ReturnType<typeof registerThumbnailIpc>['starteThumbnail']; starteVideo: ReturnType<typeof registerThumbnailIpc>['starteVideo']; starteReaktion: ReturnType<typeof registerThumbnailIpc>['starteReaktion']; starteSpielvorlage: ReturnType<typeof registerThumbnailIpc>['starteSpielvorlage']; starteAenderung: ReturnType<typeof registerThumbnailIpc>['starteAenderung']; starteImport: ReturnType<typeof registerSchnittIpc>['starteImport']; starteWunsch: ReturnType<typeof registerSchnittIpc>['starteWunsch']; schnitt: ReturnType<typeof registerSchnittIpc>; planung: ReturnType<typeof registerPlanungIpc>; logo: ReturnType<typeof registerLogoIpc> } {
   const queue = new JobQueue(join(root, 'jobs'))
   queue.register('probe-render', probeRenderJob)
   registerJobsIpc(queue, getWindow)
@@ -33,6 +34,7 @@ export function setupJobs(
   const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
   const { starteImport, starteWunsch } = schnitt
   registerAdobeIpc(settings, queue, getWindow, tools)
+  const logo = registerLogoIpc(queue, settings, hardware, tools, getWindow)
   const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport })
 
   const enqueueProbe = async (): Promise<string> => {
@@ -62,5 +64,5 @@ export function setupJobs(
       return null
     }
   })
-  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt, planung }
+  return { queue, enqueueProbe, starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung, starteImport, starteWunsch, schnitt, planung, logo }
 }
