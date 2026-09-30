@@ -6,6 +6,17 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+> Schöne Dateinamen, Namen fürs Video
+
+### Added
+
+- Schnitt: Knopf „Namen vorschlagen“ im Projekt. Claude schlägt aus dem Transkript 5 Titel im Stil des Kanals vor, ein Klick übernimmt den Titel als Namen des Videos und als YouTube-Titel (im Export und in der verknüpften Planungskarte). Projekte lassen sich auch selbst umbenennen, auch aus Claude Desktop (`video_edit`, Aktion `umbenennen`).
+
+### Changed
+
+- Sprechende Dateinamen statt IDs: Thumbnails heißen beim Speichern `Thumbnail_2026-09-30_19-05.png` (Datum und Uhrzeit des Auftrags), mit `_V2` bei mehreren Varianten und `_Aenderung3` bei Änderungen. Gehört das Thumbnail zu einem Video oder einer Planungskarte, steht dessen Name vorne. Das gilt auch für die Photoshop-Datei.
+- Schnitt: Das fertige Video, die Premiere-Dateien und Shorts heißen wie das Video (`<Video>.mp4`, `<Video>_Short_1.mp4`, `<Video>_Clip_2.mp4`). Beim Speichern liegen Titel, Beschreibung und Kapitel gleich benannt als `<Video>.txt` daneben.
+
 ## [0.37.0] - 2026-09-30
 
 > Thumbnail-Änderungen als Verlauf

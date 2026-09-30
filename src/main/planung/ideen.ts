@@ -151,7 +151,7 @@ ${o.andere?.length ? `\nVideos des anderen Kanals (nicht wiederholen):\n${karten
 Antworte nur mit JSON: {"ideen":[{"titel":"…","idee":"…","warum":"…"}]}`
 }
 
-export function titelPrompt(o: { karte: Pick<Karte, 'kanal' | 'titel' | 'notizen'>; transkript: string; vorbilder: string[]; andere: string[]; ganz?: boolean }): string {
+export function titelPrompt(o: { karte: { kanal: string; titel: string; notizen: string }; transkript: string; vorbilder: string[]; andere: string[]; ganz?: boolean }): string {
   return `Schlage 5 YouTube-Titel für ein Video auf dem Kanal ${o.karte.kanal} vor.
 ${KANAL_BESCHREIBUNG[o.karte.kanal] ?? ''}
 

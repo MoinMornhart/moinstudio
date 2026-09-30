@@ -1,5 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import { clipDateiname, sichererName, thumbnailDateiname, videoDateiname, videoName, zeitStempel } from '../../src/main/dateinamen'
+import type { JobQueue } from '../../src/main/jobs/queue'
+import { thumbDateiname } from '../../src/main/thumbnail/dateiname'
+
+/** Aufgabenliste mit Aufträgen: id → Art, Zeit, Payload, Anzahl Varianten */
+function queue(jobs: Record<string, { kind: string; zeit: Date; payload: unknown; varianten: number }>): JobQueue {
+  const liste = Object.entries(jobs).map(([id, j]) => ({ id, kind: j.kind, createdAt: j.zeit.toISOString() }))
+  return {
+    get: (id: string) => liste.find((j) => j.id === id),
+    state: () => ({ paused: false, jobs: liste }),
+    payload: (id: string) => jobs[id]?.payload,
+    result: (id: string) => (jobs[id] ? { varianten: Array.from({ length: jobs[id].varianten }) } : undefined)
+  } as unknown as JobQueue
+}
+
+describe('Thumbnail speichern', () => {
+  const q = queue({
+    a: { kind: 'thumbnail', zeit: new Date(2026, 8, 30, 19, 5), payload: { videoName: 'Riesen-Creeper?' }, varianten: 3 },
+    b: { kind: 'reaktion', zeit: new Date(2026, 8, 30, 20, 0), payload: {}, varianten: 1 },
+    c1: { kind: 'aenderung', zeit: new Date(2026, 8, 30, 21, 10), payload: { eltern: 'a' }, varianten: 1 },
+    c2: { kind: 'aenderung', zeit: new Date(2026, 8, 30, 21, 30), payload: { eltern: 'a' }, varianten: 1 }
+  })
+  it('Datum und Uhrzeit des Auftrags, Variante, Videoname', async () => {
+    expect(await thumbDateiname(q, null, 'a', 1, 'png')).toBe('Riesen-Creeper_Thumbnail_2026-09-30_19-05_V2.png')
+    expect(await thumbDateiname(q, null, 'b', 0, 'psd')).toBe('Thumbnail_2026-09-30_20-00.psd')
+  })
+  it('Änderungen mit Nummer im Verlauf und Zeit der Änderung', async () => {
+    expect(await thumbDateiname(q, null, 'c2', 0, 'png')).toBe('Riesen-Creeper_Thumbnail_2026-09-30_21-30_Aenderung2.png')
+  })
+})
 
 const zeit = new Date(2026, 8, 30, 19, 5, 42)
 
