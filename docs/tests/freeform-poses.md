@@ -18,7 +18,7 @@ Jedes Bild habe ich selbst angesehen und streng bewertet:
 
 Bilder und Szenen liegen nur lokal unter `test-output/freeform/`, nie im Repo. Der Test lässt sich mit `npx vitest run -c vitest.echt.config.ts tests/echt/freeform.test.ts` wiederholen.
 
-**Ergebnis: 29 gut, 20 mittel, 1 schwach.** Kein Fall bricht mehr ab. Im Schnitt dauert ein Fall 120 s mit einer Variante. Insgesamt gab es 25 Korrekturen durch die Selbstprüfung.
+**Ergebnis: 33 gut, 17 mittel, 0 schwach** (Nachbesserung in 0.34.0; vorher 29 gut, 20 mittel, 1 schwach). Kein Fall bricht mehr ab. Im Schnitt dauert ein Fall 120 s mit einer Variante. Insgesamt gab es 25 Korrekturen durch die Selbstprüfung.
 
 ## Verlauf
 
@@ -39,12 +39,15 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 | Absturz bei Position `[x, y, z]` und Entity ohne Geometrie | fehlende Absicherung | dritter Wert als Höhe, leere Entities übersprungen (0.29.5) |
 | Warden in der Nacht unsichtbar | Fülllicht für Themen-Mobs zu schwach | Fülllicht verstärkt (0.29.6) |
 | Reiten ohne Reittier unter Philip | Claude kannte die Kombination nicht | Regel „Reiten = auf + Sitzpose“ (0.29.7) |
+| Phantom nur als schwarzer Schatten, halb aus dem Bild | Nacht- und Abendhimmel hatten kein Fülllicht für Themen-Mobs; keine Prüfung auf angeschnittene kleine Mobs | Mob-Licht auch nachts und abends, Stärke nach Abstand (kleine Mobs nicht überstrahlt); leuchtende Augen aus den echten Augen-Texturen; „am Bildrand angeschnitten“ als ernster Fehler (0.34.0) |
+| Wächter ohne Laser, Angel ohne Schnur, Leine fehlt | Verbindungen zwischen Figuren und Mobs gab es nicht | Feld `verbindungen` (angelschnur, leine, strahl) und Kurzform `strahl` am Wächter; Laser mit echter Textur, additiv wie im Spiel (0.34.0) |
+| Elytra nur als Gegenstand in der Hand | Elytra auf dem Rücken gab es nicht | Feld `elytra` (zu/offen) mit dem Java-Modell und Pose `gleiten` (0.34.0) |
 
 ## Alle 50 Fälle (Endstand)
 
 | # | Beschreibung | Art | Bewertung | Bemerkung |
 |---|---|---|---|---|
-| 1 | Ancient City im Deep Dark, Sculk-Kreischer geht los | Welt | mittel | Sculk, Kreischer, Warden da; sehr dunkel, Kopf groß |
+| 1 | Ancient City im Deep Dark, Sculk-Kreischer geht los | Welt | gut | Sculk, Kreischer, Warden gut ausgeleuchtet (0.34.0) |
 | 2 | Landung mit der Elytra auf einer End City | Welt | gut | Purpur, Endstein, Flugpose |
 | 3 | Pilzinsel mit Mooshrooms | Welt | gut | rote Mooshrooms, Myzel, Ozean |
 | 4 | Klettern auf die höchste Eisspitze | Welt | gut | Eisspitzen, Kletterpose |
@@ -64,7 +67,7 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 | 18 | mit dem Boot einen Wasserfall hinunter | Pose | mittel | Wasserfall da, Boot nur als Gegenstand |
 | 19 | auf einem Schreiter über den Lavasee | Pose | gut | reitet auf dem Schreiter (nach Regel „Reiten“, 0.29.7) |
 | 20 | Bett im Nether explodiert | Pose | mittel | Explosion wirft Philip, Bett kaum sichtbar |
-| 21 | Warden aus dem Wasser angeln | Pose | mittel | Warden und Angel da (nach stärkerem Fülllicht) |
+| 21 | Warden aus dem Wasser angeln | Pose | mittel | Warden ausgeleuchtet, Angelschnur bis zum Warden (0.34.0); die große Angel verdeckt einen Teil des Gesichts |
 | 22 | Klettern am Gerüstturm | Pose | gut | Kletterpose am Turm |
 | 23 | MLG mit dem Wassereimer | Pose | gut | Fall von oben, Eimer |
 | 24 | mit Kürbis als Enderman verkleidet | Pose | gut | Kürbiskopf zwischen Endermen |
@@ -74,16 +77,16 @@ Der erste Durchlauf (vereinfachter Test ohne Korrekturschleife) war schlecht. Et
 | 28 | Tanz mit dem Allay an der Notenblock-Bühne | Pose | gut | Allay, Notenblöcke |
 | 29 | Netherportal aus Holz funktioniert nicht | Pose | gut | Holzrahmen, Feuerzeug |
 | 30 | goldener Apfel, Wither schießt | Pose | gut | Apfel, Wither, rote Stimmung |
-| 31 | Enderdrache auf dem Portal, Bogen | Mob | gut | Drache und Bogen |
+| 31 | Enderdrache auf dem Portal, Bogen | Mob | mittel | Drache und Bogen; in der neuen Variante wirkt der Drache im Fülllicht zu hell (liegt an der Szene, alter und neuer Code rendern sie gleich) |
 | 32 | Riesen-Schleim hüpft auf mich zu | Mob | mittel | großer Schleim, nicht riesig nah |
 | 33 | Wolfsrudel beschützt mich vor Skeletten | Mob | mittel | Wölfe da, Skelett teils verdeckt |
-| 34 | Phantom greift in der Nacht an | Mob | **schwach** | Phantom nur als dunkle Silhouette |
-| 35 | Älterer Wächter feuert Laser | Mob | mittel | Wächter da, kein Laser |
+| 34 | Phantom greift in der Nacht an | Mob | gut | zwei Phantome mit echter Textur und grün leuchtenden Augen, ganz im Bild (0.34.0) |
+| 35 | Älterer Wächter feuert Laser | Mob | gut | leuchtender Laser mit echter Strahl-Textur bis zu Philip (0.34.0) |
 | 36 | Piglin-Barbar in der Bastion | Mob | gut | Barbar, Bastion, Lava |
 | 37 | Kamelritt in der Wüste, Husk jagt | Mob | gut | sitzt auf dem Kamel, Husk dahinter |
 | 38 | Ravager rammt die Holzhütte | Mob | gut | Ravager an der Hütte |
-| 39 | Elytra-Wettflug mit SimPell | Duo | mittel | beide in der Luft, Elytras nicht sichtbar |
-| 40 | SimPell zieht mich an der Leine hinter dem Boot | Duo | mittel | Leine und Wasser, Boot aus Blöcken |
+| 39 | Elytra-Wettflug mit SimPell | Duo | gut | beide gleiten mit ausgebreiteter Elytra auf ein Ziel aus Goldblöcken zu (0.34.0) |
+| 40 | SimPell zieht mich an der Leine hinter dem Boot | Duo | gut | Leine von SimPells Hand zu Philip, Boot aus Blöcken (0.34.0) |
 | 41 | Rücken an Rücken gegen Zombies | Duo | gut | Kampf, Zombies ringsum |
 | 42 | SimPell schubst mich in den Brunnen | Duo | gut | Dorfbrunnen, Schubser |
 | 43 | Wettbauen, SimPells Haus schöner | Duo | gut | Haus, SimPell jubelt |

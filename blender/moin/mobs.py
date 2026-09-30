@@ -17,7 +17,19 @@ from .figur import PX, _box_rects, _faces
 ARME_VORN = {"zombie", "husk", "drowned"}
 
 
-def _material(name, bild):
+def augen_textur(texturen_ordner, textur):
+    """Leuchtende Augen wie im Spiel (Phantom, Enderman, Spinne …): „<name>_eyes.png“ neben der Textur oder eine Ebene
+    höher (Spinne: entity/spider_eyes.png); None, wenn der Mob keine hat."""
+    ordner, datei = os.path.split(textur)
+    stamm = os.path.splitext(datei)[0]
+    for p in (os.path.join(ordner, f"{stamm}_eyes.png"), os.path.join(os.path.dirname(ordner), f"{stamm}_eyes.png")):
+        voll = os.path.join(texturen_ordner, p)
+        if os.path.exists(voll):
+            return voll
+    return None
+
+
+def _material(name, bild, augen=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nt = mat.node_tree
@@ -30,6 +42,18 @@ def _material(name, bild):
     if hasattr(mat, "blend_method"):
         mat.blend_method = "CLIP"
     bsdf.inputs["Roughness"].default_value = 0.65
+    if augen:
+        # Augen-Textur hat dasselbe UV-Layout; nur ihre deckenden Pixel leuchten
+        at = nt.nodes.new("ShaderNodeTexImage")
+        at.image = augen
+        at.interpolation = "Closest"
+        staerke = nt.nodes.new("ShaderNodeMath")
+        staerke.operation = "MULTIPLY"
+        staerke.inputs[1].default_value = 6.0
+        nt.links.new(at.outputs["Alpha"], staerke.inputs[0])
+        farbe = bsdf.inputs.get("Emission Color") or bsdf.inputs.get("Emission")
+        nt.links.new(at.outputs["Color"], farbe)
+        nt.links.new(staerke.outputs[0], bsdf.inputs["Emission Strength"])
     return mat
 
 
@@ -100,7 +124,11 @@ def baue_mob(art, eintrag, texturen_ordner, groesse=1.0, pose="stand", collectio
     bild = bpy.data.images.load(os.path.join(texturen_ordner, eintrag["texture"]), check_existing=True)
     bild.alpha_mode = "STRAIGHT"
     tex_w, tex_h = eintrag["tex_size"]
-    mat = _material(f"mob.{art}", bild)
+    augen_pfad = augen_textur(texturen_ordner, eintrag["texture"])
+    augen = bpy.data.images.load(augen_pfad, check_existing=True) if augen_pfad else None
+    if augen:
+        augen.alpha_mode = "STRAIGHT"
+    mat = _material(f"mob.{art}", bild, augen)
     skala = (eintrag.get("scale") or 1.0) * groesse
     name = name or art
     wurzel = bpy.data.objects.new(f"{name}.wurzel", None)

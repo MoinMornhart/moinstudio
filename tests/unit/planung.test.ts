@@ -38,6 +38,8 @@ describe('Thumbnail-Planung', () => {
     expect(p).toContain('id „simpell“')
     expect(p).toContain('gomme-helden3-schmockyyy')
     expect(p).toContain('sturmangriff')
+    // Freiform-Test: Angelschnur, Leine, Wächter-Laser und Elytra auf dem Rücken sind beschreibbar
+    for (const w of ['"angelschnur"', '"leine"', '"strahl": "ich"', '"elytra": "offen"', '"ich:hand"']) expect(p).toContain(w)
     expect(p).not.toMatch(/\{\{\w+\}\}/)
   })
 
@@ -72,13 +74,15 @@ describe('Thumbnail-Planung', () => {
         'Item von ich kaum sichtbar (80 % im Bild)',
         'Item von ich kaum sichtbar (30 % im Bild)',
         'Gesicht von simpell verdeckt oder abgewandt (0 % sichtbar)',
-        'Etwas versperrt die Sicht (40 % des Bildes liegen vor der Hauptfigur)'
+        'Etwas versperrt die Sicht (40 % des Bildes liegen vor der Hauptfigur)',
+        'Mob phantom am Bildrand angeschnitten – weiter zur Mitte oder näher an Philip stellen'
       ])
     ).toEqual([
       'Kamera trifft das Stilbuch nicht (Abweichung 0.91) – Thema näher an die Figur legen',
       'Item von ich kaum sichtbar (30 % im Bild)',
       'Gesicht von simpell verdeckt oder abgewandt (0 % sichtbar)',
-      'Etwas versperrt die Sicht (40 % des Bildes liegen vor der Hauptfigur)'
+      'Etwas versperrt die Sicht (40 % des Bildes liegen vor der Hauptfigur)',
+      'Mob phantom am Bildrand angeschnitten – weiter zur Mitte oder näher an Philip stellen'
     ])
   })
 

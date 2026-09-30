@@ -6,6 +6,19 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Thumbnail: Mobs haben leuchtende Augen wie im Spiel (Phantom, Enderman, Spinne), aus den echten Augen-Texturen des Spiels.
+- Thumbnail: Verbindungen zwischen Figuren, Gegenständen und Mobs – Angelschnur, Leine und der echte Wächter-Laser.
+- Thumbnail: Elytra auf dem Rücken, angelegt oder zum Gleiten ausgebreitet (echtes Modell und echte Textur), dazu die Pose „gleiten“.
+- Freiform-Test nachgebessert: 33 gut, 17 mittel, 0 schwach (vorher 29/20/1).
+
+### Fixed
+
+- Thumbnail: Mobs sind nachts und abends wieder ausgeleuchtet (das Fülllicht fehlte dort), kleine Mobs werden nicht mehr überstrahlt.
+- Thumbnail: Kleine Mobs, die über den Bildrand ragen, lösen eine Korrektur aus (Phantom halb aus dem Bild).
+- Tests: Die Unit-Tests räumen ihre Arbeitsordner im Temp wieder auf (vorher blieben Hunderte liegen und füllten die Festplatte).
+
 ## [0.33.0] - 2026-09-30
 
 > Premiere: Effekte

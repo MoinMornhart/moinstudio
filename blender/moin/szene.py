@@ -361,6 +361,9 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
         # sichtbar = zur Hälfte im Bild, oder (Riesenmob, angeschnitten wie bei den Vorbildern) füllt mindestens 12 % des Bildes
         if _im_bild(b) < 0.5 and sichtbar < 0.12:
             warnungen.append(f"Mob {m['art']} kaum sichtbar")
+        elif sichtbar < 0.12 and (b[0] < 0 or b[2] > 1 or b[1] < 0 or b[3] > 1):
+            # kleine Mobs gehören ganz ins Bild (Riesenmobs dürfen angeschnitten sein wie bei den Vorbildern)
+            warnungen.append(f"Mob {m['art']} am Bildrand angeschnitten – weiter zur Mitte oder näher an Philip stellen")
     if fehler > 0.1:
         warnungen.append(f"Kamera trifft das Stilbuch nicht (Abweichung {fehler:.2f}) – Thema näher an die Figur legen")
     info["warnungen"] = warnungen
@@ -396,6 +399,8 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             mmimik.setze_mimik(fig, f["mimik"])
         if f.get("kopf"):
             _kopf_block(fig, f["kopf"], texturen)
+        if f.get("elytra"):
+            _elytra(fig, f["elytra"], texturen)
         _auf_den_boden(scene, fig, f.get("hoehe"))
         figuren.append((f, fig))
     haupt = figuren[0][1]
@@ -506,14 +511,15 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     # Dunkle Himmel: das Thema-Mob (Drache, Enderman, Warden …) bekommt Fülllicht und eine helle Randkante,
     # sonst verschwindet es vor dem Hintergrund
     t_mob = k.get("thema")
-    if variante.get("gesicht") and isinstance(t_mob, str) and (t_mob.startswith("mob:") or any(m["art"] == t_mob for m, _ in mobs)):
+    if (variante.get("gesicht") or variante.get("mob_licht")) and isinstance(t_mob, str) and (t_mob.startswith("mob:") or any(m["art"] == t_mob for m, _ in mobs)):
         mob = mobs[int(t_mob[4:])][1] if t_mob.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == t_mob)
         punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
         mitte = sum(punkte, Vector()) / len(punkte)
         groesse = max((p - mitte).length for p in punkte)
         for nr, (richtung, energie, farbe) in enumerate(((cam.matrix_world.translation - mitte, 600, (1.0, 1.0, 1.0)), (mitte - cam.matrix_world.translation, 3000, variante.get("rand", (1, 1, 1))))):
             l = bpy.data.lights.new(f"mob_licht{nr}", "AREA")
-            l.energy = energie * max(1.0, groesse / 3) ** 2
+            # gleiche Beleuchtungsstärke für jede Mob-Größe: Abstand wächst mit der Größe, Energie mit dem Abstand²
+            l.energy = energie * (max(0.5, groesse) / 3) ** 2
             l.size = max(2.0, groesse)
             l.color = farbe
             lo = bpy.data.objects.new(l.name, l)
@@ -529,6 +535,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             mlook.gesichtslicht(scene, cam, fig.kopf_mitte(), staerke * 0.6)
 
     gehalten = _items_anhaengen(figuren, texturen, cam, k)
+    _verbindungen_bauen(szene, figuren, mobs, gehalten, texturen)
 
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
@@ -574,6 +581,32 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     return info
 
 
+def _elytra(fig, modus, texturen):
+    """Elytra auf dem Rücken wie im Spiel (Java-Modell ElytraModel: Flügel 10×20×2 px, UV 22/0, Drehpunkt 5 px neben der
+    Mitte am Hals, 2 px hinter dem Rücken). „zu“: angelegt (x 15°, z ∓15°), „offen“/true: ausgebreitet beim Gleiten
+    (x 20°, z ∓90°). Textur entity/equipment/wings/elytra.png, ältere Versionen entity/elytra.png."""
+    pfad = next((q for q in (os.path.join(texturen, "entity", "equipment", "wings", "elytra.png"), os.path.join(texturen, "entity", "elytra.png")) if os.path.exists(q)), None)
+    if not pfad:
+        print("MOIN_WARNUNG Elytra-Textur fehlt")
+        return
+    bild = bpy.data.images.load(pfad, check_existing=True)
+    bild.alpha_mode = "STRAIGHT"
+    mat = mmobs._material(f"{fig.name}.elytra", bild)
+    offen = modus not in ("zu", "angelegt")
+    x_rot, z_rot = (20.0, 90.0) if offen else (15.0, 15.0)
+    # Java-Modellraum (y nach unten, z nach hinten) → Figurraum (z nach oben, y nach hinten)
+    basis = mathutils_Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))
+    huefte = fig.gelenke["koerper"]
+    for seite, vz, box in (("l", 1, {"origin": [-10, -20, 0], "size": [10, 20, 2], "uv": [22, 0], "inflate": 1.0}), ("r", -1, {"origin": [0, -20, 0], "size": [10, 20, 2], "uv": [22, 0], "inflate": 1.0, "mirror": True})):
+        me = mmobs._mesh(f"{fig.name}.elytra_{seite}", [box], 64, 32, Vector((0, 0, 0)), mat)
+        ob = bpy.data.objects.new(me.name, me)
+        bpy.context.scene.collection.objects.link(ob)
+        java = mathutils_Matrix.Rotation(math.radians(-z_rot * vz), 4, "Z") @ mathutils_Matrix.Rotation(math.radians(x_rot), 4, "X")
+        ob.parent = huefte
+        ob.matrix_parent_inverse = mathutils_Matrix.Identity(4)
+        ob.matrix_basis = mathutils_Matrix.Translation(Vector((5 * vz, 2, 12)) * mfigur.PX) @ basis @ java @ basis.inverted()
+
+
 def _kopf_block(fig, block, texturen):
     """Block auf dem Kopf (geschnitzter Kürbis, Helm aus Blöcken …): etwas größer als der Kopf, dreht mit ihm.
     Der Name beginnt mit „<figur>.kopf“, damit die Gesichtsprüfung ihn als gewollt zählt."""
@@ -585,6 +618,138 @@ def _kopf_block(fig, block, texturen):
     ob.matrix_world = kopf.matrix_world @ mathutils_Matrix.Scale(s, 4)
     ob.parent = kopf
     ob.matrix_parent_inverse = kopf.matrix_world.inverted()
+
+
+# Verbindungen zwischen zwei Punkten: Breite (halbe Kantenlänge in Blöcken), Durchhang (Anteil der Länge), Farbe/Textur
+VERBINDUNGEN = {
+    "strahl": {"breite": 0.12, "durchhang": 0.0, "textur": ("entity", "guardian", "guardian_beam.png"), "leuchten": 4.0, "tönung": (0.85, 0.73, 0.30)},
+    "angelschnur": {"breite": 0.012, "durchhang": 0.12, "farbe": (0.05, 0.05, 0.05)},
+    "leine": {"breite": 0.035, "durchhang": 0.08, "farbe": (0.36, 0.24, 0.12)},
+}
+
+
+def _mitte_von(ob_liste):
+    punkte = [o.matrix_world @ Vector(c) for o in ob_liste for c in o.bound_box]
+    return sum(punkte, Vector()) / len(punkte)
+
+
+def _verbindungs_punkt(ref, figuren, mobs, gehalten):
+    """„mob:0“ oder Mob-Art → Mitte des Mobs; „<id>“ → Hals der Figur; „<id>:hand“ → Spitze des gehaltenen Gegenstands
+    (sonst die Faust); [x, y, z] → Punkt in Blöcken."""
+    if isinstance(ref, (list, tuple)) and len(ref) >= 2:
+        return Vector((ref[0] * BLOCK, ref[1] * BLOCK, (ref[2] if len(ref) > 2 else 1.0) * BLOCK))
+    if not isinstance(ref, str):
+        return None
+    if ref.startswith("mob:") or any(m["art"] == ref for m, _ in mobs):
+        try:
+            mob = mobs[int(ref[4:])][1] if ref.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == ref)
+        except (ValueError, IndexError):
+            return None
+        return _mitte_von(mob.teile.values())
+    fid, _, teil = ref.partition(":")
+    treffer = next(((f, fig) for f, fig in figuren if f["id"] == fid), None)
+    if not treffer:
+        return None
+    f, fig = treffer
+    if teil == "hand":
+        ob = gehalten.get(fid)
+        faust = fig.hand((f.get("item") or {}).get("hand", "r"))
+        if ob:  # Spitze: der Punkt des Gegenstands, der am weitesten von der Faust weg ist
+            return max((ob.matrix_world @ Vector(c) for c in ob.bound_box), key=lambda q: (q - faust).length)
+        return faust
+    return fig.kopf_mitte() - Vector((0, 0, 0.45 * BLOCK))
+
+
+def _verbindung(a, b, art, texturen, name):
+    """Balken aus Stücken von a nach b, bei Schnur und Leine leicht durchhängend; der Strahl nutzt die echte Textur
+    entity/guardian/guardian_beam.png, die sich längs wiederholt und leuchtet."""
+    v = VERBINDUNGEN[art]
+    d = b - a
+    laenge = d.length
+    if laenge < 0.05:
+        return None
+    stuecke = 1 if v["durchhang"] == 0 else 12
+    punkte = [a + d * (i / stuecke) - Vector((0, 0, 4 * v["durchhang"] * laenge * (i / stuecke) * (1 - i / stuecke))) for i in range(stuecke + 1)]
+    w = v["breite"] * BLOCK
+    verts, faces, uvs = [], [], []
+    gelaufen = 0.0
+    for i in range(stuecke):
+        p0, p1 = punkte[i], punkte[i + 1]
+        achse = (p1 - p0).normalized()
+        quer = achse.cross(Vector((0, 0, 1)))
+        if quer.length < 1e-4:
+            quer = Vector((1, 0, 0))
+        quer.normalize()
+        hoch = quer.cross(achse).normalized()
+        ecken = [(-quer - hoch) * w, (quer - hoch) * w, (quer + hoch) * w, (-quer + hoch) * w]
+        schritt = (p1 - p0).length / BLOCK
+        for j in range(4):
+            e0, e1 = ecken[j], ecken[(j + 1) % 4]
+            n = len(verts)
+            verts += [p0 + e0, p0 + e1, p1 + e1, p1 + e0]
+            faces.append((n, n + 1, n + 2, n + 3))
+            uvs += [(0, gelaufen), (1, gelaufen), (1, gelaufen + schritt), (0, gelaufen + schritt)]
+        gelaufen += schritt
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([tuple(x) for x in verts], [], faces)
+    uv = me.uv_layers.new(name="uv")
+    for loop in me.loops:
+        uv.data[loop.index].uv = uvs[loop.vertex_index]
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    pfad = os.path.join(texturen, *v["textur"]) if v.get("textur") else None
+    if pfad and os.path.exists(pfad):
+        tex = nt.nodes.new("ShaderNodeTexImage")
+        tex.image = bpy.data.images.load(pfad, check_existing=True)
+        tex.interpolation = "Closest"
+        nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+        if v.get("leuchten"):
+            # wie im Spiel additiv: Schwarz ist durchsichtig, helle Linien leuchten in der Farbe des geladenen Strahls
+            # (GuardianRenderer: Farbe wandert beim Aufladen von Lila zu Gold-Weiß; hier 80 % geladen)
+            faerben = nt.nodes.new("ShaderNodeMixRGB")
+            faerben.blend_type = "MULTIPLY"
+            faerben.inputs[0].default_value = 1.0
+            faerben.inputs[2].default_value = (*v.get("tönung", (1.0, 1.0, 1.0)), 1.0)
+            nt.links.new(tex.outputs["Color"], faerben.inputs[1])
+            licht = nt.nodes.new("ShaderNodeEmission")
+            licht.inputs["Strength"].default_value = v["leuchten"]
+            nt.links.new(faerben.outputs[0], licht.inputs["Color"])
+            durch = nt.nodes.new("ShaderNodeBsdfTransparent")
+            summe = nt.nodes.new("ShaderNodeAddShader")
+            nt.links.new(durch.outputs[0], summe.inputs[0])
+            nt.links.new(licht.outputs[0], summe.inputs[1])
+            nt.links.new(summe.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
+            if hasattr(mat, "blend_method"):
+                mat.blend_method = "BLEND"
+    else:
+        bsdf.inputs["Base Color"].default_value = (*v.get("farbe", (0.1, 0.1, 0.1)), 1.0)
+    bsdf.inputs["Roughness"].default_value = 0.8
+    me.materials.append(mat)
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    return ob
+
+
+def _verbindungen_bauen(szene, figuren, mobs, gehalten, texturen):
+    """„verbindungen“: [{"von", "zu", "art": strahl|angelschnur|leine}]; Kurzform am Mob: „strahl“: „<id>“ (Wächter-Laser)."""
+    liste = list(szene.get("verbindungen") or [])
+    for i, (m, _) in enumerate(mobs):
+        if isinstance(m.get("strahl"), str):
+            liste.append({"von": f"mob:{i}", "zu": m["strahl"], "art": "strahl"})
+    bpy.context.view_layer.update()
+    for n, vb in enumerate(liste):
+        art = vb.get("art", "leine")
+        if art not in VERBINDUNGEN:
+            print("MOIN_WARNUNG unbekannte Verbindung", art)
+            continue
+        a = _verbindungs_punkt(vb.get("von"), figuren, mobs, gehalten)
+        b = _verbindungs_punkt(vb.get("zu"), figuren, mobs, gehalten)
+        if a is None or b is None:
+            print("MOIN_WARNUNG Verbindung ohne Endpunkt", vb)
+            continue
+        _verbindung(a, b, art, texturen, f"verbindung{n}.{art}")
 
 
 def _auf_etwas(fig, ziel, mobs, hoehe=0.0):

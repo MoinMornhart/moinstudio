@@ -102,6 +102,16 @@ POSEN = {
         "bein_r": {"vor": 26, "beugen": 35},
         "bein_l": {"vor": -30, "beugen": 25},
     },
+    # Gleiten mit der Elytra: Körper fast waagerecht nach vorn, Kopf hebt den Blick, Arme eng am Körper nach hinten, Beine gestreckt – mit "elytra": "offen" und Höhe
+    "gleiten": {
+        "kippen": -72,
+        "koerper": {"vor": 4},
+        "kopf": {"nicken": -58},
+        "arm_r": {"heben": -12, "seitlich": 14, "beugen": 8},
+        "arm_l": {"heben": -12, "seitlich": 14, "beugen": 8},
+        "bein_r": {"vor": -6, "seitlich": 4},
+        "bein_l": {"vor": -2, "seitlich": 4},
+    },
     # Getroffen: nach hinten geworfen, Arme hoch, Beine vorn – mit Höhe (in der Luft) in der Szene
     "getroffen": {
         "kippen": 30,

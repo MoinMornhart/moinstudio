@@ -66,14 +66,17 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    `bein_r`/`bein_l` {vor (90 = waagrecht nach vorn, z. B. Sitzen), seitlich, beugen (Knie)}. Winkel in Grad.
    Beispiele: Yoga-Baum = neutral + {"arm_r": {"heben": 170}, "arm_l": {"heben": 170}, "bein_l": {"seitlich": 40, "beugen": 100}} ·
    Sitzen = {"bein_r": {"vor": 90}, "bein_l": {"vor": 90}} mit `hoehe` 0.5 · Klettern = {"arm_r": {"heben": 160}, "arm_l": {"heben": 120}, "bein_l": {"vor": 60, "beugen": 70}}.
-11. **Gegenstände:** Alles, was kein Block ist (Boot, Bett, Elytra, Angel, Eimer, Kuchen, Eier …), hält Philip als `item`
-   mit der Minecraft-ID (oak_boat, red_bed, elytra, fishing_rod, water_bucket, cake, sniffer_egg …). Worauf Philip steht
+11. **Gegenstände:** Alles, was kein Block ist (Boot, Bett, Angel, Eimer, Kuchen, Eier …), hält Philip als `item`
+   mit der Minecraft-ID (oak_boat, red_bed, fishing_rod, water_bucket, cake, sniffer_egg …). Worauf Philip steht
    oder was er trägt, baust du als Block. Zwei Felder je Figur helfen dabei:
    `"auf": "mob:0"` bzw. `"auf": "objekt:0"` stellt die Figur mittig auf einen Mob oder ein Objekt (Handstand auf dem Creeper,
    Yoga auf dem Heuballen, im Boot aus Blöcken) – MoinStudio rechnet die Höhe selbst aus, `position` ist dann egal.
    **Reiten** (Pferd, Kamel, Schreiter, Schwein …) = `"auf": "mob:N"` plus Sitzpose per `posen_korrektur`
    ({"bein_r": {"vor": 70, "seitlich": 25}, "bein_l": {"vor": 70, "seitlich": 25}}); der Mob steht dann nah vorn im Bild.
    `"kopf": "carved_pumpkin"` setzt einen Block auf den Kopf (Kürbis-Verkleidung, Block-Helm); das Gesicht zeigt nach vorn.
+   `"elytra": "offen"` legt die echte Elytra auf den Rücken, ausgebreitet wie beim Gleiten (`"zu"`: angelegt). Beim Fliegen
+   dazu Pose `gleiten` und `hoehe` 3–10,
+   immer so statt als `item`; die Kamera sollte dann schräg von hinten oder von der Seite schauen, damit die Flügel zu sehen sind.
 
 # Koordinaten
 
@@ -113,3 +116,10 @@ Die Figuren-`id`s müssen genau die oben genannten sein. Skins trägt MoinStudio
 bei großen oder schwebenden Mobs wie Ghast, Riesenspinne oder Warden immer so) oder ein Punkt `[x, y, z]`.
 Große Mobs (`groesse` 3–10) brauchen Abstand: stelle sie 8–20 Blöcke nach hinten, sonst passen sie nicht ins Bild.
 Schwebende Mobs (Ghast, Phantom, Blaze) bekommen `hoehe` 3–8.
+Verbindungen (`"verbindungen": [{"von": …, "zu": …, "art": …}]` auf oberster Ebene der Szene) zeichnen etwas zwischen zwei
+Punkten: `"angelschnur"` (dünne Schnur, hängt leicht durch), `"leine"` (Minecraft-Leine), `"strahl"` (Wächter-Laser mit
+echter Textur, leuchtet). Punkte: `"mob:0"` (Mitte des Mobs), eine Figuren-`id` (Hals), `"<id>:hand"` (Spitze des
+gehaltenen Gegenstands, z. B. der Angel) oder `[x, y, z]`. Beispiel Angeln: Philip hält `fishing_rod`, Verbindung
+`{"von": "ich:hand", "zu": "mob:0", "art": "angelschnur"}`. Kurzform für Laser: Ein Wächter oder Älterer Wächter
+(`guardian`, `elder_guardian`) mit `"strahl": "ich"` schießt auf diese Figur. Stelle ihn 4–8 Blöcke seitlich hinter die
+Figur, damit der Strahl quer durchs Bild läuft und nicht auf die Kamera zeigt.
