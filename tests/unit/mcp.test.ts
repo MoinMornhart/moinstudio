@@ -129,6 +129,10 @@ describe('MCP-Werkzeuge (offizieller Client ↔ Server, App nachgebaut)', () => 
   it('reicht Schnitt-Aufträge aus Claude Desktop an die App weiter (video_edit)', async () => {
     const res = await client.callTool({ name: 'video_edit', arguments: { aktion: 'aendern', projekt: 'p1', wunsch: 'lass den Creeper drin' } })
     expect(JSON.stringify(res.content)).toContain('lass den Creeper drin')
+    // Effekte ansehen und einzeln ausschalten (E.6)
+    const effekt = await client.callTool({ name: 'video_edit', arguments: { aktion: 'effekt_aendern', projekt: 'p1', index: 2, aus: true } })
+    expect(effekt.isError).toBeFalsy()
+    expect(JSON.stringify(res.content) + JSON.stringify(effekt.content)).toContain('effekt_aendern')
     const falsch = await client.callTool({ name: 'video_edit', arguments: { aktion: 'gibtsnicht' } })
     expect(falsch.isError).toBe(true)
   })

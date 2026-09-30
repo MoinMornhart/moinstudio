@@ -13,6 +13,7 @@ function wohlgeformt(xml: string): boolean {
   }
   return stapel.length === 0
 }
+const ohneMitte = (l: { t: number; wert: number }[]): { t: number; wert: number }[] => l.map(({ t, wert }) => ({ t, wert }))
 const zaehle = (xml: string, tag: string): number => (xml.match(new RegExp(`<${tag}[ >]`, 'g')) ?? []).length
 
 describe('Premiere: Sequenz als FCP7-XML (ROADMAP 8.3, ungetestet in Premiere)', () => {
@@ -29,7 +30,7 @@ describe('Premiere: Sequenz als FCP7-XML (ROADMAP 8.3, ungetestet in Premiere)',
 
   it('setzt Zoom-Keyframes nur dort, wo ein Zoom liegt, mit Rampe wie im Render', () => {
     expect(zoomKeyframes([{ start: 10, ende: 14 }], 0, 5)).toEqual([])
-    expect(zoomKeyframes([{ start: 10, ende: 14 }], 8, 20)).toEqual([
+    expect(ohneMitte(zoomKeyframes([{ start: 10, ende: 14 }], 8, 20))).toEqual([
       { t: 8, wert: 100 },
       { t: 10, wert: 100 },
       { t: 10.35, wert: 112 },
@@ -38,7 +39,7 @@ describe('Premiere: Sequenz als FCP7-XML (ROADMAP 8.3, ungetestet in Premiere)',
       { t: 20, wert: 100 }
     ])
     // Zoom über einen Schnitt hinweg: der Clip beginnt schon vergrößert
-    expect(zoomKeyframes([{ start: 10, ende: 14 }], 12, 20)[0]).toEqual({ t: 12, wert: 112 })
+    expect(zoomKeyframes([{ start: 10, ende: 14 }], 12, 20)[0]).toEqual({ t: 12, wert: 112, mitte: { x: 0, y: 0 } })
   })
 
   it('baut eine Sequenz mit allen behaltenen Stücken, Ton, Zoom und Kapitel-Markern', () => {
@@ -65,6 +66,37 @@ describe('Premiere: Sequenz als FCP7-XML (ROADMAP 8.3, ungetestet in Premiere)',
     expect(xml).toContain('<keyframe><when>510</when><value>100</value></keyframe>')
     expect(xml).toContain('<keyframe><when>620</when><value>112</value></keyframe>')
     expect(xml).toContain('<marker><name>Der Creeper kommt</name><comment>Kapitel</comment><in>750</in><out>-1</out></marker>')
+  })
+
+  it('übernimmt Effekte: Zoom auf einen Punkt als Keyframes, Text als Bild auf V2, alles als Marker (E.6)', () => {
+    const xml = premiereXml({
+      name: 'Effekte',
+      quelle: { pfad: 'D:\\roh.mp4', dauer: 30, breite: 1920, hoehe: 1080, fps: 30, audio: true },
+      liste: { version: 1, dauer: 30, behalten: [{ start: 0, ende: 10 }, { start: 15, ende: 30 }], entfernt: [] },
+      zooms: [],
+      kapitel: [],
+      effekte: [
+        { art: 'zoom', von: 2, bis: 4, faktor: 1.5, x: 0.75 },
+        { art: 'text', von: 5, bis: 7, text: 'WAS?!', lage: 'oben' },
+        { art: 'tempo', von: 12, bis: 14, faktor: 0.5 }
+      ],
+      textBilder: { '1': { datei: 'D:\\Projekt\\effekte\\text1.png', breite: 400, hoehe: 100 } }
+    })
+    expect(wohlgeformt(xml)).toBe(true)
+    // Zoom 1,5 auf den Punkt x = 0,75: Scale 150 %, Bild wandert um ein Achtel nach links
+    expect(xml).toContain('<keyframe><when>60</when><value>100</value></keyframe>')
+    expect(xml).toContain('<keyframe><when>71</when><value>150</value></keyframe>')
+    expect(xml).toContain('<keyframe><when>71</when><value><horiz>-0.125</horiz><vert>0</vert></value></keyframe>')
+    // Text auf der zweiten Videospur, Größe wie im Render (12 % der Bildhöhe → 129,6 %), oben
+    expect(zaehle(xml, 'track')).toBe(3)
+    expect(xml).toContain('<start>150</start><end>210</end><in>0</in><out>60</out>')
+    expect(xml).toContain('<pathurl>file://localhost/D:/Projekt/effekte/text1.png</pathurl>')
+    expect(xml).toContain('<value>129.6</value>')
+    expect(xml).toContain('<value><horiz>0</horiz><vert>-0.36</vert></value>')
+    // jeder Effekt als Marker; Tempo muss in Premiere von Hand gesetzt werden
+    expect(xml).toContain('<marker><name>Effekt: Zoom ×1,5</name><comment>Effekt aus MoinStudio (in der Sequenz enthalten)</comment><in>60</in><out>120</out></marker>')
+    expect(xml).toMatch(/<marker><name>Effekt: Zeitlupe \(×0,5\)<\/name><comment>[^<]*von Hand[^<]*<\/comment><in>360<\/in><out>420<\/out><\/marker>/)
+    expect(zaehle(xml, 'marker')).toBe(3)
   })
 
   it('lässt ohne Ton die Tonspur weg', () => {

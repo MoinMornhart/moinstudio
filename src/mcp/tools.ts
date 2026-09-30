@@ -240,13 +240,16 @@ export function createServer(version: string): McpServer {
     {
       title: 'Videos schneiden',
       description:
-        'Schnitt in MoinStudio (Rohvideo rein, fertiges Video raus). Aktionen: projekte (alle Schnitt-Projekte), importieren (pfad, kanal – startet Import, Transkript und Rohschnitt von selbst), schnitt (projekt – Rohschnitt mit Transkript und entfernten Stellen), aendern (projekt, wunsch – Änderung in Worten, z. B. „lass die Stelle mit dem Creeper drin“), vorschau, export (YouTube-Export mit Titel, Beschreibung, Kapiteln), export_info, highlights (Höhepunkte aus Streams suchen), highlights_liste, clips (projekt, auswahl: [{index, art: clip|short}]). Aufträge laufen im Hintergrund – mit job_get den Fortschritt abfragen.',
+        'Schnitt in MoinStudio (Rohvideo rein, fertiges Video raus). Aktionen: projekte (alle Schnitt-Projekte), importieren (pfad, kanal – startet Import, Transkript und Rohschnitt von selbst), schnitt (projekt – Rohschnitt mit Transkript und entfernten Stellen), aendern (projekt, wunsch – Schnitt und Effekte in Worten, z. B. „mach mir ein geiles Intro“, „Zeitlupe, wenn der Creeper explodiert“, „am Ende schwarz ausblenden“, „lass die Stelle mit dem Creeper drin“; danach entsteht die Vorschau von selbst), effekte (projekt – alle Effekte mit Nummer, Zeit und Beschreibung), effekt_aendern (projekt, index, aus: true/false oder loeschen: true), vorschau, export (YouTube-Export mit Titel, Beschreibung, Kapiteln), export_info, highlights (Höhepunkte aus Streams suchen), highlights_liste, clips (projekt, auswahl: [{index, art: clip|short}]). Aufträge laufen im Hintergrund – mit job_get den Fortschritt abfragen.',
       inputSchema: z.object({
-        aktion: z.enum(['projekte', 'importieren', 'schnitt', 'aendern', 'vorschau', 'export', 'export_info', 'highlights', 'highlights_liste', 'clips']),
+        aktion: z.enum(['projekte', 'importieren', 'schnitt', 'aendern', 'effekte', 'effekt_aendern', 'vorschau', 'export', 'export_info', 'highlights', 'highlights_liste', 'clips']),
         projekt: z.string().optional().describe('Projekt-ID (aus projekte)'),
         pfad: z.string().optional().describe('Rohvideo (nur importieren)'),
         kanal: z.enum(['MoinMornhart', 'MoinMorni']).optional(),
         wunsch: z.string().optional().describe('Änderungswunsch in Worten (nur aendern)'),
+        index: z.number().int().optional().describe('Effekt-Nummer aus effekte (nur effekt_aendern)'),
+        aus: z.boolean().optional().describe('Effekt aus- (true) oder einschalten (false) (nur effekt_aendern)'),
+        loeschen: z.boolean().optional().describe('Effekt löschen (nur effekt_aendern)'),
         auswahl: z.array(z.object({ index: z.number().int(), art: z.enum(['clip', 'short']) })).optional().describe('nur clips')
       })
     },

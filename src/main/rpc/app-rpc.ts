@@ -3,7 +3,8 @@ import { rmSync } from 'node:fs'
 import { userInfo } from 'node:os'
 import { join } from 'node:path'
 import { pipeName } from '@shared/rpc'
-import { IPC } from '@shared/app'
+import { IPC, type SchnittEffekt } from '@shared/app'
+import { effektText } from '@shared/effekt-text'
 import { writeJsonAtomic } from '../data/jsonfile'
 import type { SettingsStore } from '../data/settings'
 import type { HardwareController } from '../hardware/controller'
@@ -95,7 +96,10 @@ export async function startAppRpc(deps: AppRpcDeps): Promise<RpcServer> {
   )
   // Schnitt aus Claude Desktop (ROADMAP 6.9): video_edit
   rpc.handle('schnitt', async (p) => {
-    const { aktion, projekt, pfad, kanal, wunsch, auswahl } = (p ?? {}) as { aktion?: string; projekt?: string; pfad?: string; kanal?: string; wunsch?: string; auswahl?: unknown }
+    const { aktion, projekt, pfad, kanal, wunsch, auswahl, index, aus, loeschen } = (p ?? {}) as { aktion?: string; projekt?: string; pfad?: string; kanal?: string; wunsch?: string; auswahl?: unknown; index?: number; aus?: boolean; loeschen?: boolean }
+    // Effekte für Claude: Nummer, Zeit in der Originalaufnahme und Beschreibung in Worten (ROADMAP E.6)
+    const effektListe = (l: SchnittEffekt[]): { index: number; beschreibung: string; von?: number; bis?: number; bei?: number; aus: boolean; daten: SchnittEffekt }[] =>
+      l.map((e, i) => ({ index: i, beschreibung: effektText(e), von: e.von, bis: e.bis, bei: e.bei, aus: e.aus === true, daten: e }))
     const a = deps.schnitt.aufruf
     switch (aktion) {
       case 'projekte':
@@ -117,6 +121,15 @@ export async function startAppRpc(deps: AppRpcDeps): Promise<RpcServer> {
       }
       case 'aendern':
         return { auftrag: await a(IPC.schnittWunsch, projekt, wunsch) }
+      case 'effekte': {
+        const l = effektListe((await a(IPC.schnittEffekte, projekt)) as SchnittEffekt[])
+        return { effekte: l, hinweis: l.length ? 'Zeiten in Sekunden der Originalaufnahme. Nach effekt_aendern die Vorschau neu rendern.' : 'Noch keine Effekte – mit aendern z. B. „mach mir ein geiles Intro“.' }
+      }
+      case 'effekt_aendern': {
+        if (typeof index !== 'number') throw new Error('index fehlt')
+        if (loeschen !== true && typeof aus !== 'boolean') throw new Error('aus oder loeschen angeben')
+        return { effekte: effektListe((await a(IPC.schnittEffektAendern, projekt, index, loeschen === true ? null : { aus })) as SchnittEffekt[]) }
+      }
       case 'vorschau':
         return { auftrag: await a(IPC.schnittVorschau, projekt) }
       case 'export':

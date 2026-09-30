@@ -6,6 +6,12 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Premiere: Effekte kommen mit in die Sequenz – Zooms als Keyframes (auch auf einen Punkt), Texte als Bilder auf Spur V2, jeder Effekt als Marker mit Hinweis, was von Hand gesetzt werden muss (ROADMAP E.6, ungetestet in Premiere).
+- Claude Desktop: `video_edit` listet Effekte, schaltet sie an/aus und löscht sie; „aendern“ versteht Effekte und Intros.
+- Adobe-Selbsttest: Premiere-Probe und Checkliste prüfen Zoom auf einen Punkt, Text auf V2 und Effekt-Marker.
+
 ## [0.32.0] - 2026-09-30
 
 > Schnitt: Wünsche und Effektliste

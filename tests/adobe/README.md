@@ -12,7 +12,8 @@ Die Adobe-Funktionen von MoinStudio bleiben als **„ungetestet“** markiert, b
    - Länge der Sequenz
    - drei Clips
    - Zoom auf 112 %
-   - zwei Marker
+   - zwei Kapitel-Marker und drei Effekt-Marker
+   - Zoom auf 150 % zur rechten Bildhälfte und ein gelber Text-Balken auf V2
    - drei Untertitel
 4. Ergebnis (und bei Fehlern ein Bildschirmfoto) an Claude geben. Erst dann wird „ungetestet“ entfernt.
 
@@ -33,6 +34,6 @@ npm run test:adobe
 | Programm | Datei | Prüfung |
 |---|---|---|
 | Photoshop | `ebenen.psd` (640×360, Ebenen Hintergrund, Figuren, Text) | automatisch: öffnen, Größe und Ebenennamen vergleichen, ohne Speichern schließen |
-| Premiere | `sequenz.xml` (FCP7-XML), `untertitel.srt`, `testvideo.mp4` | Checkliste: Import, Länge, Clips ohne Lücke, Zoom-Keyframes, Marker, Untertitel |
+| Premiere | `sequenz.xml` (FCP7-XML), `untertitel.srt`, `testvideo.mp4` | Checkliste: Import, Länge, Clips ohne Lücke, Zoom-Keyframes (auch Position), Text-Bild auf V2, Kapitel- und Effekt-Marker, Untertitel |
 
 Premiere lässt sich ohne Plugin nicht fernsteuern. ExtendScript läuft aus, und UXP-Plugins lassen sich nur mit installiertem Premiere entwickeln (siehe `docs/research/adobe.md`). Deshalb gibt es hier eine Checkliste.

@@ -1,7 +1,8 @@
 import { execFile } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { premiereXml, srt } from './premiere'
+import type { Effekt } from '../schnitt/effekte'
+import { effektMarker, premiereXml, srt } from './premiere'
 import { schreibePsd, type PsdEbene } from './psd'
 
 /**
@@ -23,11 +24,18 @@ export const PROBE = {
     { zeit: 0, titel: 'Start' },
     { zeit: 5, titel: 'Mitte' }
   ],
+  /** Effekte (ROADMAP E.6), Zeit im Schnitt: Zoom auf die rechte Bildhälfte im ersten Stück, Text-Balken und Tempo im dritten */
+  effekte: [
+    { art: 'zoom', von: 1, bis: 3, faktor: 1.5, x: 0.75 },
+    { art: 'text', von: 11.5, bis: 13.5, text: 'TEST', lage: 'oben' },
+    { art: 'tempo', von: 12, bis: 14, faktor: 0.5 }
+  ] satisfies Effekt[],
+  textBild: { breite: 400, hoehe: 100 },
   psd: { breite: 640, hoehe: 360, ebenen: ['Hintergrund', 'Figuren', 'Text'] }
 } as const
 
 export interface Erwartung {
-  premiere: { sequenz: string; frames: number; clips: number; marker: string[]; zoomProzent: number; untertitel: number }
+  premiere: { sequenz: string; frames: number; clips: number; marker: string[]; zoomProzent: number; untertitel: number; effektMarker: string[] }
   photoshop: { breite: number; hoehe: number; ebenen: string[] }
 }
 
@@ -72,7 +80,16 @@ export async function erzeugeProben(ordner: string, ffmpeg: string): Promise<Erw
   if (r.code !== 0) throw new Error(`Testvideo ließ sich nicht erzeugen: ${r.out.trim().slice(-300)}`)
   const liste = { version: 1 as const, dauer: v.dauer, behalten: PROBE.behalten.map((b) => ({ ...b })), entfernt: [] }
   const sequenz = 'MoinStudio Adobe-Test'
-  await writeFile(join(ordner, 'sequenz.xml'), premiereXml({ name: sequenz, quelle: { pfad: video, ...v, audio: true }, liste, zooms: PROBE.zooms.map((z) => ({ ...z })), kapitel: PROBE.kapitel.map((k) => ({ ...k })) }))
+  // gelber Balken als Text-Bild (wie ein Text-Effekt aus der Vorschau)
+  const tb = PROBE.textBild
+  const bild = join(ordner, 'text1.png')
+  const rb = await lauf(ffmpeg, ['-y', '-v', 'error', '-f', 'lavfi', '-i', `color=c=0xffdd33:s=${tb.breite}x${tb.hoehe}`, '-frames:v', '1', bild])
+  if (rb.code !== 0) throw new Error(`Text-Bild ließ sich nicht erzeugen: ${rb.out.trim().slice(-300)}`)
+  const effekte: Effekt[] = PROBE.effekte.map((e) => ({ ...e }))
+  await writeFile(
+    join(ordner, 'sequenz.xml'),
+    premiereXml({ name: sequenz, quelle: { pfad: video, ...v, audio: true }, liste, zooms: PROBE.zooms.map((z) => ({ ...z })), kapitel: PROBE.kapitel.map((k) => ({ ...k })), effekte, textBilder: { '1': { datei: bild, ...tb } } })
+  )
   const zeilen = [
     { start: 0.5, ende: 2.5, text: 'Erster Untertitel' },
     { start: 6, ende: 8, text: 'Zweiter Untertitel' },
@@ -84,7 +101,7 @@ export async function erzeugeProben(ordner: string, ffmpeg: string): Promise<Erw
   await writeFile(join(ordner, 'ebenen.psd'), schreibePsd(breite, hoehe, p.ebenen, p.gesamt))
   const frames = PROBE.behalten.reduce((s, b) => s + Math.round(b.ende * v.fps) - Math.round(b.start * v.fps), 0)
   const erwartung: Erwartung = {
-    premiere: { sequenz, frames, clips: PROBE.behalten.length, marker: PROBE.kapitel.map((k) => k.titel), zoomProzent: 112, untertitel: zeilen.length },
+    premiere: { sequenz, frames, clips: PROBE.behalten.length, marker: PROBE.kapitel.map((k) => k.titel), zoomProzent: 112, untertitel: zeilen.length, effektMarker: effekte.map((e) => effektMarker(e).name) },
     photoshop: { breite, hoehe, ebenen: [...PROBE.psd.ebenen] }
   }
   await writeFile(join(ordner, 'erwartung.json'), JSON.stringify(erwartung, null, 2))
@@ -137,6 +154,9 @@ Ordner: ${ordner}
    - [ ] Auf V1 und A1 liegen je ${e.clips} Clips ohne Lücke (Testbild mit Zähler, Ton 440 Hz).
    - [ ] Beim zweiten Clip zoomt das Bild sanft auf ${e.zoomProzent} % und wieder zurück (Effekteinstellungen → Bewegung → Skalierung mit Keyframes).
    - [ ] Sequenz-Marker: ${e.marker.join(', ')}.
+   - [ ] Effekt-Marker mit Hinweis im Kommentar: ${e.effektMarker.join(', ')}.
+   - [ ] Beim ersten Clip zoomt das Bild von Sekunde 1 bis 3 auf 150 % und rückt dabei nach links, sodass die rechte Bildhälfte in die Mitte kommt (Bewegung → Skalierung und Position mit Keyframes).
+   - [ ] Auf V2 liegt von Sekunde 11,5 bis 13,5 ein gelber Balken (text1.png), oben im Bild, gut ein Viertel der Bildbreite breit.
 4. Datei → Importieren → untertitel.srt, auf die Sequenz ziehen:
    - [ ] ${e.untertitel} Untertitel erscheinen zur richtigen Zeit.
 
