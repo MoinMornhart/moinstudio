@@ -11,6 +11,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
+import { EINGEBAUT, wandle as wandleGeo } from '../src/main/thumbnail/mobimport.ts'
 
 const GEO = 'https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/models/entity/'
 const ANIM = 'https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/animations/'
@@ -264,6 +265,13 @@ for (const m of MOBS) {
   const s = Math.round(scale * (m.scale ?? 1) * 1000) / 1000
   tabelle[m.key] = { texture: tex, tex_size: geo.tex, height_px: Math.round(hoehe * 100) / 100, ...(s !== 1 ? { scale: s } : {}), quelle: `bedrock-samples/${m.geo}`, parts }
   bericht.push(`✓ ${m.key}: ${parts.length} Teile, ${tex} (${tw}×${th})`)
+}
+// Im Spiel fest einprogrammierte Modelle (fehlen in bedrock-samples): Boot aus dem Java-Modell, Textur aus der Spieldatei
+{
+  const { parts } = wandleGeo(EINGEBAUT['geometry.boat']!)
+  const hoehe = Math.max(...parts.flatMap((p) => p.boxes.map((b) => b.origin[1] + b.size[1])), 1)
+  tabelle['boat'] = { texture: 'entity/boat/oak.png', tex_size: [128, 64], height_px: hoehe, quelle: 'Java BoatModel (eingebaut)', parts }
+  bericht.push('✓ boat: eingebaut aus dem Java-Modell')
 }
 writeFileSync(AUSGABE, `${JSON.stringify(tabelle, null, 1)}\n`)
 console.log(bericht.join('\n'))

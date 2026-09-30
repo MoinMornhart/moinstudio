@@ -8,6 +8,7 @@ import os
 import bpy
 from mathutils import Matrix, Vector
 
+from .bloecke import _rgba_im_speicher
 from .figur import PX
 
 # Größe in der Hand: Stilbuch 4 – mitgehaltenes Schwert 1,3–1,6 Kopfgrößen (Diagonale), Kopf = 8 px
@@ -22,7 +23,7 @@ def _bild(ordner, name):
         raise FileNotFoundError(f"Item-Textur {name} fehlt in der Spieldatei ({pfad})")
     img = bpy.data.images.load(pfad, check_existing=True)
     img.alpha_mode = "STRAIGHT"
-    return img
+    return _rgba_im_speicher(img, pfad)
 
 
 def baue_item(name, texturen_ordner, pixel=ITEM_PIXEL, collection=None):

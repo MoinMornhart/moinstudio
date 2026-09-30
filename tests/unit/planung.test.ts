@@ -61,6 +61,10 @@ describe('Thumbnail-Planung', () => {
     // Mob als Thema ist erlaubt
     const mitMob: Szene = { welt: { art: 'wiese' }, figuren: [{ id: 'ich', pose: 'schreck' }], mobs: [{ art: 'ghast' }], kamera: { thema: 'mob:0' } }
     expect(pruefeSzene(mitMob, k, ['ich'])).toEqual([])
+    // Objekt als Thema (Diamantblock, auf den Philip zeigt); ein fehlendes Objekt nicht
+    const mitObjekt: Szene = { welt: { art: 'hoehle' }, figuren: [{ id: 'ich', pose: 'zeigen' }], objekte: [{ block: 'tnt', position: [2, 2, 1], wichtig: true }], kamera: { thema: 'objekt:0' } }
+    expect(pruefeSzene(mitObjekt, k, ['ich'])).toEqual([])
+    expect(pruefeSzene({ ...mitObjekt, kamera: { thema: 'objekt:3' } }, k, ['ich']).join()).toMatch(/Kamera-Thema/)
     expect(s.himmel).toBe('tag')
     expect(s.kamera?.modus).toBe('nah')
     expect(s.figuren[0]!.item!.hand).toBe('l')

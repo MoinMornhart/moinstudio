@@ -6,6 +6,19 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Thumbnail: das echte Minecraft-Boot mit Rudern (Mob `boat`), nachgebaut aus dem Java-Modell des Spiels, weil Mojangs Bedrock-Daten es nicht enthalten; Philip sitzt darin in Fahrtrichtung.
+- Mob-Import: eingebaute Geometrien für fest einprogrammierte Modelle (Umrechnung Java → Bedrock), Import läuft bei neuem Format von selbst neu.
+- Thumbnail: Die Kamera kann auf ein Objekt zielen (`"objekt:0"`), und Objekte, um die es geht (`"wichtig": true`), müssen ganz im Bild sein – sonst korrigiert die Selbstprüfung.
+
+### Fixed
+
+- Thumbnail: „auf“ (auf einem Mob, Heuballen oder Boot stehen/sitzen) setzte die Figur oft an die falsche Stelle, weil die Position des Ziels vor dem Aktualisieren gelesen wurde.
+- Thumbnail: Mobs, auf denen eine Figur sitzt, werden nicht mehr als „zu groß“ nach hinten geschoben.
+- Einstellungen: Fehlalarm „OneDrive hat Konfliktkopien angelegt“ für mc/mobs/…/mobs-gesamt.json behoben – die Datei ist MoinStudios eigene Mob-Tabelle (heißt jetzt mobs_gesamt.json), der Download-Ordner „mc“ wird nicht mehr als Konflikt geprüft.
+- Thumbnail: Weißes Buntglas und andere Graustufen-Texturen mit Transparenz waren undurchsichtig weiß (Cycles verlor beim Laden die Transparenz).
+
 ## [0.34.0] - 2026-09-30
 
 > Thumbnail: Augen, Laser, Elytra

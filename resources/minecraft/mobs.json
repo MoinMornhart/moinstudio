@@ -13359,5 +13359,305 @@
     ]
    }
   ]
+ },
+ "boat": {
+  "texture": "entity/boat/oak.png",
+  "tex_size": [
+   128,
+   64
+  ],
+  "height_px": 14,
+  "quelle": "Java BoatModel (eingebaut)",
+  "parts": [
+   {
+    "name": "root",
+    "parent": null,
+    "pivot": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     90,
+     0
+    ],
+    "boxes": []
+   },
+   {
+    "name": "bottom",
+    "parent": "root",
+    "pivot": [
+     0,
+     3,
+     1
+    ],
+    "rotation": [
+     -90,
+     0,
+     0
+    ],
+    "boxes": [
+     {
+      "origin": [
+       -14,
+       -4,
+       -2
+      ],
+      "size": [
+       28,
+       16,
+       3
+      ],
+      "uv": [
+       0,
+       0
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   },
+   {
+    "name": "back",
+    "parent": "root",
+    "pivot": [
+     15,
+     2,
+     4
+    ],
+    "rotation": [
+     0,
+     -270,
+     0
+    ],
+    "boxes": [
+     {
+      "origin": [
+       10,
+       3,
+       3
+      ],
+      "size": [
+       18,
+       6,
+       2
+      ],
+      "uv": [
+       0,
+       19
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   },
+   {
+    "name": "front",
+    "parent": "root",
+    "pivot": [
+     -15,
+     2,
+     0
+    ],
+    "rotation": [
+     0,
+     -90,
+     0
+    ],
+    "boxes": [
+     {
+      "origin": [
+       -23,
+       3,
+       -1
+      ],
+      "size": [
+       16,
+       6,
+       2
+      ],
+      "uv": [
+       0,
+       27
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   },
+   {
+    "name": "right",
+    "parent": "root",
+    "pivot": [
+     0,
+     2,
+     -9
+    ],
+    "rotation": [
+     0,
+     -180,
+     0
+    ],
+    "boxes": [
+     {
+      "origin": [
+       -14,
+       3,
+       -10
+      ],
+      "size": [
+       28,
+       6,
+       2
+      ],
+      "uv": [
+       0,
+       35
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   },
+   {
+    "name": "left",
+    "parent": "root",
+    "pivot": [
+     0,
+     2,
+     9
+    ],
+    "rotation": [
+     0,
+     0,
+     0
+    ],
+    "boxes": [
+     {
+      "origin": [
+       -14,
+       3,
+       8
+      ],
+      "size": [
+       28,
+       6,
+       2
+      ],
+      "uv": [
+       0,
+       43
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   },
+   {
+    "name": "left_paddle",
+    "parent": "root",
+    "pivot": [
+     -3,
+     11,
+     9
+    ],
+    "rotation": [
+     0,
+     0,
+     11.25
+    ],
+    "boxes": [
+     {
+      "origin": [
+       -4,
+       9,
+       4
+      ],
+      "size": [
+       2,
+       2,
+       18
+      ],
+      "uv": [
+       62,
+       0
+      ],
+      "inflate": 0,
+      "mirror": false
+     },
+     {
+      "origin": [
+       -2.999,
+       8,
+       17
+      ],
+      "size": [
+       1,
+       6,
+       7
+      ],
+      "uv": [
+       62,
+       0
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   },
+   {
+    "name": "right_paddle",
+    "parent": "root",
+    "pivot": [
+     -3,
+     11,
+     -9
+    ],
+    "rotation": [
+     0,
+     -180,
+     11.25
+    ],
+    "boxes": [
+     {
+      "origin": [
+       -4,
+       9,
+       -14
+      ],
+      "size": [
+       2,
+       2,
+       18
+      ],
+      "uv": [
+       62,
+       20
+      ],
+      "inflate": 0,
+      "mirror": false
+     },
+     {
+      "origin": [
+       -2.999,
+       8,
+       -1
+      ],
+      "size": [
+       1,
+       6,
+       7
+      ],
+      "uv": [
+       62,
+       20
+      ],
+      "inflate": 0,
+      "mirror": false
+     }
+    ]
+   }
+  ]
  }
 }

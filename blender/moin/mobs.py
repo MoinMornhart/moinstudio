@@ -11,6 +11,7 @@ import os
 import bpy
 from mathutils import Euler, Vector
 
+from .bloecke import _rgba_im_speicher
 from .figur import PX, _box_rects, _faces
 
 # Arme nach vorn wie im Spiel
@@ -121,8 +122,10 @@ def tabelle(pfad=None):
 
 def baue_mob(art, eintrag, texturen_ordner, groesse=1.0, pose="stand", collection=None, name=None):
     col = collection or bpy.context.scene.collection
-    bild = bpy.data.images.load(os.path.join(texturen_ordner, eintrag["texture"]), check_existing=True)
+    pfad = os.path.join(texturen_ordner, eintrag["texture"])
+    bild = bpy.data.images.load(pfad, check_existing=True)
     bild.alpha_mode = "STRAIGHT"
+    bild = _rgba_im_speicher(bild, pfad)
     tex_w, tex_h = eintrag["tex_size"]
     augen_pfad = augen_textur(texturen_ordner, eintrag["texture"])
     augen = bpy.data.images.load(augen_pfad, check_existing=True) if augen_pfad else None

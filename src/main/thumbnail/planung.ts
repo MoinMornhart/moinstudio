@@ -38,7 +38,7 @@ export interface Szene {
   himmel?: string
   figuren: { id: string; pose: string; position?: number[]; blick?: number | 'auto'; hoehe?: number; item?: { name: string; hand?: string }; [k: string]: unknown }[]
   mobs?: { art: string; position?: number[]; blick?: number | string; groesse?: number; [k: string]: unknown }[]
-  objekte?: { block: string; position?: number[]; drehung?: number[]; groesse?: number }[]
+  objekte?: { block: string; position?: number[]; drehung?: number[]; groesse?: number; wichtig?: boolean }[]
   kamera?: { modus?: string; seite?: string; thema?: string | number[]; [k: string]: unknown }
   [k: string]: unknown
 }
@@ -146,7 +146,9 @@ export function pruefeSzene(s: Szene, k: Katalog, figurIds: string[]): string[] 
     const t = s.kamera.thema
     const mobIndex = /^mob:(\d+)$/.exec(t)?.[1]
     const istMob = mobIndex !== undefined ? Number(mobIndex) < mobs.length : mobs.some((m) => m.art === t)
-    if (!ids.has(t) && !istMob) fehler.push(`Kamera-Thema „${t}“ ist weder Figur noch Mob der Szene`)
+    const objektIndex = /^objekt:(\d+)$/.exec(t)?.[1]
+    const istObjekt = objektIndex !== undefined && Number(objektIndex) < (s.objekte ?? []).length
+    if (!ids.has(t) && !istMob && !istObjekt) fehler.push(`Kamera-Thema „${t}“ ist weder Figur noch Mob oder Objekt der Szene`)
   }
   if (s.kamera.thema === undefined) s.kamera.thema = s.figuren?.[1]?.id ?? (mobs.length ? 'mob:0' : [4, 4, 1.5])
   return fehler
@@ -178,7 +180,7 @@ export function ernsteWarnungen(warnungen: string[]): string[] {
   return warnungen.filter((w) => {
     if (/^Kamera trifft/.test(w)) return Number(/Abweichung ([\d.]+)/.exec(w)?.[1] ?? 0) > 0.5
     if (/^Item .* kaum sichtbar/.test(w)) return Number(/\((\d+) %/.exec(w)?.[1] ?? 0) < 60
-    return /^(Gesicht|Etwas versperrt|Gegner|Mob|Kopf|Text|Bild)/.test(w)
+    return /^(Gesicht|Etwas versperrt|Gegner|Mob|Objekt|Kopf|Text|Bild)/.test(w)
   })
 }
 

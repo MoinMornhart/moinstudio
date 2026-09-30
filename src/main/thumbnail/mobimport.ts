@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 /**
@@ -12,6 +12,8 @@ import { dirname, join } from 'node:path'
  */
 
 const QUELLE = 'https://raw.githubusercontent.com/Mojang/bedrock-samples/preview/'
+/** Erhöhen, wenn sich der Import ändert (eingebaute Geometrien, Sonderfälle): dann wird neu importiert, auch ohne neue Version */
+const IMPORT_FORMAT = 4
 const BAUM = 'https://api.github.com/repos/Mojang/bedrock-samples/git/trees/preview?recursive=1'
 
 type Vec = [number, number, number]
@@ -33,7 +35,9 @@ export interface MobEintrag {
 }
 
 /** Sonderfälle, die im Spiel erst im Code entstehen (Lage von Einzelteilen). Ergänzungen, nie die Grenze. */
-const SONDERFAELLE: Record<string, { versatz?: Record<string, Vec>; ziel?: string[] }> = {
+const SONDERFAELLE: Record<string, { versatz?: Record<string, Vec>; ziel?: string[]; textur?: string; nichtAnheben?: boolean }> = {
+  // Standard-Boot wie in Java: Eiche (Bedrock nimmt sonst Akazie); die gedrehte Bodenplatte liegt nicht unter dem Boden
+  boat: { textur: 'oak', nichtAnheben: true },
   enderman: { versatz: { head: [0, 14, 0] } },
   // Wächter: die Stachel-Animation gibt die Würfelmitte an, nicht eine Verschiebung
   guardian: { ziel: ['spikes'] },
@@ -77,6 +81,53 @@ export function geometrienAus(json: Record<string, unknown>): Map<string, Geo> {
     m.set(id!, { tex: [g.texturewidth ?? 64, g.textureheight ?? 64], bones: g.bones ?? [], eltern })
   }
   return m
+}
+
+/** Ein Teil eines Java-Modells (y nach unten): Versatz, Drehung in Grad, Würfel [x, y, z, b, h, t] mit Texturversatz */
+interface JavaTeil { name: string; versatz: Vec; drehung?: Vec; uv: [number, number]; wuerfel: [number, number, number, number, number, number][] }
+
+/**
+ * Java-Modell → Bedrock-Knochen. Der Renderer spiegelt das Java-Modell mit scale(−1, −1, 1): x und y kehren sich um,
+ * Drehungen um x und y wechseln das Vorzeichen (dieselbe Umrechnung wie Blockbench). `boden`: Java-y, das auf dem Boden
+ * liegt (Boot: +6, weil der Renderer 0,375 Blöcke anhebt).
+ */
+export function ausJava(teile: JavaTeil[], boden: number, drehung = 0): GeoBone[] {
+  // Renderer-Drehung (Boot: 90° um y, damit man in Fahrtrichtung sitzt) als gemeinsamer Wurzelknochen
+  const wurzel: GeoBone[] = drehung ? [{ name: 'root', pivot: [0, 0, 0], rotation: [0, drehung, 0] }] : []
+  return [...wurzel, ...teile.map((t) => {
+    const [px, py, pz] = t.versatz
+    const [rx, ry, rz] = t.drehung ?? [0, 0, 0]
+    return {
+      name: t.name,
+      ...(drehung ? { parent: 'root' } : {}),
+      pivot: [-px || 0, boden - py, pz],
+      rotation: [-rx, -ry, rz].map((w) => w || 0),
+      cubes: t.wuerfel.map(([x, y, z, b, h, d]) => ({ origin: [-(px + x + b) || 0, boden - (py + y + h), pz + z], size: [b, h, d], uv: t.uv }))
+    }
+  })]
+}
+
+/**
+ * Geometrien, die im Bedrock-Spiel fest einprogrammiert sind und in bedrock-samples fehlen. Quelle: Java-Modelle des
+ * Spiels (BoatModel). Ergänzung, nie die Grenze – alles andere kommt weiter aus den Daten.
+ */
+export const EINGEBAUT: Record<string, Geo> = {
+  'geometry.boat': {
+    tex: [128, 64],
+    bones: ausJava(
+      [
+        { name: 'bottom', versatz: [0, 3, 1], drehung: [90, 0, 0], uv: [0, 0], wuerfel: [[-14, -9, -3, 28, 16, 3]] },
+        { name: 'back', versatz: [-15, 4, 4], drehung: [0, 270, 0], uv: [0, 19], wuerfel: [[-13, -7, -1, 18, 6, 2]] },
+        { name: 'front', versatz: [15, 4, 0], drehung: [0, 90, 0], uv: [0, 27], wuerfel: [[-8, -7, -1, 16, 6, 2]] },
+        { name: 'right', versatz: [0, 4, -9], drehung: [0, 180, 0], uv: [0, 35], wuerfel: [[-14, -7, -1, 28, 6, 2]] },
+        { name: 'left', versatz: [0, 4, 9], uv: [0, 43], wuerfel: [[-14, -7, -1, 28, 6, 2]] },
+        { name: 'left_paddle', versatz: [3, -5, 9], drehung: [0, 0, 11.25], uv: [62, 0], wuerfel: [[-1, 0, -5, 2, 2, 18], [-1.001, -3, 8, 1, 6, 7]] },
+        { name: 'right_paddle', versatz: [3, -5, -9], drehung: [0, 180, 11.25], uv: [62, 20], wuerfel: [[-1, 0, -5, 2, 2, 18], [-1.001, -3, 8, 1, 6, 7]] }
+      ],
+      6,
+      90
+    )
+  }
 }
 
 function aufgeloest(id: string, alle: Map<string, Geo>, tiefe = 0): Geo | null {
@@ -273,6 +324,8 @@ function jsonLocker(s: string): unknown {
 
 export interface MobImport {
   version: string
+  /** Stand des Imports (IMPORT_FORMAT); fehlt bei alten Importen */
+  format?: number
   tabelle: string
   anzahl: number
   fehler: string[]
@@ -292,8 +345,10 @@ export async function sichereMobs(
   const tab = JSON.parse(await readFile(basis.tabelle, 'utf8')) as Record<string, MobEintrag | string>
   const kur = JSON.parse(await readFile(o.kuratiert.tabelle, 'utf8')) as Record<string, MobEintrag | string>
   for (const [k, v] of Object.entries(kur)) if (!k.startsWith('_') && typeof v === 'object') tab[k] = { ...v, texture: join(o.kuratiert.texturen, v.texture) }
-  const pfad = join(dirname(basis.tabelle), 'mobs-gesamt.json')
+  // Unterstrich statt Bindestrich: „mobs-gesamt.json“ neben „mobs.json“ hielt die Konfliktsuche für eine OneDrive-Kopie
+  const pfad = join(dirname(basis.tabelle), 'mobs_gesamt.json')
   await writeFile(pfad, JSON.stringify(tab))
+  await rm(join(dirname(basis.tabelle), 'mobs-gesamt.json'), { force: true })
   return { ...basis, tabelle: pfad, anzahl: Object.keys(tab).length - 1 }
 }
 
@@ -308,7 +363,7 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
     if (alt.tabelle && existsSync(alt.tabelle)) return alt as MobImport
     throw err
   }
-  if (alt.version === version && alt.tabelle && existsSync(alt.tabelle)) return alt as MobImport
+  if (alt.version === version && alt.format === IMPORT_FORMAT && alt.tabelle && existsSync(alt.tabelle)) return alt as MobImport
   o.onProgress?.(`Lade alle Mobs der neuesten Minecraft-Vorschau (${version}) …`)
   const ziel = join(lokal, 'mc', 'mobs', version)
   const baum = JSON.parse(await text(BAUM, fetcher)) as { tree: { path: string }[] }
@@ -322,6 +377,7 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
   }
   const geos = new Map<string, Geo>()
   for (const j of await parallel(liste(/^resource_pack\/models\/entity\/.*\.json$/), (p) => lade(p).catch(() => ({})))) for (const [k, v] of geometrienAus(j as Record<string, unknown>)) geos.set(k, v)
+  for (const [k, v] of Object.entries(EINGEBAUT)) if (!geos.has(k)) geos.set(k, v)
   const anims = new Map<string, Anim>()
   for (const j of await parallel(liste(/^resource_pack\/animations\/.*\.json$/), (p) => lade(p).catch(() => ({})))) for (const [k, v] of Object.entries((j as { animations?: Record<string, Anim> }).animations ?? {})) anims.set(k, v)
   const entities = await parallel(liste(/^resource_pack\/entity\/.*\.json$/), async (p) => ({ p, j: (await lade(p).catch(() => null)) as Record<string, unknown> | null }))
@@ -334,7 +390,8 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
     const key = String(d['identifier'] ?? '').replace(/^minecraft:/, '')
     if (!key || tabelle[key]) continue
     try {
-      const tex = (d['textures'] as Record<string, string> | undefined)?.['default'] ?? Object.values((d['textures'] as Record<string, string>) ?? {})[0]
+      const texturen = (d['textures'] as Record<string, string> | undefined) ?? {}
+      const tex = texturen[SONDERFAELLE[key]?.textur ?? 'default'] ?? texturen['default'] ?? Object.values(texturen)[0]
       const geoId = (d['geometry'] as Record<string, string> | undefined)?.['default'] ?? Object.values((d['geometry'] as Record<string, string>) ?? {})[0]
       if (!tex || !geoId) continue
       const geo = aufgeloest(geoId, geos)
@@ -369,7 +426,7 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
         if (t) for (const b of t.boxes) b.origin = [b.origin[0] + off[0], b.origin[1] + off[1], b.origin[2] + off[2]]
       }
       // unter den Boden ragende Teile anheben (Ghast-Tentakel, Enderman-Beine)
-      const unten = Math.min(0, ...parts.flatMap((x) => x.boxes.map((b) => b.origin[1])))
+      const unten = SONDERFAELLE[key]?.nichtAnheben ? 0 : Math.min(0, ...parts.flatMap((x) => x.boxes.map((b) => b.origin[1])))
       if (unten < 0)
         for (const x of parts) {
           x.pivot = [x.pivot[0], x.pivot[1] - unten, x.pivot[2]]
@@ -389,7 +446,7 @@ async function importiereMobs(lokal: string, o: { fetcher?: typeof fetch; onProg
   await mkdir(ziel, { recursive: true })
   const pfad = join(ziel, 'mobs.json')
   await writeFile(pfad, JSON.stringify(tabelle))
-  const ergebnis: MobImport = { version, tabelle: pfad, anzahl: Object.keys(tabelle).length - 1, fehler }
+  const ergebnis: MobImport = { version, format: IMPORT_FORMAT, tabelle: pfad, anzahl: Object.keys(tabelle).length - 1, fehler }
   await writeFile(merker, JSON.stringify(ergebnis, null, 1))
   return ergebnis
 }

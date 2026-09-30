@@ -66,11 +66,13 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    `bein_r`/`bein_l` {vor (90 = waagrecht nach vorn, z. B. Sitzen), seitlich, beugen (Knie)}. Winkel in Grad.
    Beispiele: Yoga-Baum = neutral + {"arm_r": {"heben": 170}, "arm_l": {"heben": 170}, "bein_l": {"seitlich": 40, "beugen": 100}} ·
    Sitzen = {"bein_r": {"vor": 90}, "bein_l": {"vor": 90}} mit `hoehe` 0.5 · Klettern = {"arm_r": {"heben": 160}, "arm_l": {"heben": 120}, "bein_l": {"vor": 60, "beugen": 70}}.
-11. **Gegenstände:** Alles, was kein Block ist (Boot, Bett, Angel, Eimer, Kuchen, Eier …), hält Philip als `item`
-   mit der Minecraft-ID (oak_boat, red_bed, fishing_rod, water_bucket, cake, sniffer_egg …). Worauf Philip steht
+11. **Gegenstände:** Alles, was kein Block ist (Bett, Angel, Eimer, Kuchen, Eier …), hält Philip als `item`
+   mit der Minecraft-ID (red_bed, fishing_rod, water_bucket, cake, sniffer_egg …). Worauf Philip steht
    oder was er trägt, baust du als Block. Zwei Felder je Figur helfen dabei:
    `"auf": "mob:0"` bzw. `"auf": "objekt:0"` stellt die Figur mittig auf einen Mob oder ein Objekt (Handstand auf dem Creeper,
-   Yoga auf dem Heuballen, im Boot aus Blöcken) – MoinStudio rechnet die Höhe selbst aus, `position` ist dann egal.
+   Yoga auf dem Heuballen) – MoinStudio rechnet die Höhe selbst aus, `position` ist dann egal.
+   **Boot** = Mob `boat` (das echte Boot mit Rudern) auf dem Wasser, Philip mit `"auf": "mob:N"`, `hoehe` −0.3 und Sitzpose;
+   Boot und Philip bekommen denselben `blick` (er sitzt in Fahrtrichtung).
    **Reiten** (Pferd, Kamel, Schreiter, Schwein …) = `"auf": "mob:N"` plus Sitzpose per `posen_korrektur`
    ({"bein_r": {"vor": 70, "seitlich": 25}, "bein_l": {"vor": 70, "seitlich": 25}}); der Mob steht dann nah vorn im Bild.
    `"kopf": "carved_pumpkin"` setzt einen Block auf den Kopf (Kürbis-Verkleidung, Block-Helm); das Gesicht zeigt nach vorn.
@@ -113,7 +115,9 @@ Antworte nur mit JSON nach dem vorgegebenen Schema. Jede `szene` hat dieses Form
 
 Die Figuren-`id`s müssen genau die oben genannten sein. Skins trägt MoinStudio selbst ein, gib keine Pfade an.
 `kamera.thema` ist die `id` einer Figur, ein Mob als `"mob:0"` (Index in `mobs`, die Kamera zielt auf seine echte Mitte –
-bei großen oder schwebenden Mobs wie Ghast, Riesenspinne oder Warden immer so) oder ein Punkt `[x, y, z]`.
+bei großen oder schwebenden Mobs wie Ghast, Riesenspinne oder Warden immer so), ein Objekt als `"objekt:0"`
+(Index in `objekte`, z. B. der Diamantblock, auf den Philip zeigt) oder ein Punkt `[x, y, z]`. Objekte, um die es in der
+Beschreibung geht, bekommen `"wichtig": true` – dann prüft MoinStudio, dass sie ganz im Bild sind; Deko darf angeschnitten sein.
 Große Mobs (`groesse` 3–10) brauchen Abstand: stelle sie 8–20 Blöcke nach hinten, sonst passen sie nicht ins Bild.
 Schwebende Mobs (Ghast, Phantom, Blaze) bekommen `hoehe` 3–8.
 Verbindungen (`"verbindungen": [{"von": …, "zu": …, "art": …}]` auf oberster Ebene der Szene) zeichnen etwas zwischen zwei

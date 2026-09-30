@@ -105,6 +105,10 @@ describe('OneDrive-Konflikte', () => {
     await mkdir(join(dir, 'projects', 'p1'), { recursive: true })
     await writeFile(join(dir, 'projects', 'p1', 'project.json'), '{}')
     await writeFile(join(dir, 'projects', 'p1', 'project-PC-2.json'), '{}')
+    // Fehlalarm aus der App (30.09.): eigene Cache-Dateien im Ordner „mc“ sind keine OneDrive-Kopien
+    await mkdir(join(dir, 'mc', 'mobs', '1.26.60.28'), { recursive: true })
+    await writeFile(join(dir, 'mc', 'mobs', '1.26.60.28', 'mobs.json'), '{}')
+    await writeFile(join(dir, 'mc', 'mobs', '1.26.60.28', 'mobs-gesamt.json'), '{}')
     const conflicts = await findSyncConflicts(dir)
     expect(conflicts.map((c) => c.copy.replace(/\\/g, '/'))).toEqual([
       'planning/cards/A-LAPTOP.json',

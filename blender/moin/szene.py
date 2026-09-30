@@ -177,12 +177,12 @@ def _auf_den_boden(scene, fig, hoehe=None):
     bpy.context.view_layer.update()
 
 
-def _riesen_zurueck(haupt, mobs, thema):
+def _riesen_zurueck(haupt, mobs, thema, getragen=frozenset()):
     """Riesige Mobs (Ghast, 10-fache Mobs) passen nur ins Bild, wenn sie weit genug hinten stehen – wie die
     Riesenspinne bei Paluten. Ist ein Mob das Kamera-Thema und höher als 60 % seines Abstands zur Hauptfigur, wird er
     auf der Linie Figur → Mob nach hinten geschoben, bis es passt."""
     for i, (m, mob) in enumerate(mobs):
-        if not (thema == f"mob:{i}" or thema == m["art"]):
+        if not (thema == f"mob:{i}" or thema == m["art"]) or f"mob:{i}" in getragen or m["art"] in getragen:
             continue
         bpy.context.view_layer.update()
         punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
@@ -312,6 +312,15 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
         if not xs:  # Entity ohne Geometrie (z. B. fireball): nicht messbar, aber kein Absturz
             continue
         info["mobs"].append({"art": m["art"], "box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]})
+    # Objekte, um die es geht (Kamera-Thema oder „wichtig“), müssen im Bild sein – Deko darf angeschnitten sein
+    info["objekte"] = []
+    thema = szene.get("kamera", {}).get("thema")
+    for i, o in enumerate(szene.get("objekte") or []):
+        ob = bpy.data.objects.get(f"objekt{i}")
+        if not ob or not (o.get("wichtig") or thema == f"objekt:{i}"):
+            continue
+        xs = [_bildpunkt(scene, cam, ob.matrix_world @ Vector(c)) for c in ob.bound_box]
+        info["objekte"].append({"nr": i, "block": o.get("block"), "box": [min(p[0] for p in xs), min(p[1] for p in xs), max(p[0] for p in xs), max(p[1] for p in xs)]})
     for fid, ob in gehalten.items():
         pts = [ob.matrix_world @ v.co for v in ob.data.vertices]
         xs = [_bildpunkt(scene, cam, p) for p in pts[:: max(1, len(pts) // 60)]]
@@ -364,6 +373,9 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
         elif sichtbar < 0.12 and (b[0] < 0 or b[2] > 1 or b[1] < 0 or b[3] > 1):
             # kleine Mobs gehören ganz ins Bild (Riesenmobs dürfen angeschnitten sein wie bei den Vorbildern)
             warnungen.append(f"Mob {m['art']} am Bildrand angeschnitten – weiter zur Mitte oder näher an Philip stellen")
+    for o in info["objekte"]:
+        if _im_bild(o["box"]) < 0.8 or o["box"][0] < 0 or o["box"][2] > 1:
+            warnungen.append(f"Objekt {o['block']} (objekt:{o['nr']}) nicht ganz im Bild ({int(_im_bild(o['box']) * 100)} %) – näher an Philip und zur Bildmitte")
     if fehler > 0.1:
         warnungen.append(f"Kamera trifft das Stilbuch nicht (Abweichung {fehler:.2f}) – Thema näher an die Figur legen")
     info["warnungen"] = warnungen
@@ -432,7 +444,9 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             _auf_etwas(fig, f["auf"], mobs, f.get("hoehe") or 0)
 
     k = szene.get("kamera", {})
-    _riesen_zurueck(haupt, mobs, k.get("thema"))
+    # Mobs, auf denen jemand steht, sitzt oder reitet, bleiben unter der Figur
+    getragen = {f.get("auf") for f, _ in figuren if isinstance(f.get("auf"), str)}
+    _riesen_zurueck(haupt, mobs, k.get("thema"), getragen)
     cam_data = bpy.data.cameras.new("kamera")
     cam = bpy.data.objects.new("kamera", cam_data)
     scene.collection.objects.link(cam)
@@ -445,8 +459,14 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         mob = mobs[int(t[4:])][1] if t.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == t)
         punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
         thema = sum(punkte, Vector()) / len(punkte)
+    elif isinstance(t, str) and t.startswith("objekt:") and bpy.data.objects.get(f"objekt{t[7:]}"):
+        # Thema ist ein Objekt (Diamantblock, TNT …): seine Mitte
+        bpy.context.view_layer.update()
+        ob = bpy.data.objects[f"objekt{t[7:]}"]
+        punkte = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+        thema = sum(punkte, Vector()) / len(punkte)
     elif isinstance(t, str):  # Thema ist eine Figur (Gegner): ihr Kopf
-        thema = next(fig for f, fig in figuren if f["id"] == t).kopf_mitte()
+        thema = next((fig for f, fig in figuren if f["id"] == t), haupt).kopf_mitte()
     else:
         thema = Vector([c * BLOCK for c in t])
     kante = szene.get("welt", {}).get("kante", 0)
@@ -755,6 +775,8 @@ def _verbindungen_bauen(szene, figuren, mobs, gehalten, texturen):
 def _auf_etwas(fig, ziel, mobs, hoehe=0.0):
     """Stellt die Figur mittig auf einen Mob („mob:0“ oder Mob-Art) oder ein Objekt („objekt:0“); der tiefste Punkt der
     Figur (Füße, beim Handstand die Hände/der Kopf) liegt auf dessen Oberseite."""
+    # erst aktualisieren: sonst stehen frisch platzierte Mobs und Objekte für matrix_world noch im Ursprung
+    bpy.context.view_layer.update()
     punkte = []
     if isinstance(ziel, str) and ziel.startswith("objekt:"):
         ob = bpy.data.objects.get(f"objekt{int(ziel[7:])}")

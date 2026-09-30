@@ -139,6 +139,28 @@ def dunst_einbauen(mat):
     nt.links.new(mix.outputs[0], out.inputs["Surface"])
 
 
+def _rgba_im_speicher(img, pfad):
+    """Graustufen-PNGs mit Alpha (Farbtyp 4, z. B. weißes Buntglas) liest Cycles selbst von der Platte und verliert
+    dabei die Transparenz – der Block wird undurchsichtig weiß. Solche Texturen gehen als RGBA-Puffer aus Blenders
+    Speicher in den Render (Blender hat sie beim Laden schon richtig nach RGBA gewandelt)."""
+    try:
+        with open(pfad, "rb") as fh:
+            kopf = fh.read(26)
+    except OSError:
+        return img
+    if len(kopf) < 26 or kopf[1:4] != b"PNG" or kopf[25] != 4:
+        return img
+    name = f"{img.name}.rgba"
+    kopie = bpy.data.images.get(name)
+    if kopie is None:
+        w, h = img.size
+        kopie = bpy.data.images.new(name, w, h, alpha=True)
+        kopie.alpha_mode = "STRAIGHT"
+        kopie.pixels.foreach_set(list(img.pixels))
+        kopie.pack()
+    return kopie
+
+
 class Texturen:
     """Lädt Blocktexturen aus der entpackten Spieldatei und baut Materialien (einmal je Textur/Einfärbung)."""
 
@@ -152,7 +174,7 @@ class Texturen:
             raise FileNotFoundError(f"Textur {name} fehlt in der Spieldatei ({pfad})")
         img = bpy.data.images.load(pfad, check_existing=True)
         img.alpha_mode = "STRAIGHT"
-        return img
+        return _rgba_im_speicher(img, pfad)
 
     def material(self, name, farbe=None, overlay=None, durchsichtig=False, leuchtet=0.0):
         key = (name, farbe, overlay, durchsichtig, leuchtet)
@@ -198,6 +220,16 @@ class Texturen:
             nt.links.new(farbe_out, _rgba(mix, "A"))
             nt.links.new(_rgba(tint, "Result"), _rgba(mix, "B"))
             farbe_out = _rgba(mix, "Result")
+        if durchsichtig and not leuchtet:
+            # reines Weiß (weißes Buntglas) übersteuert in der Sonne und wirkt dann undurchsichtig und leuchtend:
+            # Grundfarbe durchsichtiger Blöcke auf 80 % begrenzen, wie echtes Glas, das nie alles zurückwirft
+            daempfen = nt.nodes.new("ShaderNodeMix")
+            daempfen.data_type = "RGBA"
+            daempfen.blend_type = "MULTIPLY"
+            daempfen.inputs[0].default_value = 1.0
+            nt.links.new(farbe_out, _rgba(daempfen, "A"))
+            _rgba(daempfen, "B").default_value = (0.8, 0.8, 0.8, 1)
+            farbe_out = _rgba(daempfen, "Result")
         nt.links.new(farbe_out, bsdf.inputs["Base Color"])
         if durchsichtig:
             nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])

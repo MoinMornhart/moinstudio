@@ -59,6 +59,8 @@ export interface SyncConflict {
 }
 
 const SYNCED_EXT = /\.(json|yaml|yml)$/i
+/** Ordner, die MoinStudio nur herunterlädt oder zwischenspeichert – dort gibt es keine echten Konfliktkopien */
+const NICHT_SYNCHRON = new Set(['mc', 'node_modules', '.cache'])
 
 /**
  * Welche Datei ist das Original einer Konfliktkopie? OneDrive hängt „-GERÄTENAME“ (evtl. mit
@@ -95,7 +97,8 @@ export async function findSyncConflicts(dir: string, maxDepth = 4): Promise<Sync
       const info = await stat(full).catch(() => null)
       if (!info) continue
       if (info.isDirectory()) {
-        if (depth < maxDepth) await walk(full, depth + 1)
+        // Downloads und Caches (Minecraft-Daten, Mob-Import) werden nie auf zwei Geräten bearbeitet
+        if (depth < maxDepth && !NICHT_SYNCHRON.has(name)) await walk(full, depth + 1)
       } else {
         files.add(name)
       }
