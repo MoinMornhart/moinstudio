@@ -511,7 +511,7 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
         mitte = sum(punkte, Vector()) / len(punkte)
         groesse = max((p - mitte).length for p in punkte)
-        for nr, (richtung, energie, farbe) in enumerate(((cam.matrix_world.translation - mitte, 150, (1.0, 1.0, 1.0)), (mitte - cam.matrix_world.translation, 3000, variante.get("rand", (1, 1, 1))))):
+        for nr, (richtung, energie, farbe) in enumerate(((cam.matrix_world.translation - mitte, 600, (1.0, 1.0, 1.0)), (mitte - cam.matrix_world.translation, 3000, variante.get("rand", (1, 1, 1))))):
             l = bpy.data.lights.new(f"mob_licht{nr}", "AREA")
             l.energy = energie * max(1.0, groesse / 3) ** 2
             l.size = max(2.0, groesse)

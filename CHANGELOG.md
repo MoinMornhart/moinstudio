@@ -6,6 +6,14 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Behoben
+
+- Thumbnail: stärkeres Fülllicht für Themen-Mobs in dunklen Szenen (z. B. Warden in der Nacht).
+
+### Dokumentation
+
+- Freiform-Test mit 50 ungewöhnlichen Beschreibungen aus Philips Inhalten durch den echten Thumbnail-Auftrag: 28 gut, 21 mittel, 1 schwach, kein Abbruch; alle gefundenen Fehler und ihre Behebung in `docs/tests/freeform-poses.md`.
+
 ## [0.29.5] - 2026-09-30
 
 > Thumbnail: Gesten und Positionen
