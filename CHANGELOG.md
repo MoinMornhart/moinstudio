@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-30
+
+> Schnitt: Wünsche und Effektliste
+
 ### Added
 
 - Schnitt: Feld „Was soll passieren?“ – freie Wünsche wie „mach mir ein geiles Intro“ oder „Zeitlupe, wenn der Creeper explodiert“ setzt Claude mit den Effekt-Bausteinen um, danach entsteht die Vorschau von selbst (ROADMAP E.4).
