@@ -9,7 +9,10 @@ import os
 import random
 import zlib
 
-import bpy
+try:  # Blender; außerhalb (Text-Bilder für den Schnitt, ROADMAP E.2) reicht Pillow
+    import bpy
+except ImportError:
+    bpy = None
 import numpy as np
 
 FARBEN = {
@@ -26,6 +29,10 @@ PLAETZE = ["oben_mitte", "oben_rechts", "oben_links", "unten_rechts", "unten_lin
 
 
 def _bild_array(pfad):
+    if bpy is None:
+        from PIL import Image
+
+        return np.asarray(Image.open(pfad).convert("RGBA"), dtype=np.float32) / 255.0, None
     img = bpy.data.images.load(pfad, check_existing=True)
     w, h = img.size
     a = np.array(img.pixels[:], dtype=np.float32).reshape(h, w, 4)

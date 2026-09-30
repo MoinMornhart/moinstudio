@@ -1,5 +1,6 @@
 import type { Abschnitt } from './transkript'
 import type { Bereich, Schnittliste } from './rohschnitt'
+import { effektGraph, type Effekt, type EffektGraph } from './effekte'
 
 /**
  * Rendern des Schnitts (ROADMAP 6.6/6.7) in einem FFmpeg-Durchgang: behaltene Stellen auswählen (select/aselect),
@@ -54,8 +55,13 @@ export interface UntertitelWort {
 }
 
 /** Behaltene Wörter zu kurzen, gut lesbaren Einblendungen gruppiert (für ASS zum Einbrennen und SRT für Premiere). */
-export function untertitelGruppen(abschnitte: Abschnitt[], liste: Schnittliste, maxWoerter: number): { woerter: UntertitelWort[]; start: number; ende: number }[] {
-  const { imSchnitt } = zeitAbbildung(liste.behalten)
+export function untertitelGruppen(abschnitte: Abschnitt[], liste: Schnittliste, maxWoerter: number, endzeit: (t: number) => number = (t) => t): { woerter: UntertitelWort[]; start: number; ende: number }[] {
+  const abb = zeitAbbildung(liste.behalten)
+  // Schnittzeit, bei Effekten (Zeitlupe, Standbild) weiter auf die Endzeit umgerechnet
+  const imSchnitt = (t: number): number | null => {
+    const s = abb.imSchnitt(t)
+    return s === null ? null : endzeit(s)
+  }
   const woerter = abschnitte
     .flatMap((a) => a.woerter)
     .map((w) => ({ wort: w.wort, a: imSchnitt((w.start + w.ende) / 2) === null ? null : imSchnitt(w.start) ?? imSchnitt((w.start + w.ende) / 2)!, b: imSchnitt(w.ende) }))
@@ -80,8 +86,8 @@ export function untertitelGruppen(abschnitte: Abschnitt[], liste: Schnittliste, 
 }
 
 /** Untertitel aus den Wortzeiten, nur für behaltene Wörter, kurze gut lesbare Einblendungen. */
-export function untertitelAss(abschnitte: Abschnitt[], liste: Schnittliste, stil: UntertitelStil): string {
-  const gruppen = untertitelGruppen(abschnitte, liste, stil.woerter)
+export function untertitelAss(abschnitte: Abschnitt[], liste: Schnittliste, stil: UntertitelStil, endzeit?: (t: number) => number): string {
+  const gruppen = untertitelGruppen(abschnitte, liste, stil.woerter, endzeit)
   const groesse = Math.round(stil.hoehe * 0.058)
   const kopf = `[Script Info]
 ScriptType: v4.00+
@@ -152,6 +158,18 @@ export interface RenderOptionen {
   /** Video-Encoder-Argumente (z. B. libx264 -preset … oder h264_nvenc …) */
   encoder: string[]
   ausgabe: string
+  /** Effekte (ROADMAP E.2) mit fertigen Text-Bildern und Geräuschen; Zeiten im geschnittenen Video */
+  effekte?: { liste: Effekt[]; textBilder: Record<number, { datei: string; breite: number; hoehe: number }>; klaenge: Record<string, string> }
+  /** Mit Effekten: Schnittzeit → Endzeit und Länge des fertigen Videos */
+  endzeit?: (t: number) => number
+  laengeEnde?: number
+}
+
+/** Effektteil des Graphen (nur ohne Hochformat): gleiche Eingaben für filterGraph und renderArgs */
+function effektTeil(o: RenderOptionen): EffektGraph | null {
+  if (!o.effekte?.liste.length || o.hoch) return null
+  const laenge = o.liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
+  return effektGraph({ effekte: o.effekte.liste, laenge, breite: o.breite, hoehe: o.hoehe, fps: o.fps, audio: o.audio, autoZooms: o.zooms, textBilder: o.effekte.textBilder, klaenge: o.effekte.klaenge, untertitel: o.untertitel })
 }
 
 const zahl = (x: number): string => x.toFixed(3)
@@ -164,6 +182,12 @@ export function filterGraph(o: RenderOptionen): string {
     : ''
   const ende = `${o.untertitel ? `,subtitles=${o.untertitel}` : ''},format=yuv420p[v]`
   const basis = `[0:v]select='${auswahl}',setpts=N/FRAME_RATE/TB,fps=${o.fps}`
+  const eff = effektTeil(o)
+  if (eff) {
+    // Schnitt als [vc]/[ac], danach die Effektkette (Zooms und Untertitel laufen dort mit)
+    const ton = o.audio ? `;[0:a]aselect='${auswahl}',asetpts=N/SR/TB[ac]` : ''
+    return `${basis},scale=${o.breite}:${o.hoehe}:force_original_aspect_ratio=increase,crop=${o.breite}:${o.hoehe},setsar=1[vc]${ton};\n${eff.graph}`
+  }
   let video: string
   if (o.hoch?.cam) {
     // Short: Facecam oben (ein Drittel), Gameplay mittig darunter
@@ -178,5 +202,6 @@ export function filterGraph(o: RenderOptionen): string {
 }
 
 export function renderArgs(o: RenderOptionen, graphDatei: string): string[] {
-  return ['-i', o.quelle, '-/filter_complex', graphDatei, '-map', '[v]', ...(o.audio ? ['-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'] : []), ...o.encoder, '-movflags', '+faststart', o.ausgabe]
+  const eingaben = (effektTeil(o)?.eingaben ?? []).flatMap((e) => [...e.vor, '-i', e.datei])
+  return ['-i', o.quelle, ...eingaben, '-/filter_complex', graphDatei, '-map', '[v]', ...(o.audio ? ['-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'] : []), ...o.encoder, '-movflags', '+faststart', o.ausgabe]
 }

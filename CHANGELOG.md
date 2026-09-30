@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Schnitt: Effekt-Bausteine für Vorschau und Export: Zeitlupe und Zeitraffer, Standbild, Zoom auf einen Punkt, Wackeln, Farbe (Töne, Schwarzweiß), Blitz, Übergang, Text in Minecraft-Schrift, Bild, Geräusch, Zensur mit Piep und Lautstärke. Geräusche werden lizenzfrei selbst erzeugt. Untertitel, Zooms und Kapitel passen sich an Zeitlupe und Standbild an (ROADMAP E.2).
+
 ## [0.29.8] - 2026-09-30
 
 > Plan: Effekte per Sprache

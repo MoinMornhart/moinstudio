@@ -8,6 +8,7 @@ import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
 import { filterGraph, renderArgs, zeitAbbildung } from './render'
 import { liesAbschnitte } from './transkript'
 import { renderPlan } from './vorschau'
+import type { EffektHilfe } from './effekt-vorbereitung'
 
 /**
  * Export für YouTube (ROADMAP 6.7): volle Qualität aus dem Original, nach YouTubes Upload-Empfehlung (H.264 High,
@@ -151,6 +152,8 @@ export interface ExportPayload {
   ffprobe: string
   encoder: string
   claudeCli: string | null
+  /** Effekte (ROADMAP E.2); fehlt bei alten Aufträgen */
+  hilfe?: EffektHilfe
 }
 
 export interface ExportErgebnis {
@@ -179,8 +182,14 @@ export async function exportJob(p: ExportPayload, ctx: JobContext<{ claudeSessio
   if (!pr?.quelle || !pr.rohschnitt) throw new Error('Erst Import und Rohschnitt abwarten.')
   const ordner = projektOrdner(p.daten, p.projekt)
   const ziel = zielFormat(pr.quelle.breite, pr.quelle.hoehe, pr.quelle.fps)
-  const plan = await renderPlan(p.daten, pr, { quelle: pr.quelle.pfad, ...ziel, encoder: encoderArgs(p.encoder, ziel.hoehe, ziel.fps), ausgabe: 'export.mp4', untertitelDatei: 'export.ass' })
-  const { imSchnitt, laenge } = zeitAbbildung(plan.liste.behalten)
+  const plan = await renderPlan(p.daten, pr, { quelle: pr.quelle.pfad, ...ziel, encoder: encoderArgs(p.encoder, ziel.hoehe, ziel.fps), ausgabe: 'export.mp4', untertitelDatei: 'export.ass' }, p.hilfe)
+  const abb = zeitAbbildung(plan.liste.behalten)
+  // Mit Effekten (Zeitlupe, Standbild) verschieben sich alle Zeiten: Kapitel gelten für das fertige Video
+  const imSchnitt = (t: number): number | null => {
+    const s = abb.imSchnitt(t)
+    return s === null ? null : (plan.endzeit ?? ((x: number) => x))(s)
+  }
+  const laenge = plan.laengeEnde ?? abb.laenge
 
   // Kapitel, Titel und Beschreibung (Zeiten im geschnittenen Video)
   let text = { titel: [pr.name, pr.name, pr.name], beschreibung: '', kapitel: [] as Kapitel[] }

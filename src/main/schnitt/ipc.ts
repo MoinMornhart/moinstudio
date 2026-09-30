@@ -23,6 +23,7 @@ import { readdir } from 'node:fs/promises'
 import { copyFile } from 'node:fs/promises'
 import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
+import type { EffektHilfe } from './effekt-vorbereitung'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
 
 /** Schnitt-Reiter (ROADMAP 6.x): Projekte, Import, Vorschau. */
@@ -35,6 +36,9 @@ async function datenOrdner(settings: SettingsStore): Promise<string> {
 }
 
 export const VIDEO_ENDUNGEN = ['mp4', 'mkv', 'mov', 'avi', 'webm', 'flv', 'ts']
+
+/** Pfade für Effekte (ROADMAP E.2): Python für Texte in Minecraft-Schrift, Ordner für Geräusche */
+const effektHilfe = (ffmpeg: string): EffektHilfe => ({ ffmpeg, python: join(localRoot(), 'py', 'vorlage', 'Scripts', 'python.exe'), textSkript: join(resourceDir('blender'), 'text_bild.py'), lokal: localRoot() })
 
 export function registerSchnittIpc(
   queue: JobQueue,
@@ -199,7 +203,7 @@ export function registerSchnittIpc(
     if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
     const p = await ladeProjekt(daten, String(id))
     if (!p) throw new Error('Projekt nicht gefunden.')
-    const payload: VorschauPayload = { daten, projekt: p.id, ffmpeg }
+    const payload: VorschauPayload = { daten, projekt: p.id, ffmpeg, hilfe: effektHilfe(ffmpeg) }
     const auftrag = await queue.enqueue('schnitt-vorschau', `Schnitt: ${p.name} Vorschau`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
@@ -212,7 +216,7 @@ export function registerSchnittIpc(
     const p = await ladeProjekt(daten, String(id))
     if (!p) throw new Error('Projekt nicht gefunden.')
     const profile = await hardware.profiles.load()
-    const payload: ExportPayload = { daten, projekt: p.id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe'), encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', claudeCli: await findClaudeCli() }
+    const payload: ExportPayload = { daten, projekt: p.id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe'), encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', claudeCli: await findClaudeCli(), hilfe: effektHilfe(ffmpeg) }
     const auftrag = await queue.enqueue('schnitt-export', `Schnitt: ${p.name} exportieren`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
