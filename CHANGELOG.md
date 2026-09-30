@@ -6,9 +6,14 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Security
+
+- vitest 5.0 behebt zwei gemeldete Lücken (GHSA-5xrq-8626-4rwp kritisch, GHSA-82fw-gwwq-j7x9 mittel); npm audit: 0 Schwachstellen.
+
 ### Changed
 
-- Thumbnail: Mobs wie bei BastiGHG, GommeHD und Paluten (Vergleich mit 56 Vorbildern): Ein Thema-Mob, der zu weit weg steht, rückt neben Philip; kleine Mobs werden fürs Bild vergrößert; neuer Kamera-Modus „mob“ (Figur halbnah, Mob groß daneben) statt Riesenkopf; ist der Mob zu klein im Bild, korrigiert die Selbstprüfung.
+- Abhängigkeiten aktualisiert: @types/node 26, MCP-SDK 2.2, eslint-plugin-react-hooks 7.1, typescript-eslint 8.71, @eslint/js 10.0.1, koffi 3.3.2. Zurückgestellt: vite 8 und @vitejs/plugin-react 6 (electron-vite 5 unterstützt nur vite bis 7), TypeScript 7 (typescript-eslint unterstützt nur bis 6.0).
+- Thumbnail: Mobs wie bei BastiGHG, GommeHD und Paluten (Vergleich mit 56 Vorbildern): Ein Thema-Mob rückt fast auf gleicher Tiefe neben Philip; kleine Mobs werden fürs Bild vergrößert; neuer Kamera-Modus „mob“ (Figur halbnah, Mob groß daneben); nachts brennen weiße Mobs nicht mehr aus; ist der Mob zu klein im Bild, korrigiert die Selbstprüfung.
 - Thumbnail: neue Posen nach Bastis Bildern – kriechen (Bauchlage, Kopf groß vorn), zur_kamera (Gegenstand mit beiden Armen zur Kamera), hervorlugen.
 
 ## [0.35.1] - 2026-09-30
