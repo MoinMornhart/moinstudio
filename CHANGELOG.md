@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-09-30
+
+> Logos, Spiele-Vorlage für alles, Namen
+
 ### Added
 
 - Neuer Reiter „Logo“: Logos aus einer Beschreibung erstellen (Kanal-, Serien- oder Server-Logo). Claude plant, Blender baut sie aus echten Minecraft-Dateien – Minecraft-Schrift, Blocktexturen, Items, Mob-Köpfe oder dein eigener Kopf – als flache Blockschrift oder echten 3D-Blocktext, immer mit transparentem Hintergrund. Änderungen in Worten stehen als Verlauf darunter wie beim Thumbnail.
