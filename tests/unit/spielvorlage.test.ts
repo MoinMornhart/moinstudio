@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analysePrompt, begrenzeWinkel, besterTreffer, groesserBeiLuecke, freundePlaetze, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
+import { analysePrompt, begrenzeWinkel, besterTreffer, ersatzSuchwort, groesserBeiLuecke, freundePlaetze, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
 
 describe('Spiele-Vorlage', () => {
   it('findet das passende Poly-Haven-Modell zum Suchwort', () => {
@@ -85,5 +85,21 @@ describe('Spiele-Vorlage: mehrere Personen, Verbindungen, Schlussprüfung', () =
     expect(p).toContain('bein_r/bein_l')
     expect(p).toContain('verbindungen')
     expect(p).toContain('box: [x0, y0, x1, y1] Kasten um die GANZE Person')
+  })
+})
+
+describe('Spiele-Vorlage: Ersatz und Blick', () => {
+  it('findet verwandte Modelle, wenn es das genaue nicht gibt', () => {
+    expect(ersatzSuchwort('shotgun')).toBe('rifle')
+    expect(ersatzSuchwort('Revolver')).toBe('pistol')
+    expect(ersatzSuchwort('battle axe')).toBe('axe')
+    expect(ersatzSuchwort('magic wand')).toBeNull()
+  })
+
+  it('begrenzt den Blick der Schlussprüfung auf −90 bis 90 Grad', () => {
+    const spec: Record<string, unknown> = { ansicht: 'hinten', blick: 20, freunde: [{ blick: 0 }] }
+    korrigiere(spec, { blick: 160, freunde: [{ blick: -170 }] })
+    expect(spec['blick']).toBe(90)
+    expect((spec['freunde'] as Record<string, unknown>[])[0]!['blick']).toBe(-90)
   })
 })

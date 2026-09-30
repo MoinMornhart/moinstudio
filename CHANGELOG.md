@@ -6,6 +6,12 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Spiele-Vorlage: Gibt es das gehaltene Ding nicht als freies 3D-Modell, nimmt MoinStudio ein ähnliches (Gewehr statt Schrotflinte, Pistole statt Revolver) statt leerer Hände.
+- Spiele-Vorlage: Die Schlussprüfung kann eine Rückansicht nicht mehr versehentlich in eine Frontansicht drehen.
+- Release-Skript: Zusammengeführte Zweige bringen das Hochladen nicht mehr durcheinander.
+
 ## [0.38.0] - 2026-09-30
 
 > Logos, Spiele-Vorlage für alles, Namen

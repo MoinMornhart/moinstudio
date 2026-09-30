@@ -70,7 +70,11 @@ git('tag', '-a', `v${version}`, '-m', `v${version}`)
 console.log(`Commit und Tag v${version} erstellt.`)
 
 if (!flag('--no-push')) {
-  git('pull', '-q', '--rebase', 'origin', 'main')
+  // Nur holen, wenn GitHub wirklich neue Commits hat; Merge-Commits dabei erhalten (ein einfaches --rebase
+  // reiht zusammengeführte Zweige neu auf und scheitert an deren längst gelösten Konflikten, 30.09.)
+  git('fetch', '-q', 'origin', 'main')
+  const neu = execFileSync('git', ['rev-list', '--count', 'HEAD..origin/main'], { encoding: 'utf8' }).trim()
+  if (neu !== '0') git('pull', '-q', '--rebase=merges', 'origin', 'main')
   // Nach einem Rebase zeigt der Tag evtl. auf den alten Commit – neu setzen.
   git('tag', '-f', '-a', `v${version}`, '-m', `v${version}`, 'HEAD')
   execFileSync('git', ['push', '-q', 'origin', 'main', `v${version}`], { stdio: 'inherit' })

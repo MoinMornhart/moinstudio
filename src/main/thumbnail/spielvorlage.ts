@@ -177,9 +177,31 @@ export function besterTreffer(assets: Record<string, { name?: string; tags?: str
 }
 
 /** Lädt ein Poly-Haven-Modell (glTF 1k mit Texturen) in den Datenordner und trägt die Lizenz ins Log ein. */
+/**
+ * Verwandte Suchwörter, wenn es das genaue Modell bei Poly Haven nicht gibt (Test 30.09.: Red Dead ohne Schrotflinte).
+ * Lieber ein ähnliches Ding in der Hand als leere Hände in einer Halte-Pose.
+ */
+const ERSATZ: [RegExp, string][] = [
+  [/shotgun|rifle|musket|sniper|flinte|gewehr|machine ?gun|smg|assault/i, 'rifle'],
+  [/revolver|handgun|colt|gun|pistole|blaster/i, 'pistol'],
+  [/battle ?axe|streitaxt|axe|axt/i, 'axe'],
+  [/katana|blade|saber|sabre|schwert|sword|longsword/i, 'sword'],
+  [/dagger|knife|messer|dolch/i, 'dagger'],
+  [/hammer|mallet|sledge/i, 'hammer'],
+  [/flashlight|torch|taschenlampe|lamp/i, 'flashlight'],
+  [/lantern|laterne/i, 'lantern'],
+  [/shield|schild/i, 'shield'],
+  [/mace|club|keule/i, 'mace']
+]
+
+export function ersatzSuchwort(suchwort: string): string | null {
+  return ERSATZ.find(([muster]) => muster.test(suchwort))?.[1] ?? null
+}
+
 export async function ladeRequisit(suchwort: string, props: string): Promise<string | null> {
   const liste = (await (await fetch('https://api.polyhaven.com/assets?t=models')).json()) as Record<string, { name?: string; tags?: string[]; categories?: string[] }>
-  const id = besterTreffer(liste, suchwort)
+  const ersatz = ersatzSuchwort(suchwort)
+  const id = besterTreffer(liste, suchwort) ?? (ersatz ? besterTreffer(liste, ersatz) : null)
   if (!id) return null
   const ordner = join(props, id)
   const dateien = (await (await fetch(`https://api.polyhaven.com/files/${id}`)).json()) as { gltf?: Record<string, { gltf?: { url: string; include?: Record<string, { url: string }> } }> }
@@ -273,6 +295,10 @@ const KORRIGIERBAR_FREUND = ['kopf', 'kopf_anteil', 'pose', 'blick', 'ansicht']
 export function korrigiere(spec: Record<string, unknown>, k: Record<string, unknown>): void {
   for (const feld of KORRIGIERBAR) if (feld in k && k[feld] !== undefined) spec[feld] = feld === 'pose' && k[feld] && typeof k[feld] === 'object' ? begrenzeWinkel(k[feld] as Record<string, unknown>) : k[feld]
   if (typeof spec['kopf_anteil'] === 'number') spec['kopf_anteil'] = Math.min(0.7, Math.max(0.08, spec['kopf_anteil']))
+  // blick 160 sollte „vom Betrachter weg“ heißen, ergab mit ansicht hinten aber eine fast frontale Figur (Test Hogwarts)
+  const blickBegrenzen = (x: Record<string, unknown>): void => {
+    if (typeof x['blick'] === 'number') x['blick'] = Math.max(-90, Math.min(90, x['blick']))
+  }
   if (Array.isArray(k['freunde']) && Array.isArray(spec['freunde'])) {
     const freunde = spec['freunde'] as Record<string, unknown>[]
     ;(k['freunde'] as (Record<string, unknown> | null)[]).forEach((fk, i) => {
@@ -280,6 +306,8 @@ export function korrigiere(spec: Record<string, unknown>, k: Record<string, unkn
       for (const feld of KORRIGIERBAR_FREUND) if (feld in fk && fk[feld] !== undefined) freunde[i]![feld] = feld === 'pose' && fk[feld] && typeof fk[feld] === 'object' ? begrenzeWinkel(fk[feld] as Record<string, unknown>) : fk[feld]
     })
   }
+  blickBegrenzen(spec)
+  if (Array.isArray(spec['freunde'])) (spec['freunde'] as Record<string, unknown>[]).forEach(blickBegrenzen)
 }
 
 export function pruefPrompt(vorlage: string, ergebnis: string, spec: Record<string, unknown>, wunsch?: string): string {
@@ -302,7 +330,8 @@ Sieh dir beide Bilder an und prüfe streng, ob das Ergebnis dem Original entspri
 
 Die Szene (Bildkoordinaten 0–1, oben links = 0,0; pose = Posen-Name oder Winkel arm_r/arm_l {heben, seitlich, drehen,
 beugen}, bein_r/bein_l {vor, seitlich, beugen}, koerper {drehen, vor, neigen}, kopf {drehen, nicken, neigen}, kippen,
-kippen_seite; blick = Körperdrehung in Grad, positiv = zur rechten Bildseite; kopf_anteil = Kopfhöhe als Anteil der
+kippen_seite; blick = Körperdrehung in Grad von −90 bis 90, positiv = zur rechten Bildseite (die Rückansicht nie über
+blick, nur über "ansicht": "hinten"); kopf_anteil = Kopfhöhe als Anteil der
 Bildhöhe; freunde = weitere Figuren mit denselben Feldern; verbindungen = [{von, zu, art, von_punkt, zu_punkt}] mit
 "ich"/"freund0"…, Punkte huefte, hand_r, hand_l, hals, fuss_r, fuss_l):
 ${JSON.stringify(zeigen, null, 1)}
