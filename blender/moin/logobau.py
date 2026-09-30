@@ -363,7 +363,7 @@ def baue_3d(spec, assets, textures, ausgabe_roh):
             fig.wurzel.scale = (s, s, s)
             fig.wurzel.rotation_euler = (0, 0, math.radians(-28 if platz != "rechts" else 28))
             bpy.context.view_layer.update()
-            ziel = Vector((-breite / 2 - hoehe * 0.85, 0, 0)) if platz != "rechts" else Vector((breite / 2 + hoehe * 0.85, 0, 0))
+            ziel = Vector((-breite / 2 - hoehe * 1.0, 0, 0)) if platz != "rechts" else Vector((breite / 2 + hoehe * 1.0, 0, 0))
             if platz == "oben":
                 ziel = Vector((0, 0, m.shape[0] * v / 2 + hoehe * 0.75))
             fig.wurzel.location += ziel - fig.kopf_mitte()
@@ -378,7 +378,7 @@ def baue_3d(spec, assets, textures, ausgabe_roh):
                 ob = mitems.baue_item(sym["name"], textures)
                 s = hoehe / max(ob.dimensions.z, 1e-6)
             ob.scale = (s, s, s)
-            x = -breite / 2 - hoehe * 0.8 if platz != "rechts" else breite / 2 + hoehe * 0.8
+            x = -breite / 2 - hoehe * 0.65 if platz != "rechts" else breite / 2 + hoehe * 0.65
             ob.location = (x, 0, 0) if platz != "oben" else (0, 0, m.shape[0] * v / 2 + hoehe * 0.7)
             objekte.append(ob)
     # Neigung als echte Drehung der ganzen Gruppe

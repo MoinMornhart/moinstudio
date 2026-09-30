@@ -6,6 +6,13 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Neuer Reiter „Logo“: Logos aus einer Beschreibung erstellen (Kanal-, Serien- oder Server-Logo). Claude plant, Blender baut sie aus echten Minecraft-Dateien – Minecraft-Schrift, Blocktexturen, Items, Mob-Köpfe oder dein eigener Kopf – als flache Blockschrift oder echten 3D-Blocktext, immer mit transparentem Hintergrund. Änderungen in Worten stehen als Verlauf darunter wie beim Thumbnail.
+- Logo-Bibliothek im Datenordner: Logos hochladen (PNG, JPG, SVG; ohne Transparenz wird der Hintergrund entfernt), umbenennen, löschen, als Standard-Logo für einen Kanal festlegen und als PNG in 512, 1024 oder 2048 px oder als YouTube-Wasserzeichen (150×150) speichern.
+- Thumbnail: In jedem Modus (Minecraft, Reaction, Gaming, Spiele-Vorlage) kann ein Logo mit aufs Bild – automatisch in einer freien Ecke oder in deiner Wunsch-Ecke, klein, mittel oder groß. Es steht nie über Figuren, Köpfen, Mobs, Text oder Titeln. Das Standard-Logo des Kanals ist vorausgewählt.
+- Thumbnail-Änderungen behalten das Logo; „Logo kleiner“, „Logo nach links“ oder „Logo weg“ gehen in Worten. In der Photoshop-Datei ist das Logo eine eigene Ebene.
+
 ## [0.37.0] - 2026-09-30
 
 > Thumbnail-Änderungen als Verlauf
