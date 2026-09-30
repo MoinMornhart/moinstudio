@@ -1,10 +1,16 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { readFile, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runClaudeInJob } from '../claude/run'
 import type { JobContext } from '../jobs/queue'
-import { ladeProjekt, projektOrdner } from './projekt'
+import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
 import { schnittliste, type Entfernt, type Schnittliste } from './rohschnitt'
 import { liesAbschnitte } from './transkript'
+import { pruefeEffekte, type Effekt } from './effekte'
+import { ladeEffekte } from './effekt-vorbereitung'
+import { KLAENGE } from './klaenge'
+import { lauteMomente } from './highlights'
+import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /**
  * Schnitt prüfen und ändern (ROADMAP 6.5): Schnittstellen an/aus, Sätze raus oder zurück, Änderungswunsch in Worten.
@@ -54,47 +60,123 @@ export interface WunschPayload {
   projekt: string
   wunsch: string
   claudeCli: string
+  /** Für den Sichtbogen (Claude sieht Standbilder aus dem Video); fehlt bei alten Aufträgen */
+  ffmpeg?: string
+}
+
+/** Sichtbogen: Standbilder aus dem Original im Raster, damit Claude Stellen im Bild findet (Explosion, Mob, Ort). */
+export function sichtRaster(dauer: number): { anzahl: number; spalten: number; zeilen: number; abstand: number } {
+  const anzahl = dauer > 600 ? 80 : 40
+  const spalten = anzahl === 80 ? 10 : 8
+  return { anzahl, spalten, zeilen: anzahl / spalten, abstand: dauer / anzahl }
+}
+
+async function sichtbogen(ffmpeg: string, quelle: string, ordner: string, dauer: number): Promise<string | null> {
+  const datei = join(ordner, 'sicht.jpg')
+  if (await stat(datei).catch(() => null)) return datei
+  const r = sichtRaster(dauer)
+  return new Promise((resolve) =>
+    execFile(ffmpeg, ['-y', '-v', 'error', '-i', quelle, '-vf', `fps=${r.anzahl}/${dauer.toFixed(3)},scale=240:-2,tile=${r.spalten}x${r.zeilen}`, '-frames:v', '1', '-q:v', '4', datei], { windowsHide: true, timeout: 300_000 }, (err) => resolve(err ? null : datei))
+  )
 }
 
 const SCHEMA = {
   type: 'object',
-  required: ['schritte'],
+  required: ['schritte', 'effekte', 'antwort'],
   properties: {
     schritte: {
       type: 'array',
       items: { type: 'object', required: ['art', 'von', 'bis'], properties: { art: { type: 'string', enum: ['entfernen', 'zurueck'] }, von: { type: 'number' }, bis: { type: 'number' }, warum: { type: 'string' } } }
     },
+    effekte: { type: 'array', items: { type: 'object', required: ['art'] } },
     antwort: { type: 'string' }
   }
 } as const
 
-export function wunschPrompt(wunsch: string, liste: Schnittliste, saetze: { start: number; ende: number; text: string }[]): string {
-  const t = (s: number): string => s.toFixed(2)
-  return `Philip schneidet ein Video. Sein Wunsch: „${wunsch}“
+const t2 = (s: number): string => s.toFixed(2)
 
-Transkript (Zeit im Original in Sekunden):
-${saetze.map((s) => `[${t(s.start)}–${t(s.ende)}] ${s.text}`).join('\n')}
-
-Gerade entfernte Stellen (Grund, Zeit, ggf. Text):
-${liste.entfernt.filter((e) => !e.aus).map((e) => `- ${e.grund} [${t(e.start)}–${t(e.ende)}]${e.text ? ` ${e.text}` : ''}`).join('\n') || '- keine'}
-
-Setze den Wunsch in Schritte um: „entfernen“ nimmt [von, bis] raus, „zurueck“ holt [von, bis] wieder rein.
-Zeiten immer im Original (nicht im geschnittenen Video). Nur ändern, was der Wunsch verlangt.
-Antworte nur mit JSON nach dem Schema; in „antwort“ ein kurzer deutscher Satz, was du geändert hast.`
+/** Beschreibung der Bausteine für Claude (ROADMAP E.4) – frei kombinierbar, keine feste Effektliste */
+export function bausteinText(): string {
+  return `- tempo {von, bis, faktor}: 0.25–4 (0.5 = Zeitlupe, 2 = doppelt so schnell)
+- einfrieren {bei, dauer}: Standbild für dauer Sekunden (Ton pausiert)
+- zoom {von, bis, faktor 1–4, x, y}: sanft auf einen Bildpunkt (x, y 0–1, 0.5 = Mitte)
+- wackeln {von, bis, staerke 0.1–1}: Kamerawackeln (Explosion, Schreck, Treffer)
+- farbe {von, bis, saettigung 0–3, kontrast 0.3–2.5, helligkeit -0.6–0.6, schwarzweiss true, ton warm|kalt|rot|gruen|blau}
+- blitz {bei, dauer 0.05–1, farbe weiss|schwarz}: kurzer Blitz (Treffer, Explosion, Enthüllung)
+- uebergang {bei, dauer, farbe weiss|schwarz}: kurze Abblende und wieder auf, z. B. an einem Szenenwechsel
+- abblende {von, bis, richtung aus|ein, farbe schwarz|weiss}: Ausblenden, das dunkel bleibt (Ende), oder Einblenden aus Schwarz (Anfang); der Ton geht mit
+- text {von, bis, text, lage oben|mitte|unten, farbe #rrggbb, groesse 0.07–0.4 (Zeilenhöhe als Anteil der Bildhöhe, 0.12 ist gut lesbar), animation pop|fest}: Einblendung in Minecraft-Schrift (1–4 Wörter wirken am besten)
+- geraeusch {bei, klang, lautstaerke 0–3}: Klänge: ${Object.entries(KLAENGE)
+    .map(([k, v]) => `${k} (${v.beschreibung})`)
+    .join(', ')}
+- zensur {von, bis}: Bild unscharf, Ton stumm, Piep darüber
+- lautstaerke {von, bis, faktor 0–4}: lauter oder leiser
+- intro {teile, klang}: Vorspann vor dem Video, höchstens eins. teile: {art: "clip", von, bis, tempo} = kurzer Moment aus dem Video, {art: "karte", text, dauer 0.5–6, hintergrund unscharf|schwarz, bei, farbe} = Titelkarte (bei = Zeitpunkt für das unscharfe Hintergrundbild). Zwischen Clips kommt automatisch ein Wusch, zur Karte ein Knall (klang: false schaltet das ab).`
 }
 
-export async function wunschJob(p: WunschPayload, ctx: JobContext<{ claudeSession?: string; claudePrompted?: boolean }>): Promise<{ projekt: string; antwort: string }> {
+export function wunschPrompt(o: { wunsch: string; kanal: string; liste: Schnittliste; saetze: { start: number; ende: number; text: string }[]; effekte: Effekt[]; laut: number[]; sicht?: string | null }): string {
+  const { liste } = o
+  const raus = (a: number, b: number): boolean => liste.entfernt.some((e) => !e.aus && (a + b) / 2 >= e.start && (a + b) / 2 <= e.ende)
+  const nachher = liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
+  return `Philip schneidet ein Video für seinen YouTube-Kanal ${o.kanal}. Sein Wunsch: „${o.wunsch}“
+
+Du kannst (1) Stellen entfernen oder zurückholen und (2) Effekte setzen. Alle Zeiten sind Sekunden der Originalaufnahme
+(${t2(liste.dauer)} s lang, nach dem aktuellen Schnitt ${t2(nachher)} s).
+Im Video bleiben (Originalzeit): ${liste.behalten.map((b) => `${t2(b.start)}–${t2(b.ende)}`).join(', ') || 'nichts'}.
+Das fertige Video beginnt also bei ${t2(liste.behalten[0]?.start ?? 0)} s und endet bei ${t2(liste.behalten.at(-1)?.ende ?? liste.dauer)} s (auch nach dem letzten gesprochenen Satz läuft es weiter).
+
+Transkript (Originalzeit, „[raus]“ = gerade herausgeschnitten):
+${o.saetze.map((s) => `[${t2(s.start)}–${t2(s.ende)}]${raus(s.start, s.ende) ? ' [raus]' : ''} ${s.text}`).join('\n') || '(kein Transkript)'}
+
+Laute Momente (Originalzeit): ${o.laut.length ? o.laut.map((s) => `${s}s`).join(', ') : 'keine'}
+${o.sicht ? (() => { const r = sichtRaster(liste.dauer); return `\nSo sieht das Video aus: Die Bilddatei ${o.sicht} zeigt ${r.anzahl} Standbilder aus dem Original im Raster ${r.spalten} × ${r.zeilen}, von links nach rechts, Zeile für Zeile. Bild k (ab 0) zeigt etwa Sekunde k × ${t2(r.abstand)}. Schau sie dir mit dem Read-Werkzeug an, wenn der Wunsch sich auf etwas im Bild bezieht (Explosion, Mob, Ort, Gesicht).\n` })() : ''}
+Aktuelle Effekte (Originalzeit): ${JSON.stringify(o.effekte)}
+
+Effekt-Bausteine – frei kombinierbar, beliebig viele, jeder Wunsch lässt sich daraus bauen:
+${bausteinText()}
+
+Regeln:
+- Setze den Wunsch vollständig um und kombiniere Bausteine frei. Stil großer deutscher Minecraft- und Streamer-Kanäle:
+  knackige Effekte genau an Höhepunkten (Ausrufe, laute Momente, Pointen), nicht überall.
+- Ein „Intro“ besteht aus 2–4 der stärksten Momente (je 0.8–2 s, gern mit Tempo) und einer Titelkarte mit kurzem, starkem
+  Titel; zusammen 4–8 s.
+- „Am Ende“ heißt am Ende des fertigen Videos (letzte behaltene Stelle), „am Anfang“ an seinem Beginn – nicht beim
+  letzten oder ersten Satz.
+- Effekt-Zeiten liegen in Stellen, die im Video bleiben (nicht in [raus]-Stellen, außer du holst sie zurück).
+- Behalte bestehende Effekte, außer der Wunsch ändert oder entfernt sie. „effekte“ ist immer die vollständige neue Liste.
+- „schritte“: entfernen/zurueck mit [von, bis] nur, wenn der Wunsch den Schnitt selbst betrifft, sonst leer.
+- „antwort“: ein kurzer deutscher Satz für Philip, was du gemacht hast. Ist etwas unklar oder unmöglich, setze um, was geht,
+  und sag es in der Antwort.
+Antworte nur mit JSON nach dem Schema.`
+}
+
+export async function wunschJob(p: WunschPayload, ctx: JobContext<{ claudeSession?: string; claudePrompted?: boolean }>): Promise<{ projekt: string; antwort: string; effekte: number }> {
   const pr = await ladeProjekt(p.daten, p.projekt)
   if (!pr) throw new Error('Projekt nicht gefunden.')
   const ordner = projektOrdner(p.daten, p.projekt)
-  let liste = JSON.parse(await readFile(join(ordner, 'schnitt.json'), 'utf8')) as Schnittliste
+  let liste = JSON.parse(await liesMitKonfliktkopien(join(ordner, 'schnitt.json'))) as Schnittliste
   const saetze = liesAbschnitte(await readFile(join(ordner, 'transkript.jsonl'), 'utf8').catch(() => ''))
+  const wellen = pr.wellenform ? (JSON.parse(await readFile(join(ordner, 'wellenform.json'), 'utf8').catch(() => 'null')) as { aufloesung: number; werte: number[] } | null) : null
+  const effekte = await ladeEffekte(ordner, liste.dauer)
   ctx.progress(10, 'Claude setzt deinen Wunsch um …')
-  const res = await runClaudeInJob({ cli: p.claudeCli, prompt: wunschPrompt(p.wunsch, liste, saetze), workDir: join(p.daten, 'claude-work', 'schnitt'), tools: [], maxTurns: 2, jsonSchema: SCHEMA }, ctx)
-  if (!res.ok) throw new Error(`Claude konnte den Wunsch nicht umsetzen: ${res.errors.join(' | ') || res.subtype}`)
-  const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { schritte?: { art: 'entfernen' | 'zurueck'; von: number; bis: number; warum?: string }[]; antwort?: string }
+  const sicht = p.ffmpeg && pr.quelle ? await sichtbogen(p.ffmpeg, pr.proxy ? join(ordner, 'proxy.mp4') : pr.quelle.pfad, ordner, liste.dauer) : null
+  let prompt = wunschPrompt({ wunsch: p.wunsch, kanal: pr.kanal, liste, saetze, effekte, laut: lauteMomente(wellen), sicht })
+  let a: { schritte?: { art: 'entfernen' | 'zurueck'; von: number; bis: number; warum?: string }[]; effekte?: unknown; antwort?: string } = {}
+  let geprueft: Effekt[] = effekte
+  for (let versuch = 0; versuch < 2; versuch++) {
+    const res = await runClaudeInJob({ cli: p.claudeCli, prompt, workDir: join(p.daten, 'claude-work', 'schnitt'), ...(sicht ? { tools: ['Read'], allowedTools: ['Read'], addDirs: [ordner], maxTurns: 5 } : { tools: [], maxTurns: 2 }), jsonSchema: SCHEMA }, ctx)
+    if (!res.ok) throw new Error(`Claude konnte den Wunsch nicht umsetzen: ${res.errors.join(' | ') || res.subtype}`)
+    a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as typeof a
+    const r = pruefeEffekte(a.effekte ?? effekte, liste.dauer)
+    geprueft = r.effekte
+    if (!r.fehler.length) break
+    ctx.progress(50, 'Claude korrigiert die Effekte …')
+    prompt = `${wunschPrompt({ wunsch: p.wunsch, kanal: pr.kanal, liste, saetze, effekte, laut: lauteMomente(wellen), sicht })}\n\n# Korrektur\nDeine letzte Antwort hatte diese Fehler, behebe sie:\n${r.fehler.map((f) => `- ${f}`).join('\n')}`
+  }
   for (const s of a.schritte ?? []) liste = bereichSetzen(liste, s.von, s.bis, s.art === 'entfernen', s.warum)
   await writeFile(join(ordner, 'schnitt.json'), JSON.stringify(liste, null, 1))
+  await writeFile(join(ordner, 'effekte.json'), JSON.stringify(geprueft, null, 1))
+  await aendereProjekt(p.daten, p.projekt, () => ({ antwort: { wunsch: p.wunsch, text: a.antwort ?? 'Erledigt.', zeit: new Date().toISOString() } }))
   ctx.progress(100, 'Fertig')
-  return { projekt: p.projekt, antwort: a.antwort ?? 'Erledigt.' }
+  return { projekt: p.projekt, antwort: a.antwort ?? 'Erledigt.', effekte: geprueft.length }
 }

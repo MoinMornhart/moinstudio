@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SchnittAbschnitt, SchnittExport, SchnittHighlight, SchnittListe, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
+import { EffektListe, WunschFeld } from '../components/SchnittWunsch'
 import { abholen, OEFFNE_EREIGNIS } from '../navigation'
 
 /**
@@ -75,19 +76,7 @@ const GRUND: Record<SchnittListe['entfernt'][number]['grund'], string> = {
 function Rohschnitt({ id, liste, setListe, springe }: { id: string; liste: SchnittListe; setListe: (l: SchnittListe) => void; springe: (s: number) => void }): React.JSX.Element {
   const nachher = liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
   const [pausenZeigen, setPausenZeigen] = useState(false)
-  const [wunsch, setWunsch] = useState('')
-  const [meldung, setMeldung] = useState<string | null>(null)
   const umschalten = (i: number): void => void window.moin.schnittUmschalten(id, i).then(setListe)
-  const senden = async (): Promise<void> => {
-    setMeldung(null)
-    try {
-      await window.moin.schnittWunsch(id, wunsch)
-      setWunsch('')
-      setMeldung('Claude arbeitet deinen Wunsch ein …')
-    } catch (err) {
-      setMeldung(err instanceof Error ? err.message : String(err))
-    }
-  }
   return (
     <div className="rohschnitt">
       <p>
@@ -117,19 +106,6 @@ function Rohschnitt({ id, liste, setListe, springe }: { id: string; liste: Schni
         <button className="btn small" onClick={() => setPausenZeigen((z) => !z)}>
           {pausenZeigen ? 'Pausen ausblenden' : `${liste.entfernt.filter((e) => e.grund === 'pause').length} gekürzte Pausen zeigen`}
         </button>
-      </div>
-      <div className="row wrap">
-        <input
-          className="input"
-          placeholder="Änderung in Worten, z. B. lass die Stelle mit dem Creeper länger drin"
-          value={wunsch}
-          onChange={(e) => setWunsch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && wunsch.trim() && void senden()}
-        />
-        <button className="btn" disabled={!wunsch.trim()} onClick={() => void senden()}>
-          Ändern
-        </button>
-        {meldung && <p className="muted small">{meldung}</p>}
       </div>
     </div>
   )
@@ -388,6 +364,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
           <input type="checkbox" checked={geschnitten} onChange={(e) => setGeschnitten(e.target.checked)} /> Geschnitten abspielen (entfernte Stellen überspringen)
         </label>
       )}
+      {liste && <WunschFeld p={p} neuLaden={neuLaden} />}
       {liste && <Rohschnitt id={p.id} liste={liste} setListe={setListe} springe={springe} />}
       {liste && (
         <div className="schnitt-fertig">
@@ -407,6 +384,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
               Vorschau rendern
             </button>
           </div>
+          <EffektListe p={p} springe={springe} neuLaden={neuLaden} />
           {p.vorschauUrl && <video className="schnitt-player" src={p.vorschauUrl} controls preload="metadata" style={{ marginTop: 10 }} />}
         </div>
       )}

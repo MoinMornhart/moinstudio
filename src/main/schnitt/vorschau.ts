@@ -7,6 +7,7 @@ import { filterGraph, renderArgs, untertitelAss, zeitAbbildung, zoomsAus, type R
 import type { Schnittliste } from './rohschnitt'
 import { liesAbschnitte } from './transkript'
 import { bereiteEffekteVor, type EffektHilfe } from './effekt-vorbereitung'
+import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /**
  * Geschnittene Vorschau (ROADMAP 6.6): der Schnitt mit Untertiteln und Zooms aus dem 540p-Proxy – schnell genug, um
@@ -25,12 +26,12 @@ export const einstellungen = (p: Projekt): SchnittEinstellungen => ({ ...STANDAR
 /** Untertitel, Zooms und Render-Optionen für ein Projekt – gemeinsam für Vorschau und Export. */
 export async function renderPlan(daten: string, p: Projekt, ziel: { quelle: string; breite: number; hoehe: number; fps: number; encoder: string[]; ausgabe: string; untertitelDatei: string }, hilfe?: EffektHilfe): Promise<RenderOptionen> {
   const ordner = projektOrdner(daten, p.id)
-  const liste = JSON.parse(await readFile(join(ordner, 'schnitt.json'), 'utf8')) as Schnittliste
+  const liste = JSON.parse(await liesMitKonfliktkopien(join(ordner, 'schnitt.json'))) as Schnittliste
   const abschnitte = liesAbschnitte(await readFile(join(ordner, 'transkript.jsonl'), 'utf8').catch(() => ''))
   const wellen = p.wellenform ? (JSON.parse(await readFile(join(ordner, 'wellenform.json'), 'utf8')) as { aufloesung: number; werte: number[] }) : null
   const e = einstellungen(p)
   // Effekte (ROADMAP E.2): Text-Bilder, Geräusche, neue Zeitleiste
-  const eff = hilfe ? await bereiteEffekteVor(daten, ordner, zeitAbbildung(liste.behalten).laenge, hilfe) : null
+  const eff = hilfe ? await bereiteEffekteVor(daten, ordner, liste, hilfe) : null
   let untertitel: string | null = null
   if (e.untertitel !== 'aus' && abschnitte.length) {
     await writeFile(join(ordner, ziel.untertitelDatei), untertitelAss(abschnitte, liste, { breite: ziel.breite, hoehe: ziel.hoehe, karaoke: e.untertitel === 'karaoke', woerter: e.untertitel === 'karaoke' ? 4 : 7 }, eff?.endzeit))

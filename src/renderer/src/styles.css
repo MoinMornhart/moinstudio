@@ -464,3 +464,13 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .wochen-plan { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .plan-zeile { display: flex; flex-direction: column; gap: 3px; background: var(--panel); border-radius: 6px; padding: 7px 8px; }
 .plan-zeile .btn { align-self: flex-start; }
+
+/* Schnitt: Wünsche und Effekte (ROADMAP E.5) */
+.wunsch-feld { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 12px 0; }
+.wunsch-feld h2 { margin: 0 0 4px; font-size: 16px; }
+.wunsch-beispiele { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.wunsch-beispiele .chip { padding: 4px 10px; }
+.wunsch-antwort { display: flex; flex-direction: column; gap: 2px; background: var(--panel); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 10px; margin: 10px 0 0; }
+.effekt-liste { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.effekt { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.effekt.aus .satz { opacity: 0.45; text-decoration: line-through; }

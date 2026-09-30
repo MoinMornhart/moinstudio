@@ -10,6 +10,7 @@ import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
 import { filterGraph, renderArgs, untertitelAss, zeitAbbildung, type RenderOptionen } from './render'
 import type { Bereich, Schnittliste } from './rohschnitt'
 import { liesAbschnitte, type Abschnitt } from './transkript'
+import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /**
  * Stream-Highlights und Shorts (ROADMAP 6.8, MoinMorni): Höhepunkte aus langen Streams finden (laute Spitzen +
@@ -160,7 +161,7 @@ export async function clipsJob(p: ClipsPayload, ctx: JobContext<unknown>): Promi
   const ordner = projektOrdner(p.daten, p.projekt)
   await mkdir(join(ordner, 'clips'), { recursive: true })
   const highlights = JSON.parse(await readFile(join(ordner, 'highlights.json'), 'utf8')) as Highlight[]
-  const liste = pr.rohschnitt ? (JSON.parse(await readFile(join(ordner, 'schnitt.json'), 'utf8')) as Schnittliste) : null
+  const liste = pr.rohschnitt ? (JSON.parse(await liesMitKonfliktkopien(join(ordner, 'schnitt.json'))) as Schnittliste) : null
   const abschnitte = liesAbschnitte(await readFile(join(ordner, 'transkript.jsonl'), 'utf8').catch(() => ''))
   let cam = pr.facecam === undefined ? undefined : pr.facecam
   if (p.auswahl.some((a) => a.art === 'short') && cam === undefined) {

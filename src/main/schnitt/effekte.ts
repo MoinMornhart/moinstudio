@@ -14,6 +14,8 @@ export type Effekt =
   | { art: 'farbe'; von: number; bis: number; saettigung?: number; kontrast?: number; helligkeit?: number; schwarzweiss?: boolean; ton?: 'warm' | 'kalt' | 'rot' | 'gruen' | 'blau' }
   | { art: 'blitz'; bei: number; dauer?: number; farbe?: 'weiss' | 'schwarz' }
   | { art: 'uebergang'; bei: number; dauer?: number; farbe?: 'weiss' | 'schwarz' }
+  /** Ausblenden (bleibt dunkel, z. B. am Ende) oder Einblenden (aus Schwarz, z. B. am Anfang); Ton geht mit */
+  | { art: 'abblende'; von: number; bis: number; richtung: 'aus' | 'ein'; farbe?: 'weiss' | 'schwarz' }
   | { art: 'text'; von: number; bis: number; text: string; lage?: 'oben' | 'mitte' | 'unten'; farbe?: string; groesse?: number; animation?: 'pop' | 'fest' }
   | { art: 'bild'; von: number; bis: number; datei: string; lage?: 'oben' | 'mitte' | 'unten' | 'links' | 'rechts'; groesse?: number }
   | { art: 'geraeusch'; bei: number; klang: string; lautstaerke?: number }
@@ -27,7 +29,7 @@ export type IntroTeil =
   | { art: 'clip'; von: number; bis: number; tempo?: number }
   | { art: 'karte'; text: string; dauer?: number; farbe?: string; hintergrund?: 'unscharf' | 'schwarz' | 'bild'; bei?: number; bild?: string; klang?: string }
 
-export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'geraeusch', 'zensur', 'lautstaerke', 'intro'] as const
+export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'geraeusch', 'zensur', 'lautstaerke', 'intro', 'abblende'] as const
 
 /** Stück der neuen Zeitleiste: normal (ggf. mit Tempo) oder ein eingefrorenes Standbild */
 export type Stueck = { a: number; b: number; faktor: number } | { frieren: number; dauer: number }
@@ -282,6 +284,15 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
       const vz = (e.farbe ?? (e.art === 'blitz' ? 'weiss' : 'schwarz')) === 'weiss' ? 1 : -1
       return `${vz}*max(0\\,1-abs(t-${z(m)})/${z(d / 2)})`
     })
+  // Ab- und Einblenden: Helligkeit gleitet zu Schwarz/Weiß und bleibt dort (aus) bzw. kommt von dort (ein)
+  for (const e of o.effekte) {
+    if (e.art !== 'abblende') continue
+    const a0 = E(e.von)
+    const a1 = Math.max(a0 + 0.1, E(e.bis))
+    const anteil = `clip((t-${z(a0)})/${z(a1 - a0)}\\,0\\,1)`
+    const vz = (e.farbe ?? 'schwarz') === 'weiss' ? 1 : -1
+    hell.push(`${vz}*${e.richtung === 'ein' ? `(1-${anteil})` : anteil}`)
+  }
   if (hell.length) kette.push(`eq=brightness='${hell.join('+')}':eval=frame`)
   // 6. Zensur: Unschärfe
   for (const e of o.effekte) if (e.art === 'zensur') kette.push(`boxblur=20:5:enable='${zwischen(E(e.von), E(e.bis))}'`)
@@ -299,7 +310,7 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     const bis = Math.max(von + 0.2, E(e.bis))
     const idx = neueEingabe({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(bis + 0.1)], datei })
     // Größe: Text als Anteil der Bildhöhe je Zeile, Bild als Anteil der Breite
-    const breite = e.art === 'text' ? Math.round(o.hoehe * klemme(e.groesse ?? 0.12, 0.04, 0.4) * ((tb?.breite ?? 1) / Math.max(1, (tb?.hoehe ?? 1) / Math.max(1, e.text.split('\n').length)))) : Math.round(o.breite * klemme(e.groesse ?? 0.3, 0.05, 1))
+    const breite = e.art === 'text' ? Math.round(o.hoehe * klemme(e.groesse ?? 0.12, 0.07, 0.4) * ((tb?.breite ?? 1) / Math.max(1, (tb?.hoehe ?? 1) / Math.max(1, e.text.split('\n').length)))) : Math.round(o.breite * klemme(e.groesse ?? 0.3, 0.05, 1))
     const pop = e.art === 'text' && (e.animation ?? 'pop') === 'pop' ? `*(0.55+0.45*min(1\\,max(0\\,(t-${z(von)})/0.12)))` : ''
     const lage = e.lage ?? (e.art === 'text' ? 'oben' : 'rechts')
     const x = lage === 'links' ? 'W*0.05' : lage === 'rechts' ? 'W*0.95-w' : '(W-w)/2'
@@ -314,6 +325,14 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     const lauter = o.effekte
       .filter((e): e is Extract<Effekt, { art: 'lautstaerke' | 'zensur' }> => e.art === 'lautstaerke' || e.art === 'zensur')
       .map((e) => `volume=${e.art === 'zensur' ? 0 : z(klemme(e.faktor, 0, 4))}:enable='${zwischen(E(e.von), E(e.bis))}'`)
+    // Ton blendet mit aus bzw. ein
+    for (const e of o.effekte) {
+      if (e.art !== 'abblende') continue
+      const a0 = E(e.von)
+      const a1 = Math.max(a0 + 0.1, E(e.bis))
+      const anteil = `clip((t-${z(a0)})/${z(a1 - a0)}\\,0\\,1)`
+      lauter.push(`volume='${e.richtung === 'ein' ? anteil : `1-${anteil}`}':eval=frame`)
+    }
     for (const e of o.effekte) if (e.art === 'geraeusch') klangEreignisse.push({ zeit: E(e.bei), klang: e.klang, lautstaerke: klemme(e.lautstaerke ?? 1, 0, 3) })
     teile.push(`[${a}]${lauter.length ? lauter.join(',') : 'anull'}[al]`)
     const mix: string[] = ['[al]']
@@ -335,6 +354,54 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     teile.push(mix.length > 1 ? `${mix.join('')}amix=inputs=${mix.length}:normalize=0:duration=first[a]` : '[al]anull[a]')
   }
   return { graph: teile.join(';\n'), eingaben, laenge: introLaenge + zl.laenge, endzeit: E }
+}
+
+/**
+ * Originalzeit → Schnittzeit. Effekte werden in Originalzeit gespeichert (wie das Transkript), damit sie an ihrer
+ * Stelle bleiben, wenn Philip später Stellen rein- oder rausnimmt. Liegt ein Zeitpunkt in einer entfernten Stelle,
+ * rastet er auf den nächsten behaltenen Rand ein: Anfänge nach vorn, Enden nach hinten.
+ */
+export function zuSchnittzeit(t: number, behalten: Bereich[], richtung: 'anfang' | 'ende'): number | null {
+  let vorher = 0
+  for (let i = 0; i < behalten.length; i++) {
+    const b = behalten[i]!
+    if (t >= b.start && t <= b.ende) return vorher + (t - b.start)
+    if (t < b.start) {
+      // in der Lücke vor diesem Stück
+      if (richtung === 'anfang') return vorher
+      return i === 0 ? null : vorher
+    }
+    vorher += b.ende - b.start
+  }
+  return richtung === 'ende' && behalten.length ? vorher : null
+}
+
+/** Effekte von Originalzeit in Schnittzeit umrechnen; Bereiche, die ganz herausgeschnitten sind, fallen weg. */
+export function effekteInSchnittzeit(effekte: Effekt[], behalten: Bereich[]): Effekt[] {
+  const aus: Effekt[] = []
+  for (const e of effekte) {
+    if (e.art === 'intro') {
+      const teile = e.teile
+        .map((t) => {
+          if (t.art !== 'clip') return { ...t, ...(t.bei !== undefined ? { bei: zuSchnittzeit(t.bei, behalten, 'anfang') ?? undefined } : {}) }
+          const von = zuSchnittzeit(t.von, behalten, 'anfang')
+          const bis = zuSchnittzeit(t.bis, behalten, 'ende')
+          return von !== null && bis !== null && bis - von >= 0.2 ? { ...t, von, bis } : null
+        })
+        .filter((t): t is IntroTeil => t !== null)
+      if (teile.length) aus.push({ ...e, teile })
+      continue
+    }
+    if ('von' in e) {
+      const von = zuSchnittzeit(e.von, behalten, 'anfang')
+      const bis = zuSchnittzeit(e.bis, behalten, 'ende')
+      if (von !== null && bis !== null && bis > von) aus.push({ ...e, von, bis } as Effekt)
+      continue
+    }
+    const bei = zuSchnittzeit(e.bei, behalten, 'anfang')
+    if (bei !== null) aus.push({ ...e, bei } as Effekt)
+  }
+  return aus
 }
 
 /** Prüft eine Effektliste (von Claude oder aus der Datei): unbekannte Arten und unmögliche Werte fliegen raus. */

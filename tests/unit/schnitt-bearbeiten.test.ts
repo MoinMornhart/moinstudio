@@ -41,10 +41,15 @@ describe('Schnitt: prüfen und ändern (ROADMAP 6.5)', () => {
     expect(neuBerechnen(l).behalten.some((b) => b.start <= 30 && b.ende >= 33)).toBe(true)
   })
 
-  it('gibt Claude Wunsch, Transkript und aktive Schnitte in Originalzeit', () => {
-    const p = wunschPrompt('lass das ähm drin', basis, [{ start: 19.5, ende: 22, text: 'und, ähm, ein paar Fackeln' }])
-    expect(p).toContain('„lass das ähm drin“')
+  it('gibt Claude Wunsch, Transkript mit herausgeschnittenen Stellen, Effekt-Bausteine und laute Momente (E.4)', () => {
+    const p = wunschPrompt({ wunsch: 'mach mir ein geiles Intro', kanal: 'MoinMornhart', liste: basis, saetze: [{ start: 19.5, ende: 22, text: 'und, ähm, ein paar Fackeln' }, { start: 20, ende: 20.5, text: 'ähm' }], effekte: [{ art: 'blitz', bei: 5 }], laut: [33] })
+    expect(p).toContain('„mach mir ein geiles Intro“')
     expect(p).toContain('[19.50–22.00] und, ähm, ein paar Fackeln')
-    expect(p).toContain('- aehm [20.00–20.50] ähm')
+    expect(p).toContain('[20.00–20.50] [raus] ähm')
+    expect(p).toContain('Laute Momente (Originalzeit): 33s')
+    expect(p).toContain('endet bei 60.00 s')
+    expect(p).toContain('Aktuelle Effekte (Originalzeit): [{"art":"blitz","bei":5}]')
+    for (const b of ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'geraeusch', 'zensur', 'lautstaerke', 'intro', 'abblende']) expect(p).toContain(`- ${b} {`)
+    expect(p).toContain('whoosh (Wusch')
   })
 })

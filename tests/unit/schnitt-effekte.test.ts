@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atempoKette, effektGraph, pruefeEffekte, zeitleiste, type Effekt, type EffektOptionen } from '../../src/main/schnitt/effekte'
+import { atempoKette, effektGraph, effekteInSchnittzeit, pruefeEffekte, zeitleiste, zuSchnittzeit, type Effekt, type EffektOptionen } from '../../src/main/schnitt/effekte'
 
 const basis = (effekte: Effekt[], x: Partial<EffektOptionen> = {}): EffektOptionen => ({ effekte, laenge: 20, breite: 1280, hoehe: 720, fps: 30, audio: true, autoZooms: [], textBilder: {}, klaenge: { whoosh: 'C:/k/whoosh.wav', piep: 'C:/k/piep.wav' }, untertitel: null, ...x })
 
@@ -142,5 +142,38 @@ describe('Schnitt: Effekt-Bausteine (ROADMAP E.2)', () => {
     const r = pruefeEffekte([{ art: 'intro', teile: [{ art: 'clip', von: 5, bis: 5.1 }, { art: 'karte', text: 'LOS' }, { art: 'quatsch' }] }, { art: 'intro', teile: [] }], 20)
     expect(r.effekte).toEqual([{ art: 'intro', teile: [{ art: 'karte', text: 'LOS' }] }])
     expect(r.fehler).toEqual(['Effekt 2: Intro ohne gültige Teile'])
+  })
+
+  it('rechnet Effekte aus Originalzeit in Schnittzeit um und rastet an entfernten Stellen ein', () => {
+    const behalten = [
+      { start: 2, ende: 6 },
+      { start: 10, ende: 20 }
+    ]
+    expect(zuSchnittzeit(3, behalten, 'anfang')).toBe(1)
+    expect(zuSchnittzeit(12, behalten, 'anfang')).toBe(6)
+    expect(zuSchnittzeit(8, behalten, 'anfang')).toBe(4) // entfernt: nächster Anfang
+    expect(zuSchnittzeit(8, behalten, 'ende')).toBe(4) // entfernt: voriges Ende
+    expect(zuSchnittzeit(1, behalten, 'ende')).toBeNull()
+    expect(zuSchnittzeit(25, behalten, 'ende')).toBe(14)
+    const e = effekteInSchnittzeit(
+      [
+        { art: 'zoom', von: 5, bis: 12, faktor: 1.5 },
+        { art: 'farbe', von: 7, bis: 9, schwarzweiss: true }, // ganz entfernt
+        { art: 'geraeusch', bei: 11, klang: 'boom' },
+        { art: 'intro', teile: [{ art: 'clip', von: 15, bis: 17 }, { art: 'clip', von: 7, bis: 8 }, { art: 'karte', text: 'LOS', bei: 12 }] }
+      ],
+      behalten
+    )
+    expect(e).toEqual([
+      { art: 'zoom', von: 3, bis: 6, faktor: 1.5 },
+      { art: 'geraeusch', bei: 5, klang: 'boom' },
+      { art: 'intro', teile: [{ art: 'clip', von: 9, bis: 11 }, { art: 'karte', text: 'LOS', bei: 6 }] }
+    ])
+  })
+  it('blendet am Ende aus (bleibt schwarz) und am Anfang ein, Ton geht mit', () => {
+    const g = effektGraph(basis([{ art: 'abblende', von: 18, bis: 20, richtung: 'aus' }, { art: 'abblende', von: 0, bis: 1, richtung: 'ein', farbe: 'weiss' }]))
+    expect(g.graph).toContain("eq=brightness='-1*clip((t-18.000)/2.000\\,0\\,1)+1*(1-clip((t-0.000)/1.000\\,0\\,1))':eval=frame")
+    expect(g.graph).toContain("volume='1-clip((t-18.000)/2.000\\,0\\,1)':eval=frame")
+    expect(g.graph).toContain("volume='clip((t-0.000)/1.000\\,0\\,1)':eval=frame")
   })
 })

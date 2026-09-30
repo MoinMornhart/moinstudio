@@ -1,8 +1,8 @@
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
-import { IPC, type SchnittProjekt } from '@shared/app'
+import { IPC, type SchnittProjekt, type SchnittEffekt } from '@shared/app'
 import type { SettingsStore } from '../data/settings'
 import type { JobQueue } from '../jobs/queue'
 import type { ToolManager } from '../tools/manager'
@@ -14,7 +14,6 @@ import { resourceDir } from '../resources'
 import { liesAbschnitte, transkriptJob, type Abschnitt, type TranskriptPayload } from './transkript'
 import { rohschnittJob, type RohschnittPayload, type Schnittliste } from './rohschnitt'
 import { findClaudeCli } from '../claude/cli'
-import { writeFile } from 'node:fs/promises'
 import { bereichSetzen, umschalten, wunschJob, type WunschPayload } from './bearbeiten'
 import { einstellungen, vorschauJob, type VorschauPayload } from './vorschau'
 import { exportJob, kapitelText, type ExportErgebnis, type ExportPayload } from './export'
@@ -25,6 +24,7 @@ import { importJob, type ImportPayload } from './import'
 import { medienUrl } from './medien'
 import type { EffektHilfe } from './effekt-vorbereitung'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
+import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /** Schnitt-Reiter (ROADMAP 6.x): Projekte, Import, Vorschau. */
 
@@ -82,6 +82,7 @@ export function registerSchnittIpc(
       exportiert: !!p.export,
       highlights: p.highlights ?? null,
       clipsStand: p.clips ?? null,
+      antwort: p.antwort ?? null,
       vorschauUrl: p.vorschau ? `${medienUrl(join(ordner, 'vorschau.mp4'))}?v=${p.vorschau}` : null,
       auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null } : null
     }
@@ -166,7 +167,7 @@ export function registerSchnittIpc(
   const aendereListe = async (id: string, f: (l: Schnittliste) => Schnittliste): Promise<Schnittliste> => {
     const daten = await datenOrdner(settings)
     const datei = join(projektOrdner(daten, id), 'schnitt.json')
-    const neu = f(JSON.parse(await readFile(datei, 'utf8')) as Schnittliste)
+    const neu = f(JSON.parse(await liesMitKonfliktkopien(datei)) as Schnittliste)
     await writeFile(datei, JSON.stringify(neu, null, 1))
     return neu
   }
@@ -180,9 +181,11 @@ export function registerSchnittIpc(
     const daten = await datenOrdner(settings)
     const cli = await findClaudeCli()
     if (!cli) throw new Error('Claude ist nicht verbunden (Einstellungen → Mit Claude verbinden).')
-    const payload: WunschPayload = { daten, projekt: String(id), wunsch: text, claudeCli: cli }
+    const payload: WunschPayload = { daten, projekt: String(id), wunsch: text, claudeCli: cli, ffmpeg: (await tools.exePath(FFMPEG)) ?? undefined }
     const auftrag = await queue.enqueue('schnitt-wunsch', `Schnitt: ${text.slice(0, 40)}`, payload)
     await aendereProjekt(daten, String(id), (p) => ({ auftraege: [...(p.auftraege ?? []), auftrag] }))
+    // danach gleich die Vorschau, damit Philip das Ergebnis sieht
+    void queue.waitFor(auftrag).then((j) => (j.state === 'done' ? starteVorschau(id) : null)).catch(() => undefined)
     return auftrag
   }
   biete(IPC.schnittWunsch, (id: unknown, wunsch: unknown) => starteWunsch(id, wunsch))
@@ -197,7 +200,7 @@ export function registerSchnittIpc(
       }
     }))
   })
-  biete(IPC.schnittVorschau, async (id: unknown): Promise<string> => {
+  const starteVorschau = async (id: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const ffmpeg = await tools.exePath(FFMPEG)
     if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
@@ -207,6 +210,20 @@ export function registerSchnittIpc(
     const auftrag = await queue.enqueue('schnitt-vorschau', `Schnitt: ${p.name} Vorschau`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
+  }
+  biete(IPC.schnittVorschau, starteVorschau)
+  // Effektliste (ROADMAP E.5): so wie gespeichert (Originalzeit), auch ausgeschaltete
+  const effektDatei = async (id: unknown): Promise<string> => join(projektOrdner(await datenOrdner(settings), String(id)), 'effekte.json')
+  biete(IPC.schnittEffekte, async (id: unknown): Promise<SchnittEffekt[]> => JSON.parse(await liesMitKonfliktkopien(await effektDatei(id)).catch(() => '[]')) as SchnittEffekt[])
+  biete(IPC.schnittEffektAendern, async (id: unknown, index: unknown, aenderung: unknown): Promise<SchnittEffekt[]> => {
+    const datei = await effektDatei(id)
+    const liste = JSON.parse(await liesMitKonfliktkopien(datei).catch(() => '[]')) as SchnittEffekt[]
+    const i = Number(index)
+    if (!liste[i]) throw new Error('Effekt nicht gefunden.')
+    if (aenderung === null) liste.splice(i, 1)
+    else liste[i] = { ...liste[i], aus: !!(aenderung as { aus?: boolean }).aus }
+    await writeFile(datei, JSON.stringify(liste, null, 1))
+    return liste
   })
   // Export für YouTube (ROADMAP 6.7)
   biete(IPC.schnittExport, async (id: unknown): Promise<string> => {
@@ -291,7 +308,7 @@ export function registerSchnittIpc(
   })
   biete(IPC.schnittListe, async (id: unknown): Promise<Schnittliste | null> => {
     const daten = await datenOrdner(settings)
-    const text = await readFile(join(projektOrdner(daten, String(id)), 'schnitt.json'), 'utf8').catch(() => null)
+    const text = await liesMitKonfliktkopien(join(projektOrdner(daten, String(id)), 'schnitt.json')).catch(() => null)
     return text === null ? null : (JSON.parse(text) as Schnittliste)
   })
   biete(IPC.schnittLoeschen, async (id: unknown): Promise<void> => {

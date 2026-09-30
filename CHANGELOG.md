@@ -6,6 +6,19 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Schnitt: Feld „Was soll passieren?“ – freie Wünsche wie „mach mir ein geiles Intro“ oder „Zeitlupe, wenn der Creeper explodiert“ setzt Claude mit den Effekt-Bausteinen um, danach entsteht die Vorschau von selbst (ROADMAP E.4).
+- Schnitt: Claude sieht das Video über einen Bogen mit Standbildern und kennt Anfang und Ende des fertigen Schnitts.
+- Schnitt: Effekt „Ausblenden/Einblenden“ – das Bild bleibt schwarz, der Ton geht mit.
+- Schnitt: Effektliste unter dem fertigen Schnitt – nach Zeit sortiert, hinspringen, an/aus, löschen (ROADMAP E.5).
+- Test: 30 freie Schnitt-Wünsche, Ergebnis in `docs/tests/schnitt-freiform.md` (27 gut, 3 mittel).
+
+### Fixed
+
+- Schnitt: Texteinblendungen sind nie mehr unleserlich klein.
+- Datenordner in iCloud: Konfliktkopien wie „projekt 2.json“ werden beim Lesen erkannt und repariert, statt dass das Projekt verschwindet.
+
 ## [0.31.0] - 2026-09-30
 
 > Schnitt: Intro-Baukasten

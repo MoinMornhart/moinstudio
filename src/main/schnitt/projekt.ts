@@ -1,8 +1,9 @@
 import { createReadStream } from 'node:fs'
-import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises'
+import { mkdir, readdir, rm, stat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { writeJsonAtomic } from '../data/jsonfile'
+import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /**
  * Schnitt-Projekte (ROADMAP 6.2). Ablage: <Datenordner>/schnitt/<id>/projekt.json plus Proxy, Wellenform und
@@ -46,6 +47,8 @@ export interface Projekt {
   clips?: number
   /** Aufträge am Projekt (Import, Transkript …) in Reihenfolge; die Oberfläche zeigt den ersten, der noch läuft */
   auftraege?: string[]
+  /** Claudes Antwort auf den letzten Wunsch (ROADMAP E.5) */
+  antwort?: { wunsch: string; text: string; zeit: string }
   fehler?: string | null
 }
 
@@ -53,7 +56,7 @@ export const projektOrdner = (daten: string, id: string): string => join(daten, 
 
 export async function ladeProjekt(daten: string, id: string): Promise<Projekt | null> {
   try {
-    return JSON.parse(await readFile(join(projektOrdner(daten, id), 'projekt.json'), 'utf8')) as Projekt
+    return JSON.parse(await liesMitKonfliktkopien(join(projektOrdner(daten, id), 'projekt.json'))) as Projekt
   } catch {
     return null
   }

@@ -1,9 +1,11 @@
 import { execFile } from 'node:child_process'
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { sichereMcAssets } from '../thumbnail/minecraft'
-import { introDauer, pruefeEffekte, zeitleiste, type Effekt } from './effekte'
+import { effekteInSchnittzeit, introDauer, pruefeEffekte, zeitleiste, type Effekt } from './effekte'
+import type { Bereich } from './rohschnitt'
 import { sichereKlaenge } from './klaenge'
+import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /** Was die Aufträge für Effekte brauchen (ROADMAP E.2) */
 export interface EffektHilfe {
@@ -24,14 +26,17 @@ export interface VorbereiteteEffekte {
   laenge: number
 }
 
-export async function ladeEffekte(ordner: string, laenge: number): Promise<Effekt[]> {
-  const roh = JSON.parse(await readFile(join(ordner, 'effekte.json'), 'utf8').catch(() => '[]')) as unknown
-  return pruefeEffekte(roh, laenge).effekte.filter((e) => (e as { aus?: boolean }).aus !== true)
+/** Effekte des Projekts in Originalzeit (wie gespeichert), ohne ausgeschaltete */
+export async function ladeEffekte(ordner: string, dauer: number): Promise<Effekt[]> {
+  const roh = JSON.parse(await liesMitKonfliktkopien(join(ordner, 'effekte.json')).catch(() => '[]')) as unknown
+  return pruefeEffekte(roh, dauer).effekte.filter((e) => (e as { aus?: boolean }).aus !== true)
 }
 
 /** Lädt die Effekte eines Projekts und legt Text-Bilder und Geräusche an; null, wenn es keine Effekte gibt. */
-export async function bereiteEffekteVor(daten: string, ordner: string, laenge: number, hilfe: EffektHilfe): Promise<VorbereiteteEffekte | null> {
-  const liste = await ladeEffekte(ordner, laenge)
+export async function bereiteEffekteVor(daten: string, ordner: string, schnitt: { dauer: number; behalten: Bereich[] }, hilfe: EffektHilfe): Promise<VorbereiteteEffekte | null> {
+  // gespeichert in Originalzeit, gerendert in Schnittzeit
+  const liste = effekteInSchnittzeit(await ladeEffekte(ordner, schnitt.dauer), schnitt.behalten)
+  const laenge = schnitt.behalten.reduce((s, b) => s + b.ende - b.start, 0)
   if (!liste.length) return null
   const klaenge = await sichereKlaenge(hilfe.ffmpeg, join(hilfe.lokal, 'klaenge'))
   const textBilder: VorbereiteteEffekte['textBilder'] = {}

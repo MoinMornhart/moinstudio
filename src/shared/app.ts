@@ -86,6 +86,8 @@ export const IPC = {
   schnittClips: 'schnitt:clips',
   schnittClipDateien: 'schnitt:clip-dateien',
   schnittClipOrdner: 'schnitt:clip-ordner',
+  schnittEffekte: 'schnitt:effekte',
+  schnittEffektAendern: 'schnitt:effekt-aendern',
   planungKarten: 'planung:karten',
   planungNeu: 'planung:neu',
   planungAendern: 'planung:aendern',
@@ -186,6 +188,16 @@ export interface SchnittListe {
   entfernt: { start: number; ende: number; grund: 'pause' | 'aehm' | 'wiederholung' | 'versprecher' | 'leerlauf' | 'manuell'; text?: string; aus?: boolean }[]
 }
 
+/** Effekt im Schnitt (ROADMAP E.2–E.5), wie in effekte.json gespeichert (Originalzeit) */
+export interface SchnittEffekt {
+  art: string
+  aus?: boolean
+  von?: number
+  bis?: number
+  bei?: number
+  [feld: string]: unknown
+}
+
 /** Höhepunkt aus einem Stream (ROADMAP 6.8) */
 export interface SchnittHighlight {
   start: number
@@ -221,6 +233,8 @@ export interface SchnittProjekt {
   rohschnitt: boolean
   einstellungen: { untertitel: 'aus' | 'an' | 'karaoke'; zooms: boolean }
   exportiert: boolean
+  /** Claudes Antwort auf den letzten Wunsch (ROADMAP E.5) */
+  antwort: { wunsch: string; text: string; zeit: string } | null
   /** Stream-Highlights (ROADMAP 6.8): Anzahl oder null (noch nicht gesucht), Stand der Clips */
   highlights: number | null
   clipsStand: number | null
@@ -447,6 +461,9 @@ export interface MoinApi {
   schnittClips(id: string, auswahl: { index: number; art: 'clip' | 'short' }[]): Promise<string>
   schnittClipDateien(id: string): Promise<{ name: string; url: string }[]>
   schnittClipOrdner(id: string): Promise<void>
+  /** Effektliste (ROADMAP E.5): Zeiten in Originalzeit; aendern mit {aus} schaltet, null löscht */
+  schnittEffekte(id: string): Promise<SchnittEffekt[]>
+  schnittEffektAendern(id: string, index: number, aenderung: { aus: boolean } | null): Promise<SchnittEffekt[]>
   /** Planung (ROADMAP 7.3) */
   planungKarten(): Promise<PlanungKarte[]>
   planungNeu(basis: { kanal: PlanungKanal; titel: string; spalte?: PlanungSpalte; termin?: string | null; notizen?: string }): Promise<PlanungKarte>

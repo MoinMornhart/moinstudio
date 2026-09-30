@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 import type { z } from 'zod'
 
 const RETRY_CODES = new Set(['EPERM', 'EBUSY', 'EACCES'])
@@ -52,4 +52,44 @@ export async function readJson<T>(path: string, schema: z.ZodType<T>): Promise<R
   const parsed = schema.safeParse(raw)
   if (!parsed.success) return { ok: false, reason: 'invalid-schema', detail: parsed.error.message }
   return { ok: true, value: parsed.data }
+}
+
+/**
+ * Liest eine Datei im geteilten Datenordner und repariert Konfliktkopien: iCloud legt beim schnellen Ersetzen
+ * „name 2.json“ an (und das Original kann fehlen), OneDrive „name-GERÄT.json“. Die jüngste gültige Fassung wird
+ * wieder unter dem richtigen Namen abgelegt, die Kopien werden entfernt. Fehlt alles, wirft sie wie readFile.
+ */
+export async function liesMitKonfliktkopien(pfad: string): Promise<string> {
+  const ordner = dirname(pfad)
+  const name = basename(pfad)
+  const punkt = name.lastIndexOf('.')
+  const stamm = punkt > 0 ? name.slice(0, punkt) : name
+  const endung = punkt > 0 ? name.slice(punkt) : ''
+  const roh = (t: string): string => t.replace(/[.*+?^$()|[\]{}\\]/g, '\\$&')
+  const muster = new RegExp('^' + roh(stamm) + '( \\d+|-[^.]+)' + roh(endung) + '$')
+  const kopien = (await readdir(ordner).catch(() => [] as string[])).filter((n) => muster.test(n))
+  if (!kopien.length) return readFile(pfad, 'utf8')
+  const kandidaten = await Promise.all(
+    [name, ...kopien].map(async (n) => {
+      const p = join(ordner, n)
+      const info = await stat(p).catch(() => null)
+      const text = info ? await readFile(p, 'utf8').catch(() => null) : null
+      const gueltig = ((): boolean => {
+        if (text === null) return false
+        if (endung !== '.json') return true
+        try {
+          JSON.parse(text)
+          return true
+        } catch {
+          return false
+        }
+      })()
+      return { p, text, zeit: info?.mtimeMs ?? 0, gueltig }
+    })
+  )
+  const beste = kandidaten.filter((k) => k.gueltig).sort((a, b) => b.zeit - a.zeit)[0]
+  if (!beste || beste.text === null) return readFile(pfad, 'utf8')
+  if (beste.p !== pfad) await writeFile(pfad, beste.text, 'utf8')
+  for (const k of kandidaten) if (k.p !== pfad) await rm(k.p, { force: true })
+  return beste.text
 }
