@@ -6,6 +6,19 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Minecraft-Thumbnails: Grafik-Ebene wie bei BastiGHG – Hotbar mit Herzen, Hunger und XP, „Level 19“, Etiketten im Knopf-Stil, rote Lupe mit Pfeil, Haken-/Kreuz-/Zahl-Abzeichen und großer Regel-Text, alles aus den echten Texturen und der Schrift der Spieldatei. Dazu geteilte Bilder (10€/100€/1000€, Noob/Pro) und eine rote Markierung auf dem Boden.
+
+### Changed
+
+- Minecraft-Thumbnails: heller, sauberer Look; Köpfe in Nahaufnahmen kleiner und nie am Rand angeschnitten; das Thema (z. B. ein Riesen-Mob) bleibt im Bild.
+- Werkzeuge und Waffen sind immer gut sichtbar: MoinStudio wählt die Haltung, bei der das Werkzeug ganz im Bild ist und das Gesicht frei bleibt, die Kamera bezieht die Hand mit ein, und bei weiten Einstellungen ist das Werkzeug größer.
+
+### Fixed
+
+- Blender blieb manchmal nach dem fertigen Bild beim Photoshop-Maskenschritt hängen und renderte bei einem Absturz dort das ganze Bild ein zweites Mal.
+
 ### Fixed
 
 - Spiele-Vorlage: Gibt es das gehaltene Ding nicht als freies 3D-Modell, nimmt MoinStudio ein ähnliches (Gewehr statt Schrotflinte, Pistole statt Revolver) statt leerer Hände.

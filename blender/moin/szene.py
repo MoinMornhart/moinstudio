@@ -336,7 +336,9 @@ def _items_anhaengen(figuren, texturen, cam, k):
         it = f.get("item")
         if it:
             # Kampf: Waffen nah an der Kamera übergroß wie bei GommeHD (1,3–1,6-fach)
-            groesse = it.get("groesse", 1.4 if k.get("modus") == "kampf" else 1.0)
+            # bei weiten Einstellungen wirkt ein maßstabsgetreues Werkzeug winzig (Test 30.09.: Goldaxt ein paar Pixel) –
+            # die Vorbilder übertreiben es dann wie im Kampf
+            groesse = it.get("groesse", {"kampf": 1.4, "ganz": 1.6, "tiefe": 1.6, "abgrund": 1.6, "klippe_wand": 1.5, "brust": 1.15, "mob": 1.3}.get(k.get("modus"), 1.0))
             ob = mitems.baue_item(it["name"], texturen, pixel=mitems.ITEM_PIXEL * groesse)
             mitems.in_die_hand(ob, fig, it.get("hand", "l"), cam, it.get("winkel", 40))
             gehalten[f["id"]] = ob
@@ -623,10 +625,21 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
         links = haupt.kopf_mitte().x - 0.3  # nicht weit links: sonst verschwindet der Gegner hinter dem Helden
         erlaubt = lambda pos: pos.y < vorn and pos.x > links
 
+    # Hält die Hauptfigur etwas, muss die Hand mit ins Bild (Test 30.09.: Spitzhacke in der Nahaufnahme unsichtbar,
+    # weil die Hand unter dem Bildrand lag) – sie zählt wie die Kopf-Ecken, dazu ein Punkt eine Werkzeuglänge weiter
+    haupt_item = (szene["figuren"][0].get("item") or {})
+
+    def wichtige_punkte():
+        punkte = list(haupt.kopf_ecken())
+        if haupt_item.get("name"):
+            hand = haupt.hand(haupt_item.get("hand", "l"))
+            punkte += [hand, hand + (hand - haupt.kopf_mitte()).normalized() * 0.5 * BLOCK]
+        return punkte
+
     def rahmen(still=False):
         o, u = haupt.kopf_punkte()
         return mkamera.rahme(scene, cam, o, u, thema, k.get("modus", "nah"), seite=k.get("seite", "links"),
-                             gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=haupt.kopf_ecken(), still=still,
+                             gesicht=haupt.gesicht_richtung(), erlaubt=erlaubt, kopf_ecken=wichtige_punkte(), still=still,
                              anpassung={n: tuple(k[n]) if n.endswith("_uv") else k[n] for n in ("hoehe", "linse", "kopf_anteil", "kopf_uv", "thema_uv") if n in k})
 
     if szene["figuren"][0].get("blick") == "auto":

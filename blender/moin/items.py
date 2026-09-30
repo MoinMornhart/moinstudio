@@ -123,18 +123,35 @@ def in_die_hand(item, figur, seite, kamera, winkel=40.0):
     griff = Vector(item["griff"])
     item.matrix_world = Matrix.Translation(hand) @ rot @ Matrix.Translation(-griff)
     bpy.context.view_layer.update()
-    # Gesicht frei (Stilbuch: das Gesicht ist das Wichtigste): liegt der Gegenstand über dem Kopf, zur anderen Seite
-    # drehen, sonst steiler halten
-    if not getattr(in_die_hand, "_innen", False) and _ueber_gesicht(item, figur, kamera) > 0.2:
+    # Werkzeug sichtbar und Gesicht frei (Philip, 30.09.: „Werkzeuge ein großes Problem“ – Test: in 6 von 6 Bildern
+    # war das Werkzeug abgeschnitten, hinter dem Kopf oder aus dem Bild gedreht). Mehrere Richtungen probieren und die
+    # nehmen, bei der das Werkzeug am vollständigsten im Bild ist, ohne das Gesicht zu verdecken.
+    if not getattr(in_die_hand, "_innen", False):
         in_die_hand._innen = True
         try:
-            for w2, andersrum in ((winkel, True), (75.0, False), (75.0, True)):
+            def wert(w2, andersrum):
                 _neu_ausrichten(item, figur, seite, kamera, w2, andersrum)
-                if _ueber_gesicht(item, figur, kamera) <= 0.2:
-                    break
+                raus = 1.0 - _im_bild(item, kamera)
+                return raus * 4 + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 5 + abs(w2 - winkel) / 90 + (0.15 if andersrum else 0)
+            kandidaten = [(w2, a2) for w2 in (winkel, 60.0, 20.0, 80.0, -15.0) for a2 in (False, True)]
+            bester = min(kandidaten, key=lambda k: wert(*k))
+            _neu_ausrichten(item, figur, seite, kamera, *bester)
         finally:
             in_die_hand._innen = False
     return item
+
+
+def _im_bild(item, kamera):
+    """Anteil der Bildfläche des Gegenstands (Umriss-Kasten), der im Bild liegt."""
+    from bpy_extras.object_utils import world_to_camera_view
+
+    p = [world_to_camera_view(bpy.context.scene, kamera, item.matrix_world @ Vector(c)) for c in item.bound_box]
+    if min(e.z for e in p) <= 0:
+        return 0.0
+    x0, x1, y0, y1 = min(e.x for e in p), max(e.x for e in p), min(e.y for e in p), max(e.y for e in p)
+    flaeche = max(1e-6, (x1 - x0) * (y1 - y0))
+    drin = max(0.0, min(1.0, x1) - max(0.0, x0)) * max(0.0, min(1.0, y1) - max(0.0, y0))
+    return drin / flaeche
 
 
 def _neu_ausrichten(item, figur, seite, kamera, winkel, andersrum):
