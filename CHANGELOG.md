@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.41.3] - 2026-10-01
+
+> Beine fließen nicht mehr ineinander
+
 ### Fixed
 
 - Beine flossen ineinander: Der Winkel „seitlich“ hatte bei den Beinen das falsche Vorzeichen – gespreizte Beine kreuzten sich zu den Füßen hin und schoben sich übereinander. Jetzt spreizen sie nach außen, mit sauberem Spalt; die Innenseiten liegen im Schatten wie bei echten Beinen.
