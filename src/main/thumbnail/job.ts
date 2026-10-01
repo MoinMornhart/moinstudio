@@ -192,8 +192,9 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         break
       }
       const warnungen = [...(bericht.warnungen ?? [])]
-      // Bildprüfung durch Claude (groß und in Handygröße) – nicht beim letzten Versuch, dann gäbe es keine Korrektur mehr
-      if (versuch < KORREKTUREN && !ernsteWarnungen(warnungen).length) {
+      // Bildprüfung durch Claude (groß und in Handygröße) – immer, auch neben Zahlen-Warnungen (die Kamera-Abweichung
+      // allein verhinderte sonst jede Prüfung, Test 01.10.); nicht beim letzten Versuch, dann gäbe es keine Korrektur mehr
+      if (versuch < KORREKTUREN) {
         ctx.progress(anteil(versuch * 0.25 + 0.15), `Variante ${i + 1}/${anzahl}: Claude prüft das Bild (auch in Handygröße) …`)
         warnungen.push(...(await sichtPruefen(pfad, v)).map((x) => SICHT_VORSILBE + x))
       }
