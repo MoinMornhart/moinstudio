@@ -161,7 +161,17 @@ def _einpassen(scene, cam, fig, person, maske, name):
         # der Kopf muss ganz im Bild bleiben (Test Red Dead: Kopf oben abgeschnitten) – sonst zurück und aufhören
         from bpy_extras.object_utils import world_to_camera_view
         ecken = [world_to_camera_view(scene, cam, e) for e in fig.kopf_ecken()]
-        if not all(0.0 < e.x < 1.0 and 0.0 < e.y < 1.0 for e in ecken):
+        z_vorher = fig.wurzel.location.z
+        # stößt nur der Scheitel oben an, rutscht die Figur nach unten (Person unten angeschnitten: die Figur ragt dann
+        # ebenfalls unten hinaus, statt klein zu bleiben – A Way Out 01.10.)
+        for _schritt in range(12 if person.get("unten_angeschnitten") else 0):
+            if max(e.y for e in ecken) <= 0.985 or min(e.y for e in ecken) < 0.1:
+                break
+            fig.wurzel.location.z -= 0.25 * mfigur.PX * fig.wurzel.scale.z * 4
+            bpy.context.view_layer.update()
+            ecken = [world_to_camera_view(scene, cam, e) for e in fig.kopf_ecken()]
+        if not all(0.015 < e.x < 0.985 and 0.015 < e.y < 0.985 for e in ecken):  # etwas Luft: Haare kleben sonst am Rand (A Way Out)
+            fig.wurzel.location.z = z_vorher
             _skaliere_um_kopf(fig, 1 / faktor)
             schritte[-1]["faktor"] = 1.0
             break

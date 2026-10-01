@@ -126,7 +126,12 @@ def personen_trennen(bild, boxen):
             anzahl = 0
         if anzahl > 2:
             groesste = 1 + int(np.argmax(werte[1:, cv2.CC_STAT_AREA]))
-            behalten = [j for j in range(1, anzahl) if j == groesste or werte[j, cv2.CC_STAT_AREA] >= 0.05 * werte[groesste, cv2.CC_STAT_AREA]]
+            # Kleine Teile direkt an der Person bleiben (Hand mit Taschenlampe, Ärmel, Patronengurt) – mit der alten
+            # 5-%-Grenze blieben sie als Rest im Bild stehen (Spiele-Vorlage-Tests 8, 10, 14)
+            nah = cv2.dilate((beschr == groesste).astype(np.uint8), np.ones((max(9, h // 25),) * 2, np.uint8)) > 0
+            behalten = [j for j in range(1, anzahl) if j == groesste
+                        or werte[j, cv2.CC_STAT_AREA] >= 0.05 * werte[groesste, cv2.CC_STAT_AREA]
+                        or (werte[j, cv2.CC_STAT_AREA] >= 0.002 * werte[groesste, cv2.CC_STAT_AREA] and nah[beschr == j].any())]
             m = np.where(np.isin(beschr, behalten), 255, 0).astype(np.uint8)
         masken.append(m)
     return masken
@@ -195,7 +200,8 @@ def main_boxen(bild, vorlage, ordner, dazu, titel, boxen):
 def auffuellen(bild, ordner, alle, dazu, titel, info):
     w, h = bild.size
     # Maske großzügig erweitern (Haare, Ränder, Schatten), dann auffüllen
-    groesser = cv2.dilate(alle, np.ones((25, 25), np.uint8), iterations=2)
+    k = max(25, min(w, h) // 30)  # mit der Bildgröße wachsen: bei 1080p ~36 px statt fest 25
+    groesser = cv2.dilate(alle, np.ones((k, k), np.uint8), iterations=2)
     for x_0, y_0, x_1, y_1 in dazu:
         # Gegenstände samt Rand (Claudes Kästen sind oft knapp; Reste wie ein Laufende sehen sonst verloren aus)
         rx, ry = 0.04 * (x_1 - x_0) + 0.015, 0.06 * (y_1 - y_0) + 0.02
