@@ -301,6 +301,15 @@ const PRUEF_SCHEMA = {
 const KORRIGIERBAR = ['kopf', 'kopf_anteil', 'pose', 'mimik', 'blick', 'ansicht', 'ziel', 'licht_seite', 'kopf_drehung', 'verbindungen']
 const KORRIGIERBAR_FREUND = ['kopf', 'kopf_anteil', 'pose', 'blick', 'ansicht']
 
+/** Kästen um Reste der alten Person aus der Schlussprüfung: nur gültige, nicht riesige Kästen (höchstens vier). */
+export function gueltigeReste(k: Record<string, unknown>): Box[] {
+  const roh = Array.isArray(k['reste']) ? (k['reste'] as unknown[]) : []
+  return roh
+    .filter((b): b is Box => Array.isArray(b) && b.length === 4 && b.every((z) => typeof z === 'number' && z >= 0 && z <= 1))
+    .filter(([x0, y0, x1, y1]) => x1 > x0 && y1 > y0 && (x1 - x0) * (y1 - y0) <= 0.25)
+    .slice(0, 4)
+}
+
 /** Korrektur der Schlussprüfung übernehmen: nur erlaubte Felder, Freunde je Index. */
 export function korrigiere(spec: Record<string, unknown>, k: Record<string, unknown>): void {
   for (const feld of KORRIGIERBAR) if (feld in k && k[feld] !== undefined) spec[feld] = feld === 'pose' && k[feld] && typeof k[feld] === 'object' ? begrenzeWinkel(k[feld] as Record<string, unknown>) : k[feld]
@@ -332,7 +341,8 @@ Sieh dir beide Bilder an und prüfe streng, ob das Ergebnis dem Original entspri
   Körper muss die Person trotzdem etwa ausfüllen) und nicht abgeschnitten, wo die Person es nicht war?
 - Stimmt die Haltung des GANZEN Körpers (Arme, Beine, Neigung, Sprung, Klettern, Sitzen) und die Blickrichtung?
 - Sind Personen verbunden (Kette, Seil), ist die Verbindung da und hängt an den richtigen Stellen?
-- Sind Reste der alten Personen sichtbar (Geist, Hand, Kopf)?
+- Sind Reste der alten Personen sichtbar (Geist, Hand, Kopf, Waffe, Gurt)? Dann gib "reste": [[x0, y0, x1, y1], …] an –
+  großzügige Kästen (Bildkoordinaten 0–1) um jeden Rest, sie werden aus der Vorlage entfernt und neu aufgefüllt.
 - Verdeckt eine Figur ein Spiel-Logo, einen Titel oder Schriftzug, der im Original VOR den Personen lag (auch wenn die
   Person im Original nur eine Silhouette dahinter war)? Dann gib "titel": [{box: [x0, y0, x1, y1], farbe: "#rrggbb"}] für
   diesen Schriftzug an (Farbe der Buchstaben, je Farbe ein Eintrag) – er wird wieder vor die Figuren gelegt.
@@ -347,7 +357,7 @@ Bildhöhe; freunde = weitere Figuren mit denselben Feldern; verbindungen = [{von
 ${JSON.stringify(zeigen, null, 1)}
 
 Antworte nur mit JSON: {"passt": true|false, "probleme": ["kurz, auf Deutsch"], "korrektur": {nur die Felder, die sich
-ändern müssen – z. B. "kopf_anteil", "kopf", "pose", "blick", "freunde": [{…} je Freund oder null], "verbindungen"}}.
+ändern müssen – z. B. "kopf_anteil", "kopf", "pose", "blick", "freunde": [{…} je Freund oder null], "verbindungen", "reste"}}.
 Größer machen = kopf_anteil erhöhen. Passt alles, "passt": true und keine Korrektur.`
 }
 
@@ -564,6 +574,14 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     probleme.splice(0, probleme.length, ...(urteil.probleme ?? []))
     if (urteil.passt || !urteil.korrektur || !Object.keys(urteil.korrektur).length) break
     korrigiere(spec, urteil.korrektur)
+    // Reste der alten Person (Hand, Gurt, Waffe), die die Maske verpasst hat: zusätzlich entfernen und neu auffüllen
+    // (Red Dead 01.10.: Hand mit Messer unten links blieb als Geist stehen)
+    const reste = gueltigeReste(urteil.korrektur)
+    if (reste.length) {
+      ctx.progress(null, 'Entferne Reste der alten Person …')
+      extra.push(...reste.map((b) => b.join(',')))
+      await freistellen().catch(() => undefined)
+    }
     // Logo/Titel, das die Figur verdeckt: wieder vor die Figuren legen (Test 30.09.: Lethal Company, GTA)
     const neueTitel = echteTitel({ titel: urteil.korrektur['titel'] as VorlagenAnalyse['titel'] })
     if (neueTitel.length) {

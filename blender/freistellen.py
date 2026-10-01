@@ -39,6 +39,32 @@ def lama(arr, maske, groesse=512):
         return None
 
 
+def lama_schrittweise(arr, loch, runden=3):
+    """Große Löcher von außen nach innen füllen: je Runde nur einen Ring am Rand übernehmen, die nächste Runde sieht
+    ihn schon als Hintergrund. In einem Schritt erfand LaMa in der Mitte großer Flächen Geisterformen der alten
+    Person (Red Dead 01.10.: verschwommene Hand links neben der Figur)."""
+    h, w = arr.shape[:2]
+    if (loch > 127).sum() < 0.12 * h * w:
+        return lama(arr, loch)
+    arbeit, rest = arr.copy(), (loch > 127).astype(np.uint8) * 255
+    dicke = max(9, int(np.sqrt((rest > 0).sum()) / (2 * runden + 2))) | 1
+    for _ in range(runden):
+        innen = cv2.erode(rest, np.ones((dicke, dicke), np.uint8))
+        if not innen.any():
+            break
+        gefuellt = lama(arbeit, rest)
+        if gefuellt is None:
+            return None
+        ring = (rest > 0) & (innen == 0)
+        arbeit[ring] = gefuellt[ring]
+        rest = innen
+    gefuellt = lama(arbeit, rest) if rest.any() else arbeit
+    if gefuellt is None:
+        return None
+    arbeit[rest > 0] = gefuellt[rest > 0]
+    return arbeit
+
+
 def _kopf_in(bild, m, w, h):
     """Kopfmitte und -höhe einer Personenmaske: größtes Gesicht darin (OpenCV), sonst oberer Teil der Person."""
     ys, xs = np.nonzero(m)
@@ -201,6 +227,16 @@ def auffuellen(bild, ordner, alle, dazu, titel, info):
     w, h = bild.size
     # Maske großzügig erweitern (Haare, Ränder, Schatten), dann auffüllen
     k = max(25, min(w, h) // 30)  # mit der Bildgröße wachsen: bei 1080p ~36 px statt fest 25
+    # Lücken schließen und Löcher füllen: Gewehr, Gurt oder Hand zwischen den Armen gehören für SAM oft nicht zur
+    # Person – die stehen gebliebenen Originalpixel malt LaMa dann zu neuen Schatten der Person aus (Red Dead 01.10.)
+    nah = max(31, min(w, h) // 12) | 1
+    alle = cv2.morphologyEx(alle, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (nah, nah)))
+    aussen = np.zeros((h + 2, w + 2), np.uint8)
+    flut = alle.copy()
+    for ecke in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
+        if flut[ecke[1], ecke[0]] == 0:
+            cv2.floodFill(flut, aussen, ecke, 255)
+    alle = np.maximum(alle, cv2.bitwise_not(flut))  # was von außen nicht erreichbar ist, ist ein Loch
     groesser = cv2.dilate(alle, np.ones((k, k), np.uint8), iterations=2)
     for x_0, y_0, x_1, y_1 in dazu:
         # Gegenstände samt Rand (Claudes Kästen sind oft knapp; Reste wie ein Laufende sehen sonst verloren aus)
@@ -217,7 +253,7 @@ def auffuellen(bild, ordner, alle, dazu, titel, info):
             schrift, _ = maske_farbe(arr, box, farbe)
             # samt Schlagschatten (liegt einige Pixel versetzt neben der Schrift)
             loch = np.maximum(loch, cv2.dilate((schrift > 0.2).astype(np.uint8) * 255, np.ones((17, 17), np.uint8)))
-    gefuellt = lama(arr, loch) if os.path.exists(LAMA) else None
+    gefuellt = lama_schrittweise(arr, loch) if os.path.exists(LAMA) else None
     if gefuellt is None:
         # Rückfall ohne Modell: OpenCV füllt weich (verwaschen, aber immer verfügbar)
         klein = cv2.resize(arr, (w // 2, h // 2))

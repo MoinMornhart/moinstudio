@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analysePrompt, begrenzeWinkel, besterTreffer, ersatzSuchwort, groesserBeiLuecke, freundePlaetze, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
+import { analysePrompt, begrenzeWinkel, besterTreffer, ersatzSuchwort, groesserBeiLuecke, freundePlaetze, gueltigeReste, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
 
 describe('Spiele-Vorlage', () => {
   it('findet das passende Poly-Haven-Modell zum Suchwort', () => {
@@ -101,5 +101,13 @@ describe('Spiele-Vorlage: Ersatz und Blick', () => {
     korrigiere(spec, { blick: 160, freunde: [{ blick: -170 }] })
     expect(spec['blick']).toBe(90)
     expect((spec['freunde'] as Record<string, unknown>[])[0]!['blick']).toBe(-90)
+  })
+})
+
+describe('Reste der alten Person aus der Schlussprüfung', () => {
+  it('nimmt nur gültige, nicht riesige Kästen, höchstens vier', () => {
+    expect(gueltigeReste({ reste: [[0.08, 0.5, 0.2, 0.75], [0.5, 0.5, 0.4, 0.6], [0, 0, 1, 1], [0.1, 0.1, 0.2], 'x'] })).toEqual([[0.08, 0.5, 0.2, 0.75]])
+    expect(gueltigeReste({ reste: Array(6).fill([0.1, 0.1, 0.2, 0.2]) })).toHaveLength(4)
+    expect(gueltigeReste({})).toEqual([])
   })
 })

@@ -153,9 +153,18 @@ def _einpassen(scene, cam, fig, person, maske, name):
             faktor = max(faktor, 1.08)
         if soll:
             faktor = min(faktor, soll / 0.85 * 1.12 / max(ist, 0.01))
+        kopf_soll = person.get("kopf_hoehe")
+        if person.get("unten_angeschnitten") and kopf_soll and not schritte:
+            # Körperhöhe sagt bei unten angeschnittenen Personen nichts – Maßstab ist der Kopf (Minecraft-Köpfe dürfen
+            # etwas größer sein). Auch verkleinern: die Figur war sonst 1,5-mal zu groß (Red Dead 01.10.)
+            from bpy_extras.object_utils import world_to_camera_view
+            ys = [world_to_camera_view(scene, cam, e).y for e in fig.kopf_ecken()]
+            kopf_ist = max(ys) - min(ys)
+            if kopf_ist > kopf_soll * 1.45:
+                faktor = max(0.6, kopf_soll * 1.25 / kopf_ist)
         faktor = min(faktor, 1.8 / gesamt, 1.45)
         schritte.append({"deckung": round(deck, 3), "hoehe": round(ist, 3), "soll": round(soll, 3), "faktor": round(faktor, 3)})
-        if faktor < 1.03:
+        if 0.97 < faktor < 1.03:
             break
         _skaliere_um_kopf(fig, faktor)
         # der Kopf muss ganz im Bild bleiben (Test Red Dead: Kopf oben abgeschnitten) – sonst zurück und aufhören
@@ -293,8 +302,15 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         # folgt das Gewehr dem gebeugten Unterarm und ragt senkrecht nach oben). Zielpunkt zwischen Hand und Kamera,
         # leicht zur Bildmitte, damit der Lauf schräg zur Kamera zeigt und nicht genau in die Linse
         seite = r.get("hand", "r")
-        mitte = cam.location + (cam.matrix_world.to_3x3() @ Vector((0, 0, -1))) * abstand
-        punkt = fig.hand(seite).lerp(cam.location, 0.45).lerp(mitte, 0.25)
+        # Lauf etwa 50° neben der Linse zur Bildmitte und leicht nach unten: genau zur Kamera verkürzt er sich zu einem
+        # Strich vor dem Gesicht (Red Dead 01.10.); so zeigt er seine Länge wie auf Waffen-Covern
+        from bpy_extras.object_utils import world_to_camera_view
+        hand = fig.hand(seite)
+        achsen = cam.matrix_world.to_3x3()
+        rechts, hoch = achsen @ Vector((1, 0, 0)), achsen @ Vector((0, 1, 0))
+        zur_mitte = 1.0 if world_to_camera_view(scene, cam, hand).x < 0.5 else -1.0
+        richtung = ((cam.location - hand).normalized() * 0.85 + rechts * zur_mitte * 0.6 - hoch * 0.25).normalized()
+        punkt = hand + richtung * 1.2
         info["ziel"] = "kamera"
         info["arm"] = _ziele(fig, p, seite, punkt)
     if r and os.path.exists(r["gltf"]):
