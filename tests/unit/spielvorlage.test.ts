@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analysePrompt, begrenzeWinkel, besterTreffer, ersatzSuchwort, groesserBeiLuecke, freundePlaetze, gueltigeReste, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
+import { analysePrompt, begrenzeWinkel, besterTreffer, ersatzSuchwort, groesserBeiLuecke, freundePlaetze, gueltigeHaende, gueltigeReste, gueltigeVerbindungen, korrigiere, kopfAnteil, personenArgumente, titelArgumente } from '../../src/main/thumbnail/spielvorlage'
 
 describe('Spiele-Vorlage', () => {
   it('findet das passende Poly-Haven-Modell zum Suchwort', () => {
@@ -109,5 +109,18 @@ describe('Reste der alten Person aus der Schlussprüfung', () => {
     expect(gueltigeReste({ reste: [[0.08, 0.5, 0.2, 0.75], [0.5, 0.5, 0.4, 0.6], [0, 0, 1, 1], [0.1, 0.1, 0.2], 'x'] })).toEqual([[0.08, 0.5, 0.2, 0.75]])
     expect(gueltigeReste({ reste: Array(6).fill([0.1, 0.1, 0.2, 0.2]) })).toHaveLength(4)
     expect(gueltigeReste({})).toEqual([])
+  })
+})
+
+describe('Handpositionen aus Analyse und Prüfung', () => {
+  it('nimmt höchstens zwei gültige Punkte im Bild', () => {
+    expect(gueltigeHaende([[0.1, 0.5], [2, 0.5], [0.3], [0.6, 0.2], [0.7, 0.7]])).toEqual([[0.1, 0.5], [0.6, 0.2]])
+    expect(gueltigeHaende('x')).toEqual([])
+  })
+  it('Korrektur übernimmt Hände nur geprüft', () => {
+    const spec: Record<string, unknown> = { freunde: [{}] }
+    korrigiere(spec, { haende: [[0.2, 0.3], [5, 5]], freunde: [{ haende: [[0.9, 0.1]] }] })
+    expect(spec['haende']).toEqual([[0.2, 0.3]])
+    expect((spec['freunde'] as Record<string, unknown>[])[0]!['haende']).toEqual([[0.9, 0.1]])
   })
 })

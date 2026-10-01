@@ -391,10 +391,15 @@ def _items_anhaengen(figuren, texturen, cam, k):
             # die Vorbilder übertreiben es dann wie im Kampf
             # Haltung und Größe wie im Spiel (display.thirdperson aus der Modellkette), nur bei weiten Einstellungen etwas
             # übertrieben wie bei den Vorbildern (sonst ist das Werkzeug dort ein paar Pixel groß)
-            groesse = it.get("groesse", {"kampf": 1.25, "ganz": 1.4, "tiefe": 1.4, "abgrund": 1.4, "klippe_wand": 1.3, "mob": 1.15}.get(k.get("modus"), 1.0))
+            # Thumbnail-Künstler zeigen Werkzeuge 1,0–1,4-fach gegenüber dem Spiel (Recherche 01.10.) – Grundwert 1,2;
+            # flache Items (Fackel, Brot, Bogen: im Spiel 0,55) wären sonst kaum zu sehen und bekommen noch 1,5 dazu
+            groesse = it.get("groesse", {"kampf": 1.3, "ganz": 1.45, "tiefe": 1.45, "abgrund": 1.45, "klippe_wand": 1.35, "mob": 1.25}.get(k.get("modus"), 1.2))
             seite = it.get("hand", "l")
             ob = mitems.baue_item(it["name"], texturen, pixel=mfigur.PX)
-            mitems.mc_halten(ob, fig, seite, ob["pixel"], mitems.haltung(it["name"], texturen, seite), groesse)
+            anzeige = mitems.haltung(it["name"], texturen, seite)
+            if "groesse" not in it and anzeige["scale"][0] < 0.7:
+                groesse *= 1.5
+            mitems.mc_halten(ob, fig, seite, ob["pixel"], anzeige, groesse)
             if cam is not None:
                 mitems.handgelenk_drehen(ob, fig, seite, cam)
             gehalten[f["id"]] = ob

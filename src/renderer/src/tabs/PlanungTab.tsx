@@ -226,9 +226,12 @@ function Kachel({ karte, oeffne, ziehen }: { karte: PlanungKarte; oeffne: (id: s
       {karte.bildUrl && <img className="kachel-bild" src={karte.bildUrl} alt="" draggable={false} />}
       <span className="kachel-titel">{karte.titel}</span>
       {notiz && <span className="kachel-notiz">{notiz}</span>}
-      {(karte.termin || karte.checkliste.length > 0) && (
+      {(karte.termin || karte.checkliste.length > 0 || karte.schnitt || karte.thumbnail?.gewaehlt || karte.youtube) && (
         <span className="kachel-fuss">
           {karte.termin && <span className={`termin${ueberfaellig(karte) ? ' spaet' : ''}`}>{terminText(karte.termin)}</span>}
+          {karte.schnitt && <span className="kachel-chip schnitt" title="Mit einem Video im Schnitt verknüpft">✂ Im Schnitt</span>}
+          {karte.thumbnail?.gewaehlt && <span className="kachel-chip bild" title="Thumbnail ausgewählt">🖼 Thumbnail</span>}
+          {karte.youtube && <span className="kachel-chip text" title="Titel, Beschreibung und Kapitel aus dem Export">✎ Text fertig</span>}
           {karte.checkliste.length > 0 && (
             <span className={`haken${erledigt === karte.checkliste.length ? ' voll' : ''}`}>
               ✓ {erledigt}/{karte.checkliste.length}

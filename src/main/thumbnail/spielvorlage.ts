@@ -41,6 +41,16 @@ export interface SpielvorlagePayload {
 
 type Box = [number, number, number, number]
 
+const HAENDE = { type: 'array', maxItems: 2, items: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 } } as const
+
+/** Handpositionen [[u, v], …] aus Analyse oder Prüfung: höchstens zwei, im Bild (0–1). */
+export function gueltigeHaende(roh: unknown): [number, number][] {
+  if (!Array.isArray(roh)) return []
+  return roh
+    .filter((h): h is [number, number] => Array.isArray(h) && h.length === 2 && h.every((z) => typeof z === 'number' && z >= 0 && z <= 1))
+    .slice(0, 2)
+}
+
 export interface Person {
   /** Kasten um die ganze Person samt Armen, Beinen und Gehaltenem */
   box?: Box
@@ -50,6 +60,8 @@ export interface Person {
   winkel?: Record<string, unknown>
   ansicht?: 'vorn' | 'hinten'
   blick?: number
+  /** Wo die Hände der Person im Bild sind [[u, v], …] – die Arme der Figur werden genau dorthin gerichtet */
+  haende?: [number, number][]
 }
 
 /** Verbindung zwischen zwei Personen der Vorlage (Kette, Seil …); „ich“ = Philip, „freund0“ … = weitere[0] … */
@@ -76,6 +88,7 @@ export interface VorlagenAnalyse {
   ansicht?: 'vorn' | 'hinten'
   ziel?: [number, number]
   blick?: number
+  haende?: [number, number][]
   gegenstand?: { box: Box; suchwort: string; hand?: 'r' | 'l' }
   /** Titel und Logos, die über der Person liegen, mit ihrer Textfarbe */
   titel?: { box: Box; farbe: string }[]
@@ -103,6 +116,7 @@ const SCHEMA = {
     ansicht: { type: 'string', enum: ['vorn', 'hinten'] },
     ziel: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
     blick: { type: 'number' },
+    haende: HAENDE,
     gegenstand: { type: 'object', properties: { box: BOX, suchwort: { type: 'string' }, hand: { type: 'string', enum: ['r', 'l'] } } },
     titel: { type: 'array', items: { type: 'object', required: ['box', 'farbe'], properties: { box: BOX, farbe: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } } } },
     weitere: {
@@ -110,7 +124,7 @@ const SCHEMA = {
       items: {
         type: 'object',
         required: ['kopf', 'kopf_anteil'],
-        properties: { box: BOX, kopf: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 }, kopf_anteil: { type: 'number' }, pose: { type: 'string' }, winkel: { type: 'object' }, ansicht: { type: 'string', enum: ['vorn', 'hinten'] }, blick: { type: 'number' } }
+        properties: { box: BOX, kopf: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 }, kopf_anteil: { type: 'number' }, pose: { type: 'string' }, winkel: { type: 'object' }, ansicht: { type: 'string', enum: ['vorn', 'hinten'] }, blick: { type: 'number' }, haende: HAENDE }
       }
     },
     verbindungen: {
@@ -277,7 +291,8 @@ export function freundePlaetze(a: Pick<VorlagenAnalyse, 'kopf' | 'kopf_anteil' |
         kopf_anteil: Math.min(0.6, Math.max(0.1, w.kopf_anteil)),
         pose: w.winkel && Object.keys(w.winkel).length ? begrenzeWinkel(w.winkel) : w.pose ?? 'neutral',
         ansicht: w.ansicht ?? 'vorn',
-        ...(typeof w.blick === 'number' ? { blick: w.blick } : {})
+        ...(typeof w.blick === 'number' ? { blick: w.blick } : {}),
+        ...(gueltigeHaende(w.haende).length ? { haende: gueltigeHaende(w.haende) } : {})
       }
     const versatz = (i - (a.weitere?.length ?? 0) + 1) * 0.24
     return { skin: f.skin, slim: f.slim ?? null, kopf: [Math.min(0.9, Math.max(0.1, u + seite * versatz)), v + 0.02], kopf_anteil: a.kopf_anteil * 0.85, pose: 'neutral', ansicht: a.ansicht ?? 'vorn', blick: -seite * 15 }
@@ -298,8 +313,8 @@ const PRUEF_SCHEMA = {
 } as const
 
 /** Felder der Szene, die die Schlussprüfung ändern darf (Pfade, Skins und Masken nie) */
-const KORRIGIERBAR = ['kopf', 'kopf_anteil', 'pose', 'mimik', 'blick', 'ansicht', 'ziel', 'licht_seite', 'kopf_drehung', 'verbindungen']
-const KORRIGIERBAR_FREUND = ['kopf', 'kopf_anteil', 'pose', 'blick', 'ansicht']
+const KORRIGIERBAR = ['kopf', 'kopf_anteil', 'pose', 'mimik', 'blick', 'ansicht', 'ziel', 'licht_seite', 'kopf_drehung', 'verbindungen', 'haende']
+const KORRIGIERBAR_FREUND = ['kopf', 'kopf_anteil', 'pose', 'blick', 'ansicht', 'haende']
 
 /** Kästen um Reste der alten Person aus der Schlussprüfung: nur gültige, nicht riesige Kästen (höchstens vier). */
 export function gueltigeReste(k: Record<string, unknown>): Box[] {
@@ -327,6 +342,11 @@ export function korrigiere(spec: Record<string, unknown>, k: Record<string, unkn
   }
   blickBegrenzen(spec)
   if (Array.isArray(spec['freunde'])) (spec['freunde'] as Record<string, unknown>[]).forEach(blickBegrenzen)
+  const haendePruefen = (x: Record<string, unknown>): void => {
+    if ('haende' in x) x['haende'] = gueltigeHaende(x['haende'])
+  }
+  haendePruefen(spec)
+  if (Array.isArray(spec['freunde'])) (spec['freunde'] as Record<string, unknown>[]).forEach(haendePruefen)
 }
 
 export function pruefPrompt(vorlage: string, ergebnis: string, spec: Record<string, unknown>, wunsch?: string): string {
@@ -358,7 +378,9 @@ Bildhöhe; freunde = weitere Figuren mit denselben Feldern; verbindungen = [{von
 ${JSON.stringify(zeigen, null, 1)}
 
 Antworte nur mit JSON: {"passt": true|false, "probleme": ["kurz, auf Deutsch"], "korrektur": {nur die Felder, die sich
-ändern müssen – z. B. "kopf_anteil", "kopf", "pose", "blick", "freunde": [{…} je Freund oder null], "verbindungen", "reste"}}.
+ändern müssen – z. B. "kopf_anteil", "kopf", "pose", "blick", "haende", "freunde": [{…} je Freund oder null], "verbindungen", "reste"}}.
+Liegen Hände falsch (Klettern, Greifen, Ausholen), gib "haende": [[u, v], …] mit den Handpositionen aus dem ORIGINAL an –
+die Arme werden genau dorthin gerichtet; das ist genauer als Winkel in "pose".
 Größer machen = kopf_anteil erhöhen. Passt alles, "passt": true und keine Korrektur.`
 }
 
@@ -438,6 +460,8 @@ ${beispiele}
 - ansicht: "vorn", wenn man das Gesicht der Person sieht, "hinten", wenn man sie von hinten sieht (z. B. Third-Person-Spiel)
 - blick: wohin der Körper gedreht ist, in Grad: 0 = frontal zur Kamera (bzw. bei hinten: gerade ins Bild hinein),
   positiv = zur rechten Bildseite, negativ = zur linken (z. B. 40, wenn die Person nach rechts zielt)
+- haende: [[u, v], …] wo die Hände der Person im Bild sind (jede sichtbare Hand, besonders wenn sie greift, klettert,
+  sich festhält oder ausholt) – Philips Arme werden genau dorthin gerichtet; verdeckte Hände weglassen
 - ziel: [u, v], falls die Person auf etwas zielt oder zeigt (z. B. den Gegner) – der Arm mit dem Gegenstand wird
   automatisch genau dorthin gerichtet; sonst weglassen
 - licht_seite: von welcher Seite das Hauptlicht auf die Person fällt
@@ -519,6 +543,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     ansicht: a.ansicht ?? 'vorn',
     ...(a.ziel?.length === 2 ? { ziel: a.ziel } : {}),
     ...(typeof a.blick === 'number' ? { blick: Math.max(-90, Math.min(90, a.blick)) } : {}),
+    ...(gueltigeHaende(a.haende).length ? { haende: gueltigeHaende(a.haende) } : {}),
     requisit: requisit ? { gltf: requisit, hand: a.gegenstand?.hand ?? 'r', laenge_px: requisitLaenge(a.gegenstand?.suchwort ?? ''), zielen: /gun|rifle|pistol|revolver|shotgun|musket|sniper|blaster|crossbow|bow|gewehr|pistole|flinte|armbrust/i.test(a.gegenstand?.suchwort ?? '') } : undefined,
     ...(p.freunde?.length ? { freunde: freundePlaetze(a, p.freunde).map((f, i) => (i < ersetzt && person.personen?.[i + 1] ? { ...f, person: mitMaske(person.personen[i + 1]) } : f)) } : {}),
     ...(person.personen ? { person: mitMaske(person.personen[0]) } : {}),

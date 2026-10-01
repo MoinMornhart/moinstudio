@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Planung erkennt Videos im Schnitt von selbst: Kommt ein Video in den Schnitt, verknüpft MoinStudio es mit der passenden Karte (gleicher Kanal, ähnlicher Titel) und schiebt sie in „Schnitt“ – oder legt dort eine neue Karte mit lesbarem Titel an. Karten zeigen jetzt auf einen Blick „Im Schnitt“, „Thumbnail“ und „Text fertig“.
+- Spiele-Vorlage: Claude gibt an, wo die Hände der Person im Bild sind, und die Arme der Figur werden genau dorthin gerichtet (Klettern, Greifen, Fliegen) – nie quer vors Gesicht.
+
 ### Changed
 
 - Gesichtsausdrücke wie bei den Gesichts-Rigs großer Thumbnail-Künstler: schräge Augenbrauen, Glanzpunkte in den Augen, Lachaugen mit roten Wangen, Mundwinkel hoch oder runter, offener Mund mit Zähnen (und Zunge beim Schreien) – in Pixeln und in den Farben des jeweiligen Skins, auch für Skins ohne Mund.

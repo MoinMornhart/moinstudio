@@ -91,6 +91,59 @@ def _richte(fig, p, seite, punkt, beugen):
     return {"heben": beste[1], "drehen": beste[2], "fehler_grad": round(math.degrees(beste[0]), 1)}
 
 
+def _haende_hin(scene, cam, fig, p, ziele):
+    """Hände genau an die Stellen im Bild, an denen die Person ihre Hände hat [[u, v], …] (Klettern, Greifen, Ausholen –
+    Winkel aus der Beschreibung trafen das kaum, Chained Together 01.10.). Zuordnung im Bild: die linke Zielhand bekommt
+    der Arm, dessen Schulter im Bild links liegt. Gesucht werden heben, drehen und beugen; bewertet wird der Abstand der
+    Faust zur Zielstelle im Bild."""
+    from bpy_extras.object_utils import world_to_camera_view
+
+    def uv(punkt):
+        q = world_to_camera_view(scene, cam, punkt)
+        return q.x, 1 - q.y
+
+    schultern = sorted(("r", "l"), key=lambda s_: uv(fig.teile[f"arm_{s_}"].matrix_world.translation)[0])
+    ziele = sorted(ziele, key=lambda z: z[0])
+    if len(ziele) == 1:  # eine Hand: der Arm, dessen Schulter näher liegt
+        u0 = ziele[0][0]
+        schultern = [min(schultern, key=lambda s_: abs(uv(fig.teile[f"arm_{s_}"].matrix_world.translation)[0] - u0))]
+    else:
+        schultern = schultern[:2]
+    ergebnis = {}
+    # Gesichtsfeld im Bild: der Arm darf nicht davor liegen (Chained Together 01.10.: unerreichbares Ziel → Arm quer
+    # über dem Gesicht)
+    kopf_uv = [uv(e) for e in fig.kopf_ecken()]
+    g0, g1 = min(k[0] for k in kopf_uv), max(k[0] for k in kopf_uv)
+    h0, h1 = min(k[1] for k in kopf_uv), max(k[1] for k in kopf_uv)
+    rand = (g1 - g0) * 0.15
+
+    def im_gesicht(pt):
+        return g0 + rand < pt[0] < g1 - rand and h0 + rand < pt[1] < h1 - rand
+
+    for seite, (zu, zv) in zip(schultern, ziele):
+        arm = f"arm_{seite}"
+
+        def fehler(heben, drehen, beugen):
+            q = dict(p)
+            q[arm] = {**p.get(arm, {}), "heben": heben, "drehen": drehen, "seitlich": 0, "beugen": beugen}
+            mfigur.pose(fig, q)
+            hand = fig.hand(seite)
+            hu, hv = uv(hand)
+            ellbogen = fig.teile[arm].matrix_world @ Vector((0, 0, 0))
+            mitte = (hand + ellbogen) / 2
+            vor_gesicht = 0.0 if im_gesicht((zu, zv)) else sum(1 for pt in (uv(ellbogen), uv(mitte), (hu, hv)) if im_gesicht(pt)) * 0.12
+            return math.hypot(hu - zu, hv - zv) + vor_gesicht
+
+        beste = min((fehler(h, d, b), h, d, b) for h in range(0, 181, 15) for d in range(-100, 101, 20) for b in (0, 30, 60, 90, 120))
+        _, h0, d0, b0 = beste
+        beste = min((fehler(h, d, b), h, d, b) for h in range(h0 - 10, h0 + 11, 5) for d in range(d0 - 12, d0 + 13, 6) for b in (max(0, b0 - 15), b0, min(140, b0 + 15)))
+        p[arm] = {**p.get(arm, {}), "heben": beste[1], "drehen": beste[2], "seitlich": 0, "beugen": beste[3]}
+        mfigur.pose(fig, p)
+        ergebnis[seite] = {"ziel": [zu, zv], "abstand": round(beste[0], 3)}
+    print("MOIN_HAENDE", ergebnis)
+    return ergebnis
+
+
 def _ziele(fig, p, seite, punkt):
     """Waffenarm leicht gebeugt aufs Ziel; die zweite Hand greift von unten an die Waffenhand (beidhändig)."""
     waffe = _richte(fig, p, seite, punkt, beugen=10)
@@ -308,6 +361,8 @@ def baue_vorlage(spec, ausgabe, bericht=None):
     # Gegenstand, damit der in der Hand der fertigen Figur sitzt
     if spec.get("person"):
         info["einpassen"] = _einpassen(scene, cam, fig, spec["person"], spec["person"].get("maske"), "ich")
+    if spec.get("haende"):
+        info["haende"] = _haende_hin(scene, cam, fig, p, spec["haende"])
     r = spec.get("requisit")
     if spec.get("ziel"):
         # Worauf die Person zielt oder zeigt ([u, v] im Bild): den Arm mit dem Gegenstand genau dorthin richten.
@@ -373,6 +428,8 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         eintrag = {"kopf": [fu, fv], "tiefe": round(tiefe, 2)}
         if fr.get("person"):
             eintrag["einpassen"] = _einpassen(scene, cam, f, fr["person"], fr["person"].get("maske"), f"freund{i}")
+        if fr.get("haende"):
+            eintrag["haende"] = _haende_hin(scene, cam, f, pf, fr["haende"])
         info.setdefault("freunde", []).append(eintrag)
 
     # Verbindungen zwischen den Figuren wie in der Vorlage (Kette bei Chained Together, Seil, Leine)
