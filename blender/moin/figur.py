@@ -113,6 +113,22 @@ def _material(name, image, overlay):
     return mat
 
 
+def _abgedunkelt(mat, faktor=0.38):
+    """Kopie des Skin-Materials mit abgedunkelter Farbe (für Flächen, die im Schatten liegen)."""
+    neu = mat.copy()
+    neu.name = f"{mat.name}.schatten"
+    nt = neu.node_tree
+    tex = next(n for n in nt.nodes if n.type == "TEX_IMAGE")
+    bsdf = nt.nodes["Principled BSDF"]
+    mal = nt.nodes.new("ShaderNodeMixRGB")
+    mal.blend_type = "MULTIPLY"
+    mal.inputs[0].default_value = 1.0
+    mal.inputs[2].default_value = (faktor, faktor, faktor, 1.0)
+    nt.links.new(tex.outputs["Color"], mal.inputs[1])
+    nt.links.new(mal.outputs[0], bsdf.inputs["Base Color"])
+    return neu
+
+
 def _mesh(name, rects, dims, tex_w, tex_h, inflate, mat, teilung=1):
     """`teilung`: Seitenflächen in so viele Reihen teilen (Arme/Beine: 1 Reihe je Pixel), damit sie sich am Gelenk
     weich biegen lassen."""
@@ -202,6 +218,7 @@ def baue_figur(name, skin_path, slim=None, fase=True, collection=None):
     arm_w = 3 if slim else 4
     mat = _material(f"{name}.skin", image, False)
     mat2 = _material(f"{name}.skin2", image, True)
+    schatten = {m.name: _abgedunkelt(m) for m in (mat, mat2)}
 
     def empty(n, loc, parent=None):
         e = bpy.data.objects.new(f"{name}.{n}", None)
@@ -243,14 +260,23 @@ def baue_figur(name, skin_path, slim=None, fase=True, collection=None):
                 continue
             rects = _box_rects(uv[0], uv[1], *dims)
             me = _mesh(f"{name}.{teil}.{ebene}", rects, dims, tex_w, tex_h, blow, m, teilung=dims[1] * 2 if teil in GLIEDER else 1)
-            if ebene == 1 and teil.startswith("bein"):
-                # Hosen-Ebene an der Innenseite nicht aufblähen: sonst stecken beide Beine ineinander, flimmern zwischen
-                # den Füßen und fließen beim Sitzen zu einem Bein zusammen (Philip, 01.10.: „die Beine wichtig“)
+            if teil.startswith("bein"):
+                # Beide Beine berühren sich an x = 0: ihre Innenseiten lagen exakt aufeinander und Blender zeigte dort
+                # abwechselnd Teile von beiden – ein grauer Streifen, die Beine flossen ineinander (Philip, 01.10.).
+                # Innenseite jedes Beins einen Hauch nach innen, die Hosen-Ebene innen hinter die Beinfläche.
                 innen = 1 if teil == "bein_r" else -1  # rechtes Bein liegt bei −X, seine Innenseite bei +x
-                grenze = (dims[0] / 2 - 0.02) * PX
+                if alt and teil == "bein_l":
+                    innen = -innen  # gespiegeltes Bein (scale.x = −1)
+                grenze = (dims[0] / 2 - (0.04 if ebene == 0 else 0.12)) * PX
                 for v in me.vertices:
                     if v.co.x * innen > grenze:
                         v.co.x = grenze * innen
+                # Innenseite beschattet wie zwischen echten Beinen: voll beleuchtet sah sie bei leicht gespreizten Beinen
+                # wie ein hellgrauer Keil aus, der die Beine verschmelzen ließ (Philip, 01.10.)
+                me.materials.append(schatten[m.name])
+                for poly in me.polygons:
+                    if poly.normal.x * innen > 0.9:
+                        poly.material_index = 1
                 me.update()
             ob = bpy.data.objects.new(me.name, me)
             col.objects.link(ob)
@@ -319,7 +345,9 @@ def pose(figur, p):
         # erst abspreizen, dann nach vorn (wie ein Hüftgelenk): in der Reihenfolge XYZ drehte „seitlich“ ein waagerecht
         # nach vorn gestrecktes Bein nur um seine Längsachse – beim Sitzen liefen die Beine ineinander (01.10.)
         g[f"bein_{seite}"].rotation_mode = "YXZ"
-        g[f"bein_{seite}"].rotation_euler = Euler((math.radians(-b.get("vor", 0)), math.radians(-b.get("seitlich", 0) * s * -1), 0), "YXZ")
+        # „seitlich“ positiv = vom Körper weg (wie bei den Armen); mit dem alten Vorzeichen kreuzten die Beine und
+        # schoben sich zu den Füßen hin übereinander – der „ineinanderfließende“ Keil (Philip, 01.10.)
+        g[f"bein_{seite}"].rotation_euler = Euler((math.radians(-b.get("vor", 0)), math.radians(b.get("seitlich", 0) * s * -1), 0), "YXZ")
         _beuge(figur, f"arm_{seite}", a.get("beugen", 0))
         _beuge(figur, f"bein_{seite}", b.get("beugen", 0))
     bpy.context.view_layer.update()

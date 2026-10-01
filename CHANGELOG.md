@@ -12,6 +12,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Fixed
 
+- Beine flossen ineinander: Der Winkel „seitlich“ hatte bei den Beinen das falsche Vorzeichen – gespreizte Beine kreuzten sich zu den Füßen hin und schoben sich übereinander. Jetzt spreizen sie nach außen, mit sauberem Spalt; die Innenseiten liegen im Schatten wie bei echten Beinen.
 - Werkzeuge, die man nur von der Kante sah (Axt beim Sturmangriff, Spitzhacke beim Stoß), werden um den eigenen Stiel zur Kamera gedreht – die Spitze bleibt, wo sie ist, alle anderen Haltungen bleiben unverändert.
 
 ## [0.41.1] - 2026-10-01
