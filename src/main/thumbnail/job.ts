@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { runClaude, runClaudeInJob } from '../claude/run'
 import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
@@ -9,6 +9,7 @@ import { lauf, sicherePakete, sichereUmgebung } from '../python'
 import { sichereMobs } from './mobimport'
 import { logoAufsetzen, type LogoWahl, type VarianteLogo } from '../logo/setzen'
 import { wichtigeBoxen } from '../logo/platz'
+import { liesSichtUrteil, SICHT_SCHEMA, SICHT_VORSILBE, sichtPrompt } from './sichtpruefung'
 import {
   ernsteWarnungen,
   korrekturPrompt,
@@ -96,6 +97,30 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
   const vorlage = await readFile(p.promptDatei, 'utf8')
   const ids = p.figuren.map((f) => f.id)
   const workDir = join(p.datenOrdner, 'claude-work', 'thumbnail')
+  /** Claude sieht das Bild groß und in Handygröße und nennt sichtbare Probleme; ohne Python-Umgebung oder bei einem
+   *  Fehler gibt es keine Bildprüfung (die Zahlen-Prüfung aus Blender bleibt). */
+  const sichtPruefen = async (pfad: string, v: { titel: string; warum?: string }): Promise<string[]> => {
+    if (!p.uv || !p.grafikPyDir) return []
+    try {
+      const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
+      await sicherePakete(p.uv, python, 'PIL, numpy', ['pillow', 'numpy'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+      await lauf(python, [join(p.blenderDir, 'handy_vorschau.py'), `${pfad}.png`, `${pfad}.handy.png`], ctx as JobContext<unknown>)
+      const res = await runClaude({
+        cli: p.claudeCli,
+        prompt: sichtPrompt({ bild: `${pfad}.png`, handy: `${pfad}.handy.png`, beschreibung: p.beschreibung, titel: v.titel, warum: v.warum }),
+        workDir,
+        tools: ['Read'],
+        allowedTools: ['Read'],
+        addDirs: [dirname(pfad)],
+        maxTurns: 6,
+        jsonSchema: SICHT_SCHEMA,
+        ctx: ctx as JobContext<unknown>
+      })
+      return liesSichtUrteil(res.structured ?? JSON.parse(JSON_OBJEKT.exec(res.text)?.[0] ?? '{}')).probleme
+    } catch {
+      return []
+    }
+  }
 
   let plan = ctx.checkpoint?.plan
   if (!plan) {
@@ -166,7 +191,12 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         renderFehler = bericht.fehler ?? `Blender Exit ${code}: ${output.trim().split(ZEILENUMBRUCH).slice(-1)[0]}`
         break
       }
-      const warnungen = bericht.warnungen ?? []
+      const warnungen = [...(bericht.warnungen ?? [])]
+      // Bildprüfung durch Claude (groß und in Handygröße) – nicht beim letzten Versuch, dann gäbe es keine Korrektur mehr
+      if (versuch < KORREKTUREN && !ernsteWarnungen(warnungen).length) {
+        ctx.progress(anteil(versuch * 0.25 + 0.15), `Variante ${i + 1}/${anzahl}: Claude prüft das Bild (auch in Handygröße) …`)
+        warnungen.push(...(await sichtPruefen(pfad, v)).map((x) => SICHT_VORSILBE + x))
+      }
       const ernst = ernsteWarnungen(warnungen)
       if (!bestes || ernst.length < bestes.ernst.length) bestes = { versuch, ernst, warnungen }
       if (!ernst.length || versuch === KORREKTUREN) break
