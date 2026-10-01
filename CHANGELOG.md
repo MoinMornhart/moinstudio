@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-01
+
+> Schöne Gesichtsausdrücke, neue Posen, Blockgelenke statt Gummibeine, Planung erkennt Videos im Schnitt, Spiele-Vorlagen mit echten Handpositionen
+
 ### Added
 
 - Planung erkennt Videos im Schnitt von selbst: Kommt ein Video in den Schnitt, verknüpft MoinStudio es mit der passenden Karte (gleicher Kanal, ähnlicher Titel) und schiebt sie in „Schnitt“ – oder legt dort eine neue Karte mit lesbarem Titel an. Karten zeigen jetzt auf einen Blick „Im Schnitt“, „Thumbnail“ und „Text fertig“.
