@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Minecraft-Thumbnails: Gegenstände, um die es geht (z. B. heranfliegende Blöcke), richtet die Kamera jetzt mit ins Bild aus, statt sie erst hinterher als angeschnitten zu melden.
+
 ## [0.40.0] - 2026-10-01
 
 > Claude prüft jedes Thumbnail selbst (auch in Handygröße), geteilte Bilder im Streifenformat, Spiele-Vorlagen ohne Reste der alten Person

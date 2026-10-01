@@ -705,6 +705,15 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             except Exception as fehler:  # unbekanntes Item: dann wenigstens die Hand
                 print("MOIN_WARNUNG Probe-Item", fehler)
                 punkte.append(haupt.hand(seite))
+        # Objekte, um die es geht („wichtig“ oder Kamera-Thema), gehören ins Bild – die Kamera kannte sie bisher nicht,
+        # die Prüfung meldete sie nur hinterher als angeschnitten (Test „Welt wird größer“, 01.10.). Die Kanten zählen
+        # zu 70 %, damit ein großer Block knapp am Rand nicht die ganze Einstellung verschiebt.
+        for i, o in enumerate(szene.get("objekte") or []):
+            ob = bpy.data.objects.get(f"objekt{i}")
+            if ob and (o.get("wichtig") or k.get("thema") == f"objekt:{i}"):
+                ecken = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+                mitte_o = sum(ecken, Vector()) / 8
+                punkte += [mitte_o + (e - mitte_o) * 0.7 for e in ecken]
         return punkte
 
     thema_figur = next((fig for f, fig in figuren if fig is not haupt and f.get("id") == k.get("thema")), None)
