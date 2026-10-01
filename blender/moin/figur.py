@@ -243,6 +243,15 @@ def baue_figur(name, skin_path, slim=None, fase=True, collection=None):
                 continue
             rects = _box_rects(uv[0], uv[1], *dims)
             me = _mesh(f"{name}.{teil}.{ebene}", rects, dims, tex_w, tex_h, blow, m, teilung=dims[1] * 2 if teil in GLIEDER else 1)
+            if ebene == 1 and teil.startswith("bein"):
+                # Hosen-Ebene an der Innenseite nicht aufblähen: sonst stecken beide Beine ineinander, flimmern zwischen
+                # den Füßen und fließen beim Sitzen zu einem Bein zusammen (Philip, 01.10.: „die Beine wichtig“)
+                innen = 1 if teil == "bein_r" else -1  # rechtes Bein liegt bei −X, seine Innenseite bei +x
+                grenze = (dims[0] / 2 - 0.02) * PX
+                for v in me.vertices:
+                    if v.co.x * innen > grenze:
+                        v.co.x = grenze * innen
+                me.update()
             ob = bpy.data.objects.new(me.name, me)
             col.objects.link(ob)
             ob.parent = gelenke[teil]

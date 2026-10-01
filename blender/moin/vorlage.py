@@ -170,6 +170,14 @@ def _gesicht_zur_kamera(p, grenze=50):
     if abs(gesamt) > grenze:
         p = dict(p)
         p["blick"] = p.get("blick", 0) - (gesamt - math.copysign(grenze, gesamt))
+    # Kopf nicht weiter als 20° nach unten nicken (plus Oberkörper vor): sonst sieht man nur Haare und Scheitel
+    # (Chained Together 01.10.: Freund mit Kopf „stark nach vorn gekippt“)
+    kopf = p.get("kopf") or {}
+    vor = (p.get("koerper") or {}).get("vor", 0)
+    nicken = kopf.get("nicken", 0)
+    if nicken + vor > 20 or nicken < -25:
+        p = dict(p)
+        p["kopf"] = {**kopf, "nicken": max(-25, min(nicken, 20 - max(0, vor)))}
     return p
 
 

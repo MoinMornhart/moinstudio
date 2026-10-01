@@ -263,11 +263,9 @@ def handgelenk_drehen(item, figur, seite, kamera):
         verdeckt = 1.0 if treffer and ob is not None and ob != item and ob.name.startswith(figur.wurzel.name.split(".")[0]) else 0.0
         v = world_to_camera_view(scene, kamera, mitte)
         drin = 1.0 if 0.02 < v.x < 0.98 and 0.02 < v.y < 0.98 and v.z > 0 else 0.0
-        # Fläche zur Kamera: ein flaches Item von der Kante ist nur ein Strich (Axt beim Sturmangriff, 01.10.)
-        normale = (item.matrix_world.to_3x3() @ Vector((0, 1, 0))).normalized()
-        flach = abs(normale.dot((start - mitte).normalized()))
-        return ((1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5
-                + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + max(0.0, 0.45 - flach) * 5 + abs(grad) / 360)
+        # Bewertung wie in v0.39 (Philip, 01.10.: „die Werkzeuge gingen doch mal, jetzt sind sie grauenhaft, besonders
+        # Axt und Hacke“ – Zusatzregeln für Fläche und Spitze hatten den Werkzeugkopf verdreht)
+        return (1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5             + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + abs(grad) / 360
 
     bester = min((0, 45, -45, 90, -90, 135, -135, 180), key=wert)
     item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(bester), 4, achse) @ Matrix.Translation(-faust) @ basis

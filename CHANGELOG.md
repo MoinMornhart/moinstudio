@@ -8,6 +8,8 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Fixed
 
+- Werkzeuge wieder wie in v0.39: Die Zusatzregeln von heute (Fläche zur Kamera, größere Werkzeuge in Nahaufnahmen) haben Axt und Hacke verdreht und zurückgenommen; der Fix für die linke Hand und der Dreizack bleiben.
+- Beine: Die Hosen-Ebene ist an der Innenseite nicht mehr aufgebläht – zwischen den Füßen flimmert nichts mehr, und die Beine fließen nicht ineinander.
 - Flache Items wie Fackel, Brot oder Blumen werden aufrecht vor der Faust gehalten, mit der Fläche zur Kamera – vorher zeigten sie mit der Spitze zur Kamera und waren kaum zu sehen.
 
 ## [0.41.0] - 2026-10-01
