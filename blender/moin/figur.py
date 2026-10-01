@@ -29,7 +29,7 @@ TEILE = {
 
 # Glieder mit Gelenk in der Mitte (Ellbogen, Knie); das Mesh eines Glieds hat seinen Ursprung genau dort
 GLIEDER = ("arm_r", "arm_l", "bein_r", "bein_l")
-UEBERGANG = 2.0  # halbe Breite des weichen Übergangs am Gelenk in Pixeln
+UEBERGANG = 0.6  # halbe Breite des Übergangs am Gelenk in Pixeln – mit 2 px bogen sich Beine wie Gummi und liefen ineinander (Philip, 01.10.)
 
 
 def _beuge_matrix(glied, grad, anteil=1.0):
@@ -304,7 +304,10 @@ def pose(figur, p):
         g[f"arm_{seite}"].rotation_quaternion = m.to_quaternion()
         b = p.get(f"bein_{seite}", {})
         s = -1 if seite == "r" else 1
-        g[f"bein_{seite}"].rotation_euler = Euler((math.radians(-b.get("vor", 0)), math.radians(-b.get("seitlich", 0) * s * -1), 0), "XYZ")
+        # erst abspreizen, dann nach vorn (wie ein Hüftgelenk): in der Reihenfolge XYZ drehte „seitlich“ ein waagerecht
+        # nach vorn gestrecktes Bein nur um seine Längsachse – beim Sitzen liefen die Beine ineinander (01.10.)
+        g[f"bein_{seite}"].rotation_mode = "YXZ"
+        g[f"bein_{seite}"].rotation_euler = Euler((math.radians(-b.get("vor", 0)), math.radians(-b.get("seitlich", 0) * s * -1), 0), "YXZ")
         _beuge(figur, f"arm_{seite}", a.get("beugen", 0))
         _beuge(figur, f"bein_{seite}", b.get("beugen", 0))
     bpy.context.view_layer.update()
