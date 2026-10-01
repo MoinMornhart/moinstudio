@@ -10,6 +10,8 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 - Reaction- und Gaming-Thumbnails: Philip verdeckt nicht mehr das Logo oder den Titel des Originals – die Figur wird kleiner und rückt an den Rand, bis es frei ist; der Kopf ragt nie über den Bildrand.
 - Reaction/Gaming mit Freunden: Die Gruppe hält das Logo frei, ein vom Arm verdeckter Freund bekommt Platz (Philip nimmt dann die Pose ohne Hände), sein Kopf ist nie am Rand angeschnitten; der Spielname passt immer ganz ins Bild und das Wort liegt nicht mehr darüber.
+- Werkzeuge in der linken Hand sitzen wieder in der Faust (vorher schwebte z. B. die Spitzhacke daneben – die Spiegelung für die linke Hand fehlte); gedrehte Werkzeuge zeigen ihre Fläche statt der Kante (Axt beim Sturmangriff war nur ein Strich).
+- Der Dreizack wird wie im Spiel als 3D-Modell gehalten (langer Stab mit drei Zacken) statt als kleines Inventarbild.
 - Minecraft-Thumbnails: Gegenstände, um die es geht (z. B. heranfliegende Blöcke), richtet die Kamera jetzt mit ins Bild aus, statt sie erst hinterher als angeschnitten zu melden.
 
 ## [0.40.0] - 2026-10-01

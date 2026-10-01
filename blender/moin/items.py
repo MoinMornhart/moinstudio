@@ -26,10 +26,45 @@ def _bild(ordner, name):
     return _rgba_im_speicher(img, pfad)
 
 
+def _dreizack(texturen_ordner, pixel, col):
+    """Dreizack wie im Spiel in der Hand: kein Inventarbild, sondern das 3D-Modell (TridentModel, entity/trident.png,
+    31 Pixel lang), aufrecht in der Faust, Zacken oben – wie das Spiel ihn in der dritten Person zeigt. Vorher war er
+    nur ein kleiner grüner Klumpen in der Faust (Werkzeug-Prüfbogen 01.10.)."""
+    from mathutils import Vector
+    from . import mobs as mmobs
+
+    pfad = os.path.join(texturen_ordner, "entity", "trident", "trident.png")
+    if not os.path.exists(pfad):
+        pfad = os.path.join(texturen_ordner, "entity", "trident.png")
+    bild = bpy.data.images.load(pfad, check_existing=True)
+    bild.alpha_mode = "STRAIGHT"
+    # Java-Modell (y nach unten) in Bedrock-Form (y nach oben); Griff bei y = −20 liegt später 7 px unter der Mitte
+    versatz = 13
+    boxen = [
+        {"origin": [-0.5, -27 + versatz, -0.5], "size": [1, 25, 1], "uv": [0, 6]},  # Stab
+        {"origin": [-1.5, -2 + versatz, -0.5], "size": [3, 2, 1], "uv": [4, 0]},  # Querstück
+        {"origin": [-2.5, -1 + versatz, -0.5], "size": [1, 4, 1], "uv": [4, 3]},  # Zacke links
+        {"origin": [-0.5, 0 + versatz, -0.5], "size": [1, 4, 1], "uv": [0, 0]},  # Zacke Mitte
+        {"origin": [1.5, -1 + versatz, -0.5], "size": [1, 4, 1], "uv": [4, 3], "mirror": True},  # Zacke rechts
+    ]
+    mat = mmobs._material("item.trident", bild)
+    me = mmobs._mesh("item.trident", boxen, bild.size[0], bild.size[1], Vector((0, 0, 0)), mat)
+    # mobs._mesh rechnet in Figur-Pixeln; auf die Item-Pixelgröße bringen
+    me.transform(Matrix.Diagonal((pixel / PX, pixel / PX, pixel / PX, 1.0)))
+    ob = bpy.data.objects.new("item.trident", me)
+    col.objects.link(ob)
+    ob["griff"] = (0.0, 0.0, 0.0)
+    ob["pixel"] = pixel
+    ob["aufrecht"] = True  # Haltung steht fest, keine Handgelenk-Drehung
+    return ob
+
+
 def baue_item(name, texturen_ordner, pixel=ITEM_PIXEL, collection=None):
     """Extrudiertes Item: Texturfläche in X (rechts) und Z (oben), Vorderseite zeigt nach −Y, Mitte im Ursprung.
     Gibt das Objekt zurück; `obj["griff"]` ist die lokale Griffposition (unten links, wie im Spiel)."""
     col = collection or bpy.context.scene.collection
+    if name == "trident":
+        return _dreizack(texturen_ordner, pixel, col)
     img = _bild(texturen_ordner, name)
     w, h = img.size
     px = img.pixels[:]
@@ -100,6 +135,8 @@ def haltung(name, texturen_ordner, seite="r"):
 
     modelle = os.path.join(os.path.dirname(texturen_ordner), "models")
     schluessel = "thirdperson_righthand" if seite == "r" else "thirdperson_lefthand"
+    if name == "trident":  # 3D-Modell (siehe _dreizack) aufrecht in der Faust, in voller Größe
+        return {"rotation": [0, 0, 0], "translation": [0, 3.0, 1.0], "scale": [1.0, 1.0, 1.0]}
     pfad = os.path.join(modelle, "item", f"{name}.json")
     for _ in range(8):
         if not os.path.exists(pfad):
@@ -135,6 +172,11 @@ def mc_halten(item, figur, seite, pixel, anzeige, groesse=1.0):
     rechts = seite == "r"
     rx, ry, rz = (math.radians(w) for w in anzeige["rotation"])
     tx, ty, tz = (w / 16 for w in anzeige["translation"])
+    if not rechts:
+        # ItemTransform.apply(leftHand = true): Drehung um y und z umgekehrt, x-Verschiebung gespiegelt – zusätzlich zu
+        # den Werten für die linke Hand aus dem Modell. Ohne das schwebte z. B. die Spitzhacke links neben der Faust
+        # (Werkzeug-Prüfbogen 01.10.)
+        ry, rz, tx = -ry, -rz, -tx
     s = anzeige["scale"]
     # 1. Minecraft: Item-Modell (0…1) → Modell-Arm-Raum (Einheit Block)
     a = (Matrix.Rotation(math.radians(-90), 4, "X") @ Matrix.Rotation(math.radians(180), 4, "Y")
@@ -163,6 +205,8 @@ def handgelenk_drehen(item, figur, seite, kamera):
     im Bild, ob die Spitze zur Kamera statt vom Betrachter weg zeigt, Gesicht frei und möglichst wenig Drehung."""
     from bpy_extras.object_utils import world_to_camera_view
 
+    if item.get("aufrecht"):
+        return item
     arm = figur.teile[f"arm_{seite}"]
     m = arm.matrix_world @ _beuge_matrix(f"arm_{seite}", figur.beugung[f"arm_{seite}"])
     achse = (m.to_3x3() @ Vector((0, 0, -1))).normalized()
@@ -185,7 +229,11 @@ def handgelenk_drehen(item, figur, seite, kamera):
         verdeckt = 1.0 if treffer and ob is not None and ob != item and ob.name.startswith(figur.wurzel.name.split(".")[0]) else 0.0
         v = world_to_camera_view(scene, kamera, mitte)
         drin = 1.0 if 0.02 < v.x < 0.98 and 0.02 < v.y < 0.98 and v.z > 0 else 0.0
-        return (1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5             + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + abs(grad) / 360
+        # Fläche zur Kamera: ein flaches Item von der Kante ist nur ein Strich (Axt beim Sturmangriff, 01.10.)
+        normale = (item.matrix_world.to_3x3() @ Vector((0, 1, 0))).normalized()
+        flach = abs(normale.dot((start - mitte).normalized()))
+        return ((1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5
+                + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + max(0.0, 0.45 - flach) * 5 + abs(grad) / 360)
 
     bester = min((0, 45, -45, 90, -90, 135, -135, 180), key=wert)
     item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(bester), 4, achse) @ Matrix.Translation(-faust) @ basis
