@@ -8,6 +8,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ### Fixed
 
+- Reaction- und Gaming-Thumbnails: Philip verdeckt nicht mehr das Logo oder den Titel des Originals – die Figur wird kleiner und rückt an den Rand, bis es frei ist; der Kopf ragt nie über den Bildrand.
 - Minecraft-Thumbnails: Gegenstände, um die es geht (z. B. heranfliegende Blöcke), richtet die Kamera jetzt mit ins Bild aus, statt sie erst hinterher als angeschnitten zu melden.
 
 ## [0.40.0] - 2026-10-01

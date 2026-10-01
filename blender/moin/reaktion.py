@@ -134,6 +134,63 @@ def _pfeil(von, nach, dicke, farbe=ROT):
     return ob
 
 
+def _figur_box(fig, bild):
+    """Umriss der Figur im Bild (0–1, oben links = 0,0), auf das Bild beschnitten."""
+    pts = [bild(o.matrix_world @ Vector(c)) for o in fig.teile.values() if o.type == "MESH" for c in o.bound_box]
+    return (max(0.0, min(p[0] for p in pts)), max(0.0, min(p[1] for p in pts)), min(1.0, max(p[0] for p in pts)), min(1.0, max(p[1] for p in pts)))
+
+
+def _verdeckt(box, sperren):
+    """Größter Anteil eines gesperrten Kastens (Logo, Titel, Gesicht), den die Figur überdeckt."""
+    beste = 0.0
+    for b in sperren:
+        flaeche = max(1e-6, (b[2] - b[0]) * (b[3] - b[1]))
+        schnitt = max(0.0, min(box[2], b[2]) - max(box[0], b[0])) * max(0.0, min(box[3], b[3]) - max(box[1], b[1]))
+        beste = max(beste, schnitt / flaeche)
+    return beste
+
+
+def _logos_frei(spec, fig, stelle, pose_name, bild, cam, cam_daten, seite, abstand, kopf):
+    """Die Figur darf Logo, Titel und Gesichter im Original nicht verdecken (Test 01.10.: „DEAD BY DAYLIGHT“ und
+    „LETHAL COMPANY“ halb unter Philip). Schrittweise kleiner und an den Rand, bis höchstens 12 % eines Kastens
+    bedeckt sind; sonst die Größe mit der geringsten Überdeckung."""
+    sperren = [b for b in (spec.get("sperren") or []) if len(b) == 4]
+    if not sperren or _verdeckt(_figur_box(fig, bild), sperren) <= 0.12:
+        return kopf, abstand
+    start = spec.get("kopf_anteil", 0.42)
+    versuche = []
+    for anteil in (start, start * 0.87, start * 0.75, start * 0.64, start * 0.55):
+        kopf, abstand = stelle(pose_name, anteil)
+        # an den Rand schieben, solange der Kopf ganz im Bild bleibt
+        ecken = [bild(c) for c in fig.kopf_ecken()]
+        k0, k1 = min(e[0] for e in ecken), max(e[0] for e in ecken)
+        schub = (k0 - 0.015) if seite == "links" else (0.985 - k1)
+        breite_m = 2 * abstand * math.tan(cam_daten.angle_x / 2)
+        cam.location.x += (schub if seite == "links" else -schub) * breite_m
+        bpy.context.view_layer.update()
+        wert = _verdeckt(_figur_box(fig, bild), sperren)
+        versuche.append((wert, anteil, cam.location.x))
+        if wert <= 0.12:
+            print("MOIN_LOGO_FREI anteil", round(anteil, 2), "verdeckt", round(wert, 2))
+            return kopf, abstand
+    wert, anteil, x = min(versuche)
+    kopf, abstand = stelle(pose_name, anteil)
+    cam.location.x = x
+    bpy.context.view_layer.update()
+    print("MOIN_LOGO_FREI bestmoeglich anteil", round(anteil, 2), "verdeckt", round(wert, 2))
+    return kopf, abstand
+
+
+def _kopf_ins_bild(fig, bild, cam, cam_daten, abstand):
+    """Der Kopf ragt nie über den Bildrand (Hogwarts-Wunschpose 01.10.: Kopf rechts angeschnitten)."""
+    ecken = [bild(c) for c in fig.kopf_ecken()]
+    k0, k1 = min(e[0] for e in ecken), max(e[0] for e in ecken)
+    schub = min(0.0, k0 - 0.01) + max(0.0, k1 - 0.99)
+    if schub:
+        cam.location.x += schub * 2 * abstand * math.tan(cam_daten.angle_x / 2)
+        bpy.context.view_layer.update()
+
+
 def baue_reaktion(spec, ausgabe, bericht=None):
     """spec: {hintergrund, skin, slim, seite: links|rechts, mimik, pose, wort, wort_farbe, schrift,
     pfeil_ziel: [u, v] (0..1, oben links = 0,0), samples}"""
@@ -219,6 +276,9 @@ def baue_reaktion(spec, ausgabe, bericht=None):
             bpy.context.view_layer.update()
             if noetig <= platz:
                 break
+    if not spec.get("freunde"):
+        kopf, abstand = _logos_frei(spec, fig, stelle, pose_name, bild, cam, cam_daten, seite, abstand, kopf)
+        _kopf_ins_bild(fig, bild, cam, cam_daten, abstand)
     if spec.get("mimik"):
         mmimik.setze_mimik(fig, spec["mimik"])
     # Freunde (Philip, 29.09.: „wenn ich mit einem anderen ein Video aufnehme, muss er mit aufs Thumbnail“):

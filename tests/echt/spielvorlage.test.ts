@@ -128,7 +128,7 @@ c=Image.new("RGB",(1920,540)); c.paste(a,(0,0)); c.paste(b,(960,0)); c.save(r"${
         sek?: number
       }
       const v = e.varianten?.[0]
-      const pruefungen = await Promise.all([1, 2].map((r) => readFile(join(ordner, `pruefung-${r}.json`), 'utf8').then((t) => JSON.parse(t) as { passt: boolean }, () => null)))
+      const pruefungen = await Promise.all([1, 2, 3].map((r) => readFile(join(ordner, `pruefung-${r}.json`), 'utf8').then((t) => JSON.parse(t) as { passt: boolean }, () => null)))
       const runden = pruefungen.filter(Boolean).map((x) => (x!.passt ? 'passt' : 'korrigiert')).join(' → ') || '–'
       zeilen.push(`| ${i + 1} | ${f.was} | ${f.freund ? 'ja' : 'nein'} | ${e.fehler ?? v?.fehler ?? (v?.bild ? 'Bild' : '–')} | ${runden} | ${(v?.warnungen ?? []).join('; ') || 'keine'} | ${e.sek ?? '–'} s |`)
     }
