@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Werkzeuge, die man nur von der Kante sah (Axt beim Sturmangriff, Spitzhacke beim Stoß), werden um den eigenen Stiel zur Kamera gedreht – die Spitze bleibt, wo sie ist, alle anderen Haltungen bleiben unverändert.
+
 ## [0.41.1] - 2026-10-01
 
 > Werkzeuge wieder wie vorher, Beine fließen nicht mehr ineinander, Fackel und Brot gut sichtbar

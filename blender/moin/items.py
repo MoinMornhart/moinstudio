@@ -232,6 +232,26 @@ def aufrichten(item, figur, seite, kamera):
     return item
 
 
+def _stiel_drehen(item, faust, kamera):
+    """Sieht man das Werkzeug fast nur von der Kante (ein Strich, z. B. Axt beim Sturmangriff), wird es um den eigenen
+    Stiel gedreht, bis die Fläche zur Kamera zeigt – wie man ein Werkzeug in der Hand dreht. Die Spitze bleibt, wo sie
+    ist (Drehungen um den Unterarm kippten Kopf von Axt und Hacke weg, Philip 01.10.)."""
+    basis = item.matrix_world.copy()
+    stiel = (basis.to_3x3() @ Vector((1, 0, 1))).normalized()  # Griff unten links → Spitze oben rechts
+
+    def flach(grad):
+        m = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(grad), 4, stiel) @ Matrix.Translation(-faust) @ basis
+        normale = (m.to_3x3() @ Vector((0, 1, 0))).normalized()
+        return abs(normale.dot((kamera.matrix_world.translation - m.translation).normalized()))
+
+    if flach(0) >= 0.3:
+        return
+    grad = max((0, 25, -25, 45, -45, 65, -65), key=lambda g: flach(g) - abs(g) / 400)
+    item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(grad), 4, stiel) @ Matrix.Translation(-faust) @ basis
+    bpy.context.view_layer.update()
+    print("MOIN_STIEL", item.name, grad, round(flach(0), 2), "->", round(flach(grad), 2))
+
+
 def handgelenk_drehen(item, figur, seite, kamera):
     """Spiel-Haltung beibehalten, aber im Handgelenk drehen, wenn das Werkzeug so verdeckt oder aus dem Bild wäre
     (Test 30.09.: beim Hieb mit hochgerissenem Arm zeigt die Klinge im Spiel nach hinten hinter den Kopf – Thumbnail-
@@ -268,8 +288,10 @@ def handgelenk_drehen(item, figur, seite, kamera):
         return (1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5             + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + abs(grad) / 360
 
     bester = min((0, 45, -45, 90, -90, 135, -135, 180), key=wert)
+
     item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(math.radians(bester), 4, achse) @ Matrix.Translation(-faust) @ basis
     bpy.context.view_layer.update()
+    _stiel_drehen(item, faust, kamera)
     if bester:
         print("MOIN_HANDGELENK", figur.wurzel.name, bester)
     return item
