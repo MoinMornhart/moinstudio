@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.41.2] - 2026-10-01
+
+> Axt und Spitzhacke zeigen ihre Form statt nur der Kante
+
 ### Fixed
 
 - Werkzeuge, die man nur von der Kante sah (Axt beim Sturmangriff, Spitzhacke beim Stoß), werden um den eigenen Stiel zur Kamera gedreht – die Spitze bleibt, wo sie ist, alle anderen Haltungen bleiben unverändert.

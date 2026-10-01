@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.41.2** (2026-10-01): Axt und Spitzhacke zeigen ihre Form statt nur der Kante
 - **0.41.1** (2026-10-01): Werkzeuge wieder wie vorher, Beine fließen nicht mehr ineinander, Fackel und Brot gut sichtbar
 - **0.41.0** (2026-10-01): Schöne Gesichtsausdrücke, neue Posen, Blockgelenke statt Gummibeine, Planung erkennt Videos im Schnitt, Spiele-Vorlagen mit echten Handpositionen
 - **0.40.1** (2026-10-01): Werkzeuge sitzen in jeder Hand richtig, Reaction/Gaming halten Logos frei, Kamera nimmt wichtige Objekte mit ins Bild
 - **0.40.0** (2026-10-01): Claude prüft jedes Thumbnail selbst (auch in Handygröße), geteilte Bilder im Streifenformat, Spiele-Vorlagen ohne Reste der alten Person
-- **0.39.0** (2026-09-30): Minecraft-Thumbnails wie bei BastiGHG: Grafik-Ebene, geteilte Bilder, Werkzeuge exakt wie im Spiel, Gegenüber mit Gesicht, alle Mobs geprüft
 <!-- CHANGELOG:END -->
 
 ## Installation
