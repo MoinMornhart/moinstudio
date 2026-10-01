@@ -198,6 +198,40 @@ def mc_halten(item, figur, seite, pixel, anzeige, groesse=1.0):
     return item
 
 
+def aufrichten(item, figur, seite, kamera):
+    """Flache Items (Fackel, Brot, Blume …) aufrecht in der Faust, Fläche zur Kamera: im Spiel zeigen sie bei hängendem
+    Arm mit der Spitze nach vorn und sind von vorn nur ein Punkt (Werkzeug-Prüfbogen 01.10.: Fackel unsichtbar).
+    Thumbnail-Künstler halten sie hoch wie eine Fackel."""
+    faust = figur.hand(seite)
+    m = item.matrix_world.to_3x3().normalized()
+    oben_jetzt = (m @ Vector((0, 0, 1))).normalized()
+    ziel_oben = Vector((0, 0, 1))
+    dreh = oben_jetzt.rotation_difference(ziel_oben).to_matrix().to_4x4()
+    item.matrix_world = Matrix.Translation(faust) @ dreh @ Matrix.Translation(-faust) @ item.matrix_world
+    bpy.context.view_layer.update()
+    # um die Hochachse drehen, bis die Fläche zur Kamera zeigt
+    normale = (item.matrix_world.to_3x3() @ Vector((0, 1, 0)))
+    normale.z = 0
+    zur_kamera = kamera.matrix_world.translation - faust
+    zur_kamera.z = 0
+    if normale.length > 1e-6 and zur_kamera.length > 1e-6:
+        winkel = normale.normalized().to_2d().angle_signed(zur_kamera.normalized().to_2d())
+        item.matrix_world = Matrix.Translation(faust) @ Matrix.Rotation(-winkel, 4, "Z") @ Matrix.Translation(-faust) @ item.matrix_world
+        bpy.context.view_layer.update()
+    # die Faust hält nur das untere Ende: Mitte steckte sonst samt halber Fackel in Faust und Ärmel
+    ecken = [item.matrix_world @ Vector(c) for c in item.bound_box]
+    unten = min(e.z for e in ecken)
+    hoehe = max(e.z for e in ecken) - unten
+    # und vor die Faust zur Kamera hin – schmale Items (Fackel: 2 px) steckten sonst im 4 px breiten Arm
+    vor = kamera.matrix_world.translation - faust
+    vor.z = 0
+    vor = vor.normalized() * 2.6 * PX * figur.wurzel.scale.x if vor.length > 1e-6 else Vector()
+    item.matrix_world = Matrix.Translation(Vector((vor.x, vor.y, faust.z - unten - hoehe * 0.2))) @ item.matrix_world
+    bpy.context.view_layer.update()
+    item["aufrecht"] = True
+    return item
+
+
 def handgelenk_drehen(item, figur, seite, kamera):
     """Spiel-Haltung beibehalten, aber im Handgelenk drehen, wenn das Werkzeug so verdeckt oder aus dem Bild wäre
     (Test 30.09.: beim Hieb mit hochgerissenem Arm zeigt die Klinge im Spiel nach hinten hinter den Kopf – Thumbnail-

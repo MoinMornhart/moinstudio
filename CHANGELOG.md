@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Flache Items wie Fackel, Brot oder Blumen werden aufrecht vor der Faust gehalten, mit der Fläche zur Kamera – vorher zeigten sie mit der Spitze zur Kamera und waren kaum zu sehen.
+
 ## [0.41.0] - 2026-10-01
 
 > Schöne Gesichtsausdrücke, neue Posen, Blockgelenke statt Gummibeine, Planung erkennt Videos im Schnitt, Spiele-Vorlagen mit echten Handpositionen
