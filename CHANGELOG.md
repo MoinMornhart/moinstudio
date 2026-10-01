@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-10-01
+
+> Werkzeuge sitzen in jeder Hand richtig, Reaction/Gaming halten Logos frei, Kamera nimmt wichtige Objekte mit ins Bild
+
 ### Fixed
 
 - Reaction- und Gaming-Thumbnails: Philip verdeckt nicht mehr das Logo oder den Titel des Originals – die Figur wird kleiner und rückt an den Rand, bis es frei ist; der Kopf ragt nie über den Bildrand.
