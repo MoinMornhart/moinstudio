@@ -14,6 +14,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 ### Changed
 
 - Gesichtsausdrücke wie bei den Gesichts-Rigs großer Thumbnail-Künstler: schräge Augenbrauen, Glanzpunkte in den Augen, Lachaugen mit roten Wangen, Mundwinkel hoch oder runter, offener Mund mit Zähnen (und Zunge beim Schreien) – in Pixeln und in den Farben des jeweiligen Skins, auch für Skins ohne Mund.
+- Werkzeuge erscheinen 1,2-fach so groß wie im Spiel (wie bei den Vorbildern), flache Items wie Brot noch etwas größer.
 - Sieben neue Thumbnail-Posen nach dem Vorbild großer Kanäle: Hände in die Hüften, Facepalm, Ausschau halten, Gegenstand hochhalten, ängstlich abwehren, Werkzeug über der Schulter, zum Schlag ausholen. Arme lassen sich dafür jetzt auch um die eigene Achse drehen.
 - Figuren: Knie und Ellbogen knicken wie Blockgelenke statt sich wie Gummi zu biegen; beim Sitzen und Knien laufen die Beine nicht mehr ineinander.
 

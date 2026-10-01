@@ -102,13 +102,6 @@ def _haende_hin(scene, cam, fig, p, ziele):
         q = world_to_camera_view(scene, cam, punkt)
         return q.x, 1 - q.y
 
-    schultern = sorted(("r", "l"), key=lambda s_: uv(fig.teile[f"arm_{s_}"].matrix_world.translation)[0])
-    ziele = sorted(ziele, key=lambda z: z[0])
-    if len(ziele) == 1:  # eine Hand: der Arm, dessen Schulter näher liegt
-        u0 = ziele[0][0]
-        schultern = [min(schultern, key=lambda s_: abs(uv(fig.teile[f"arm_{s_}"].matrix_world.translation)[0] - u0))]
-    else:
-        schultern = schultern[:2]
     ergebnis = {}
     # Gesichtsfeld im Bild: der Arm darf nicht davor liegen (Chained Together 01.10.: unerreichbares Ziel → Arm quer
     # über dem Gesicht)
@@ -119,6 +112,24 @@ def _haende_hin(scene, cam, fig, p, ziele):
 
     def im_gesicht(pt):
         return g0 + rand < pt[0] < g1 - rand and h0 + rand < pt[1] < h1 - rand
+
+    schulter_uv = {s_: uv(fig.teile[f"arm_{s_}"].matrix_world.translation) for s_ in ("r", "l")}
+
+    def kreuzt(s_, z):
+        """Geht die Linie Schulter → Ziel durchs Gesicht?"""
+        a_ = schulter_uv[s_]
+        return any(im_gesicht((a_[0] + (z[0] - a_[0]) * t / 10, a_[1] + (z[1] - a_[1]) * t / 10)) for t in range(1, 10))
+
+    def kosten(zuordnung):
+        return sum((3.0 if kreuzt(s_, z) else 0.0) + math.hypot(z[0] - schulter_uv[s_][0], z[1] - schulter_uv[s_][1]) for s_, z in zuordnung)
+
+    # Zuordnung Arm ↔ Zielhand: die Variante, bei der kein Arm übers Gesicht greifen muss, sonst die kürzere
+    if len(ziele) == 1:
+        moeglich = [[("r", ziele[0])], [("l", ziele[0])]]
+    else:
+        moeglich = [[("r", ziele[0]), ("l", ziele[1])], [("l", ziele[0]), ("r", ziele[1])]]
+    zuordnung = min(moeglich, key=kosten)
+    schultern, ziele = [s_ for s_, _ in zuordnung], [z for _, z in zuordnung]
 
     for seite, (zu, zv) in zip(schultern, ziele):
         arm = f"arm_{seite}"
@@ -131,7 +142,7 @@ def _haende_hin(scene, cam, fig, p, ziele):
             hu, hv = uv(hand)
             ellbogen = fig.teile[arm].matrix_world @ Vector((0, 0, 0))
             mitte = (hand + ellbogen) / 2
-            vor_gesicht = 0.0 if im_gesicht((zu, zv)) else sum(1 for pt in (uv(ellbogen), uv(mitte), (hu, hv)) if im_gesicht(pt)) * 0.12
+            vor_gesicht = 0.0 if im_gesicht((zu, zv)) else sum(1 for pt in (uv(ellbogen), uv(mitte), (hu, hv)) if im_gesicht(pt)) * 0.5
             return math.hypot(hu - zu, hv - zv) + vor_gesicht
 
         beste = min((fehler(h, d, b), h, d, b) for h in range(0, 181, 15) for d in range(-100, 101, 20) for b in (0, 30, 60, 90, 120))
