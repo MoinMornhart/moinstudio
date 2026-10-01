@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Gesichtsausdrücke wie bei den Gesichts-Rigs großer Thumbnail-Künstler: schräge Augenbrauen, Glanzpunkte in den Augen, Lachaugen mit roten Wangen, Mundwinkel hoch oder runter, offener Mund mit Zähnen (und Zunge beim Schreien) – in Pixeln und in den Farben des jeweiligen Skins, auch für Skins ohne Mund.
+- Figuren: Knie und Ellbogen knicken wie Blockgelenke statt sich wie Gummi zu biegen; beim Sitzen und Knien laufen die Beine nicht mehr ineinander.
+
 ## [0.40.1] - 2026-10-01
 
 > Werkzeuge sitzen in jeder Hand richtig, Reaction/Gaming halten Logos frei, Kamera nimmt wichtige Objekte mit ins Bild
