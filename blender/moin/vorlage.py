@@ -99,6 +99,16 @@ def _ziele(fig, p, seite, punkt):
     return {"waffe": waffe, "stuetze": stuetze}
 
 
+def _gesicht_zur_kamera(p, grenze=50):
+    """Von vorn gesehene Figuren: Körper, Rumpf und Kopf zusammen höchstens ~50° gedreht – sonst steht die Figur im
+    Profil und man sieht vor allem Haare (007-Vorlage 01.10.: blick 60 plus Kopfdrehung). Gekürzt wird zuerst blick."""
+    gesamt = p.get("blick", 0) + (p.get("koerper") or {}).get("drehen", 0) + (p.get("kopf") or {}).get("drehen", 0)
+    if abs(gesamt) > grenze:
+        p = dict(p)
+        p["blick"] = p.get("blick", 0) - (gesamt - math.copysign(grenze, gesamt))
+    return p
+
+
 def _objekte_von(fig):
     """Alle Objekte einer Figur (Teile samt Kindern: Überzug-Ebene, Augen …)."""
     raus, offen = set(), [fig.wurzel]
@@ -151,18 +161,28 @@ def _einpassen(scene, cam, fig, person, maske, name):
             faktor = max(faktor, math.sqrt(0.5 / max(deck, 0.05)))
         if unten_fehlt:
             faktor = max(faktor, 1.08)
-        if soll:
-            faktor = min(faktor, soll / 0.85 * 1.12 / max(ist, 0.01))
         kopf_soll = person.get("kopf_hoehe")
-        if person.get("unten_angeschnitten") and kopf_soll and not schritte:
-            # Körperhöhe sagt bei unten angeschnittenen Personen nichts – Maßstab ist der Kopf (Minecraft-Köpfe dürfen
-            # etwas größer sein). Auch verkleinern: die Figur war sonst 1,5-mal zu groß (Red Dead 01.10.)
+        # Nur Teil der Person sichtbar (unten angeschnitten, Brustbild, sitzt im Topf, hinter Deckung: unter 4,5
+        # Kopfhöhen – ein ganzer Mensch hat ~7): die Körperhöhe taugt nicht als Maßstab, sonst schrumpft die ganze
+        # Figur auf Brustbild-Größe (GTA-Collage, Getting Over It, It Takes Two, 01.10.)
+        teilweise = person.get("unten_angeschnitten") or (kopf_soll and person.get("hoehe", 1) / kopf_soll < 4.5)
+        nach_kopf = bool(teilweise and kopf_soll)
+        if soll and not nach_kopf:
+            faktor = min(faktor, soll / 0.85 * 1.12 / max(ist, 0.01))
+        if nach_kopf:
+            # Körperhöhe sagt bei unten angeschnittenen Personen nichts (sie misst auch, was unter dem Bildrand liegt) –
+            # Maßstab ist der Kopf, Minecraft-Köpfe dürfen etwas größer sein. In beide Richtungen: Red Dead war 1,5-mal
+            # zu groß, die 007-Nahaufnahme deckte nur 20 % (01.10.)
             from bpy_extras.object_utils import world_to_camera_view
             ys = [world_to_camera_view(scene, cam, e).y for e in fig.kopf_ecken()]
             kopf_ist = max(ys) - min(ys)
             if kopf_ist > kopf_soll * 1.45:
                 faktor = max(0.6, kopf_soll * 1.25 / kopf_ist)
-        faktor = min(faktor, 1.8 / gesamt, 1.45)
+            elif kopf_ist < kopf_soll * 0.95:
+                faktor = max(faktor, kopf_soll * 1.1 / max(kopf_ist, 0.01))
+            elif faktor > 1.0:
+                faktor = min(faktor, kopf_soll * 1.45 / max(kopf_ist, 0.01))
+        faktor = min(faktor, (2.6 if nach_kopf else 1.8) / gesamt, 1.45)
         schritte.append({"deckung": round(deck, 3), "hoehe": round(ist, 3), "soll": round(soll, 3), "faktor": round(faktor, 3)})
         if 0.97 < faktor < 1.03:
             break
@@ -245,6 +265,8 @@ def baue_vorlage(spec, ausgabe, bericht=None):
     p["blick"] = spec.get("blick", p.get("blick", 0))
     if "kopf_drehung" in spec:
         p.setdefault("kopf", {})["drehen"] = spec["kopf_drehung"]
+    if spec.get("ansicht") != "hinten":
+        p = _gesicht_zur_kamera(p)
     if spec.get("ansicht") == "hinten":
         # Person von hinten (Third-Person-Spiele): Figur um 180° drehen; Winkel sind in Bildrichtung angegeben,
         # deshalb seitenverkehrt, damit „drehen positiv“ weiter zur rechten Bildseite zeigt
@@ -336,6 +358,8 @@ def baue_vorlage(spec, ausgabe, bericht=None):
         roh_f = fr.get("pose", "neutral")
         pf = {k: (dict(w) if isinstance(w, dict) else w) for k, w in (roh_f if isinstance(roh_f, dict) else POSEN.get(roh_f, POSEN["neutral"])).items()}
         pf["blick"] = fr.get("blick", pf.get("blick", 0))
+        if fr.get("ansicht") != "hinten":
+            pf = _gesicht_zur_kamera(pf)
         if fr.get("ansicht") == "hinten":
             pf = mszene._spiegeln(pf)
             pf["blick"] = 180 - pf.get("blick", 0)

@@ -17,6 +17,8 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Spiele-Vorlage: Sieht die Schlussprüfung noch Reste der alten Person (Hand, Gurt, Waffe), werden genau diese Stellen zusätzlich entfernt und neu aufgefüllt; Löcher in der Personenmaske (Gewehr zwischen den Armen) werden geschlossen.
 - Spiele-Vorlage: Ist die Figur viel größer als die Person, wird sie auch verkleinert (Maßstab bei unten angeschnittenen Personen: der Kopf); Schusswaffen zielen schräg zum Betrachter statt genau in die Linse, so dass man ihre Länge sieht.
 - Geteilte Bilder (Noob/Pro, 10€/100€/1000€): Jede Hälfte wird gleich im Format ihres Streifens gerendert – ganze Figur mit normalen Beinen statt aufgeblähter Beine am Bildrand, und das Thema bleibt im Streifen. Ganzkörperbilder nutzen 35 statt 30 mm.
+- Spiele-Vorlage: Ist von der Person nur ein Teil zu sehen (Brustbild, sitzt im Topf, hinter Deckung), richtet sich die Größe der Figur nach dem Kopf – sie schrumpfte sonst auf Brustbild-Größe. Von vorn gesehene Figuren drehen sich höchstens so weit, dass das Gesicht im Dreiviertelprofil bleibt.
+- Spiele-Vorlage: Ein dunkles Logo vor den Personen (Lethal Company) liegt wieder vor der Figur; nach der letzten Korrektur prüft Claude noch einmal, damit die gemeldeten offenen Punkte zum Endbild passen. Fliegende und fallende Figuren liegen schräg im Bild statt senkrecht zu hängen.
 - Geteilte Bilder mit Freunden („ich gegen SimPell“): Die zweite Hälfte darf nur den Freund zeigen – vorher scheiterte die Planung daran.
 
 ## [0.39.0] - 2026-09-30

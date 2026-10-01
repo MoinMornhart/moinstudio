@@ -349,8 +349,9 @@ Sieh dir beide Bilder an und prüfe streng, ob das Ergebnis dem Original entspri
 - Wirkt es wie ein fertiges Thumbnail (Figur gut sichtbar, Gesicht frei, nichts Seltsames)?
 
 Die Szene (Bildkoordinaten 0–1, oben links = 0,0; pose = Posen-Name oder Winkel arm_r/arm_l {heben, seitlich, drehen,
-beugen}, bein_r/bein_l {vor, seitlich, beugen}, koerper {drehen, vor, neigen}, kopf {drehen, nicken, neigen}, kippen,
-kippen_seite; blick = Körperdrehung in Grad von −90 bis 90, positiv = zur rechten Bildseite (die Rückansicht nie über
+beugen}, bein_r/bein_l {vor, seitlich, beugen}, koerper {drehen, vor, neigen}, kopf {drehen, nicken, neigen}, kippen
+(zur Kamera hin/weg), kippen_seite (Neigung in der Bildebene, positiv = Kopf nach rechts, 60–90 = liegt waagerecht im
+Bild – damit fliegende oder fallende Figuren schräg liegen statt senkrecht zu hängen); blick = Körperdrehung in Grad von −90 bis 90, positiv = zur rechten Bildseite (die Rückansicht nie über
 blick, nur über "ansicht": "hinten"); kopf_anteil = Kopfhöhe als Anteil der
 Bildhöhe; freunde = weitere Figuren mit denselben Feldern; verbindungen = [{von, zu, art, von_punkt, zu_punkt}] mit
 "ich"/"freund0"…, Punkte huefte, hand_r, hand_l, hals, fuss_r, fuss_l):
@@ -427,7 +428,9 @@ Bestimme (Bildkoordinaten 0–1, oben links = 0,0):
 - winkel: sonst eigene Winkel für den GANZEN Körper (ohne blick – die Drehung des ganzen Körpers steht in blick, die
   Rückansicht in ansicht): arm_r/arm_l {heben, seitlich, drehen, beugen}, bein_r/bein_l {vor, seitlich, beugen},
   koerper {drehen, vor, neigen}, kopf {drehen, nicken, neigen}, kippen (ganzer Körper nach hinten +, nach vorn −, z. B.
-  −40 für einen Hechtsprung), kippen_seite. Beine gehören immer dazu, wenn die Person nicht einfach steht (springt,
+  −40 für einen Hechtsprung – zur Kamera hin/weg, im Bild kaum sichtbar), kippen_seite (Neigung IN der Bildebene,
+  positiv = Kopf zur rechten Bildseite; 60–90 = Körper liegt schräg bis waagerecht im Bild: Fliegen, Fallen, Sprung
+  zur Seite – dafür kippen_seite, nicht kippen). Beine gehören immer dazu, wenn die Person nicht einfach steht (springt,
   klettert, rennt, sitzt, fällt). Beispiele (drehen positiv = zur rechten Bildseite, heben 90 = nach vorn,
   90 mit drehen 0 zeigt genau in die Kamera; zur Seite zeigen braucht drehen 40–70):
 ${beispiele}
@@ -558,11 +561,12 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
   let { bild, code, bericht } = await rendern(62)
 
   // Schlussprüfung (Philip, 30.09.: „Es kann nicht sein, dass ich dir immer schreiben muss, weil das Thumbnail nicht
-  // passt“): Claude legt Original und Ergebnis nebeneinander und korrigiert, was nicht passt – höchstens zweimal
+  // passt“): Claude legt Original und Ergebnis nebeneinander und korrigiert, was nicht passt – höchstens zweimal. Eine
+  // dritte Prüfung berichtet nur noch: sonst standen im Ergebnis die Probleme des vorletzten Bildes (Test 01.10.)
   const probleme: string[] = []
-  for (let runde = 0; runde < 2 && bild; runde++) {
+  for (let runde = 0; runde < 3 && bild; runde++) {
     await ctx.yield()
-    ctx.progress(75 + runde * 10, 'Claude vergleicht mit dem Original …')
+    ctx.progress(75 + runde * 7, 'Claude vergleicht mit dem Original …')
     await ctx.save({ ...(ctx.checkpoint ?? {}), claudePrompted: false, claudeSession: undefined })
     const pr = await runClaudeInJob(
       { cli: p.claudeCli, prompt: pruefPrompt(vorlage, bild, spec, p.wunsch), workDir: join(p.datenOrdner, 'claude-work', 'spielvorlage'), tools: ['Read'], allowedTools: ['Read'], addDirs: [p.ausgabe], maxTurns: 6, jsonSchema: PRUEF_SCHEMA },
@@ -572,7 +576,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
     const urteil = (pr.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(pr.text)?.[0] ?? '{}')) as Pruefung
     await writeFile(join(p.ausgabe, `pruefung-${runde + 1}.json`), JSON.stringify(urteil, null, 1))
     probleme.splice(0, probleme.length, ...(urteil.probleme ?? []))
-    if (urteil.passt || !urteil.korrektur || !Object.keys(urteil.korrektur).length) break
+    if (urteil.passt || !urteil.korrektur || !Object.keys(urteil.korrektur).length || runde === 2) break
     korrigiere(spec, urteil.korrektur)
     // Reste der alten Person (Hand, Gurt, Waffe), die die Maske verpasst hat: zusätzlich entfernen und neu auffüllen
     // (Red Dead 01.10.: Hand mit Messer unten links blieb als Geist stehen)
@@ -588,7 +592,7 @@ export async function spielvorlageJob(p: SpielvorlagePayload, ctx: JobContext<{ 
       a.titel = [...(a.titel ?? []), ...neueTitel]
       boxen = titelArgumente(a)
     }
-    ;({ bild, code, bericht } = await rendern(78 + runde * 10))
+    ;({ bild, code, bericht } = await rendern(78 + runde * 7))
   }
   const warnungen = [
     ...(bericht.deckung !== undefined && bericht.deckung < 0.45 ? [`Deine Figur deckt die alte Person nur zu ${Math.round(bericht.deckung * 100)} % ab – schreib unten z. B. „Figur größer“.`] : []),
