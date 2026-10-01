@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-10-01
+
+> Werkzeuge wieder wie vorher, Beine fließen nicht mehr ineinander, Fackel und Brot gut sichtbar
+
 ### Fixed
 
 - Werkzeuge wieder wie in v0.39: Die Zusatzregeln von heute (Fläche zur Kamera, größere Werkzeuge in Nahaufnahmen) haben Axt und Hacke verdreht und zurückgenommen; der Fix für die linke Hand und der Dreizack bleiben.
