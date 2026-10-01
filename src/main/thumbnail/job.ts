@@ -204,7 +204,9 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         const roh = res.structured ?? JSON.parse(JSON_OBJEKT.exec(res.text)?.[0] ?? '{}')
         const neu = (roh as { szene?: Szene }).szene
         if (!neu || pruefeSzene(neu, katalog, ids).length) break
-        szeneAktuell = neu
+        // Claudes korrigierte Szene kennt das Streifenformat nicht – ohne erneutes Aufbereiten wurde wieder breit
+        // gerendert und nur die Mitte genutzt (10€-Teil ohne Figur, 01.10.)
+        szeneAktuell = v.split ? mitte(neu, v.split.teile.length) : neu
       } catch {
         break // ohne Korrektur weiter mit dem besten Stand
       }
