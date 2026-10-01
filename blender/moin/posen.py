@@ -357,4 +357,68 @@ POSEN = {
         "bein_r": {"seitlich": 8, "vor": 10, "beugen": 20},
         "bein_l": {"seitlich": 6},
     },
+    # Thumbnail-Posen nach Recherche (Philip, 01.10.: „schau dir bei anderen an … Posen“): nie symmetrisch, Kopf geneigt,
+    # Oberkörper gegen die Hüfte verdreht
+    # Hände in die Hüften (selbstsicher): Ellbogen nach außen, Fäuste an der Hüfte
+    "haende_hueften": {
+        "koerper": {"drehen": 8},
+        "kopf": {"neigen": 6, "nicken": -4},
+        "arm_r": {"heben": 0, "seitlich": 40, "rollen": 85, "beugen": 100},
+        "arm_l": {"heben": 0, "seitlich": 40, "rollen": 85, "beugen": 100},
+        "bein_r": {"seitlich": 7},
+        "bein_l": {"seitlich": 5, "vor": 6},
+    },
+    # Facepalm: eine Hand vor dem Gesicht, Kopf nach unten (Fail, Peinlich)
+    "facepalm": {
+        "koerper": {"vor": 6, "drehen": 6},
+        "kopf": {"nicken": 16, "neigen": -6},
+        "arm_l": {"heben": 105, "seitlich": -12, "drehen": -20, "beugen": 125},
+        "arm_r": {"heben": 12, "seitlich": 10, "beugen": 15},
+    },
+    # Ausschau halten: Hand flach über den Augen, Blick in die Ferne
+    "ausschau": {
+        "koerper": {"drehen": 12},
+        "kopf": {"drehen": 18, "nicken": -6},
+        "arm_l": {"heben": 125, "seitlich": 8, "drehen": -30, "beugen": 115},
+        "arm_r": {"heben": 14, "seitlich": 12, "beugen": 20},
+        "bein_r": {"vor": -6},
+        "bein_l": {"vor": 10, "beugen": 6},
+    },
+    # Gegenstand zur Kamera hochhalten (Item zeigen): Arm nach vorn, leicht gebeugt
+    "hochhalten": {
+        "koerper": {"drehen": 10},
+        "kopf": {"neigen": 8, "drehen": 6},
+        "arm_l": {"heben": 95, "seitlich": 10, "drehen": 15, "beugen": 25},
+        "arm_r": {"heben": 20, "seitlich": 14, "beugen": 30},
+        "bein_r": {"seitlich": 5},
+        "bein_l": {"vor": 8},
+    },
+    # Ängstlich zurücklehnen: Oberkörper zurück, beide Hände abwehrend vorn, ein Bein vor
+    "abwehr": {
+        "kippen": 8,
+        "koerper": {"vor": -14, "drehen": -8},
+        "kopf": {"nicken": -6, "drehen": -10},
+        "arm_r": {"heben": 75, "seitlich": 6, "drehen": 10, "beugen": 60},
+        "arm_l": {"heben": 68, "seitlich": 10, "drehen": -6, "beugen": 55},
+        "bein_r": {"vor": 28, "beugen": 18},
+        "bein_l": {"vor": -6},
+    },
+    # Spitzhacke (oder Schwert) locker über der Schulter: Oberarm hoch, Ellbogen spitz, Werkzeug hinter der Schulter
+    "schulter": {
+        "koerper": {"drehen": 10},
+        "kopf": {"neigen": 5, "drehen": 8},
+        "arm_l": {"heben": 100, "seitlich": 20, "drehen": -10, "beugen": 115},
+        "arm_r": {"heben": 14, "seitlich": 12, "beugen": 15},
+        "bein_r": {"seitlich": 5},
+        "bein_l": {"vor": 8},
+    },
+    # Axt zum Schlag erhoben: Arm hoch über den Kopf, Oberkörper zurückgedreht, Schrittstellung
+    "ausholen": {
+        "koerper": {"drehen": -18, "vor": -6},
+        "kopf": {"drehen": 14, "nicken": -4},
+        "arm_l": {"heben": 135, "seitlich": 18, "drehen": 10, "beugen": 50},
+        "arm_r": {"heben": 40, "seitlich": 20, "beugen": 40},
+        "bein_r": {"vor": -22, "beugen": 10},
+        "bein_l": {"vor": 24, "beugen": 22},
+    },
 }

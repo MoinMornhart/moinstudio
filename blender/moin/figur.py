@@ -268,15 +268,17 @@ def baue_figur(name, skin_path, slim=None, fase=True, collection=None):
     return Figur(name, wurzel, gelenke, teile, slim)
 
 
-def _arm_matrix(seite, heben, seitlich, drehen):
+def _arm_matrix(seite, heben, seitlich, drehen, rollen=0):
     """Stilbuch-Winkel → Rotation: `heben` 0 = hängt, 90 = nach vorn, 180 = nach oben; `seitlich` = vom Körper weg
-    (positiv) bzw. zur Körpermitte (negativ); `drehen` = Drehung um die Hochachse, positiv = nach +X (zum Thema)."""
+    (positiv) bzw. zur Körpermitte (negativ); `drehen` = Drehung um die Hochachse, positiv = nach +X (zum Thema);
+    `rollen` = Drehung um die eigene Längsachse (positiv = Ellbogenbeuge zur Körpermitte), z. B. Hände in die Hüften."""
     s = -1 if seite == "r" else 1  # rechte Seite liegt bei −X
     # Reihenfolge: erst seitlich abspreizen, dann nach vorn/oben heben – so bleibt „seitlich“ bei jeder Armhöhe
     # „vom Körper weg“ (umgekehrt kippt ein hoch erhobener, abgespreizter Arm zur Körpermitte)
     return (Matrix.Rotation(math.radians(drehen), 4, "Z")
             @ Matrix.Rotation(math.radians(-heben), 4, "X")
-            @ Matrix.Rotation(math.radians(seitlich * s * -1), 4, "Y"))
+            @ Matrix.Rotation(math.radians(seitlich * s * -1), 4, "Y")
+            @ Matrix.Rotation(math.radians(-rollen * s), 4, "Z"))
 
 
 def pose(figur, p):
@@ -284,7 +286,8 @@ def pose(figur, p):
     Drehrichtung überall: positiv = nach +X, also zum Thema, das rechts im Bild steht (steht die Figur rechts, spiegelt die Szene).
     kopf: {drehen, nicken, neigen}  – nicken positiv = nach unten, neigen positiv = Kopf zur +X-Schulter
     koerper: {drehen, vor, neigen}   – vor = nach vorn beugen
-    arm_r/arm_l: {heben, seitlich, drehen, beugen}  – beugen = Ellbogen, 0 = gestreckt, 90 = rechter Winkel nach vorn
+    arm_r/arm_l: {heben, seitlich, drehen, rollen, beugen}  – beugen = Ellbogen, 0 = gestreckt, 90 = rechter Winkel
+                 nach vorn; rollen dreht die Beuge zur Körpermitte (positiv) bzw. nach außen
     bein_r/bein_l: {vor, seitlich, beugen}  – vor positiv = Bein nach vorn; beugen = Knie (Unterschenkel nach hinten)
     blick: Grad, um den sich die ganze Figur um die Hochachse dreht (0 = schaut nach −Y, −90 = nach −X, 90 = nach +X)
     kippen: ganze Figur um die Füße nach hinten kippen (Taumeln, Sturz)
@@ -299,7 +302,7 @@ def pose(figur, p):
     g["kopf"].rotation_euler = Euler((math.radians(-h.get("nicken", 0)), math.radians(h.get("neigen", 0)), math.radians(h.get("drehen", 0))), "ZXY")
     for seite in ("r", "l"):
         a = p.get(f"arm_{seite}", {})
-        m = _arm_matrix(seite, a.get("heben", 0), a.get("seitlich", 0), a.get("drehen", 0))
+        m = _arm_matrix(seite, a.get("heben", 0), a.get("seitlich", 0), a.get("drehen", 0), a.get("rollen", 0))
         g[f"arm_{seite}"].rotation_mode = "QUATERNION"
         g[f"arm_{seite}"].rotation_quaternion = m.to_quaternion()
         b = p.get(f"bein_{seite}", {})
