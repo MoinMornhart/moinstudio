@@ -148,23 +148,19 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
     const anteil = (x: number): number => Math.round(10 + ((i + x) / anzahl) * 88)
     const basis = join(p.ausgabe, `variante-${i + 1}`)
 
-    // Geteiltes Bild: jede Teil-Szene wird später als senkrechter Streifen um die Bildmitte genutzt (bei n Teilen 1/n
-    // der Breite). Kopf und Thema stehen nebeneinander in diesem Streifen – lagen beide genau in der Mitte, verdeckte
-    // der Kopf das Haus (Test „Noob-Haus gegen Pro-Haus“, 01.10.). Ein Bauwerk als Thema braucht die ganze Figur.
+    // Geteiltes Bild: jede Teil-Szene gleich im Format ihres Streifens rendern (1/n der Breite plus Zugabe für die
+    // schräge Trennlinie) – die Kamera rahmt dann ganz normal. Vorher wurde im 16:9-Bild nur die Mitte genutzt: der
+    // Kopf verdeckte das Haus, oder Weitwinkel und Bildrand bliesen die Beine auf (Noob/Pro, 01.10.). Ein Bauwerk als
+    // Thema braucht die ganze Figur.
     const mitte = (s: Szene, n: number): Szene => {
-      const k = (s.kamera ?? {}) as { seite?: string; thema?: unknown; modus?: string }
-      const halb = (0.5 / n) * 0.55
-      const links = k.seite !== 'rechts'
-      const mitThema = k.thema !== undefined && k.thema !== null
+      const k = (s.kamera ?? {}) as { thema?: unknown; modus?: string }
       const bauwerk = Array.isArray(k.thema) && ['nah', 'brust'].includes(k.modus ?? '')
+      const r = (s['render'] ?? {}) as { breite?: number; hoehe?: number }
+      const hoehe = r.hoehe ?? 720
       return {
         ...s,
-        kamera: {
-          ...(s.kamera as object),
-          ...(bauwerk ? { modus: 'ganz' } : {}),
-          kopf_uv: mitThema ? [0.5 + (links ? -halb : halb), 0.45] : [0.5, 0.45],
-          thema_uv: [0.5 + (links ? halb : -halb), 0.5]
-        } as Szene['kamera']
+        kamera: { ...(s.kamera as object), ...(bauwerk ? { modus: 'ganz' } : {}) } as Szene['kamera'],
+        render: { ...r, breite: Math.round((hoehe * 16) / 9 / n + hoehe * 0.16), hoehe }
       }
     }
     if (v.split) v.szene = mitte(v.szene, v.split.teile.length)

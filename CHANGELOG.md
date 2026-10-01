@@ -16,6 +16,7 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 - Spiele-Vorlage: Ist die Person unten angeschnitten (A Way Out), ragt auch die Figur unten hinaus, statt klein zu bleiben und zu schweben; über dem Kopf bleibt etwas Luft.
 - Spiele-Vorlage: Sieht die Schlussprüfung noch Reste der alten Person (Hand, Gurt, Waffe), werden genau diese Stellen zusätzlich entfernt und neu aufgefüllt; Löcher in der Personenmaske (Gewehr zwischen den Armen) werden geschlossen.
 - Spiele-Vorlage: Ist die Figur viel größer als die Person, wird sie auch verkleinert (Maßstab bei unten angeschnittenen Personen: der Kopf); Schusswaffen zielen schräg zum Betrachter statt genau in die Linse, so dass man ihre Länge sieht.
+- Geteilte Bilder (Noob/Pro, 10€/100€/1000€): Jede Hälfte wird gleich im Format ihres Streifens gerendert – ganze Figur mit normalen Beinen statt aufgeblähter Beine am Bildrand, und das Thema bleibt im Streifen. Ganzkörperbilder nutzen 35 statt 30 mm.
 - Geteilte Bilder mit Freunden („ich gegen SimPell“): Die zweite Hälfte darf nur den Freund zeigen – vorher scheiterte die Planung daran.
 
 ## [0.39.0] - 2026-09-30

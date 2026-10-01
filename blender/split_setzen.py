@@ -18,18 +18,20 @@ from grafik_setzen import Leinwand  # noqa: E402
 
 def setze(assets, ausgabe, teile, schraeg=7.0):
     bilder = [Image.open(p).convert("RGBA") for p, _ in teile]
-    w, h = bilder[0].size
+    # Teilbilder kommen im Streifenformat (schmal) oder alt im vollen 16:9 – das Ergebnis ist immer 16:9
+    h = bilder[0].height
+    w = round(h * 16 / 9)
     n = len(bilder)
     versatz = math.tan(math.radians(schraeg)) * h / 2  # Neigung der Trennlinie: oben nach rechts
     ergebnis = Image.new("RGBA", (w, h), (0, 0, 0, 255))
     grenzen = [w * i / n for i in range(n + 1)]
     for i, b in enumerate(bilder):
-        if b.size != (w, h):
-            b = b.resize((w, h), Image.LANCZOS)
+        if b.height != h:
+            b = b.resize((round(b.width * h / b.height), h), Image.LANCZOS)
         mitte = (grenzen[i] + grenzen[i + 1]) / 2
-        # Streifen um die Bildmitte des Teilbilds an seinen Platz schieben
+        # Teilbild mittig an seinen Streifen schieben
         verschoben = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        verschoben.paste(b, (int(mitte - w / 2), 0))
+        verschoben.paste(b, (int(mitte - b.width / 2), 0))
         maske = Image.new("L", (w, h), 0)
         links_o = grenzen[i] + (versatz if i > 0 else -w)
         links_u = grenzen[i] - (versatz if i > 0 else w)

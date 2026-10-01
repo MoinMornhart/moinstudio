@@ -33,7 +33,8 @@ MODI = {
     "mob": {"linse": 45, "kopf_anteil": 0.17, "kopf_uv": (0.30, 0.44), "thema_uv": (0.68, 0.46), "hoehe": 3},
     # Ganze Figur mit Umgebung (Freiform-Test): für besondere Orte und Körperhaltungen (Yoga, Handstand, Klettern, Surfen),
     # damit Ort und Handlung zu sehen sind statt nur ein großer Kopf
-    "ganz": {"linse": 30, "kopf_anteil": 0.12, "kopf_uv": (0.30, 0.72), "thema_uv": (0.70, 0.42), "hoehe": 10},
+    # 35 statt 30 mm: Weitwinkel bläst die Beine am unteren Bildrand auf (Noob/Pro, 01.10.)
+    "ganz": {"linse": 35, "kopf_anteil": 0.12, "kopf_uv": (0.30, 0.72), "thema_uv": (0.70, 0.42), "hoehe": 10},
 }
 
 # Dreiviertelprofil: Winkel zwischen Blickrichtung des Gesichts und Richtung zur Kamera (Stilbuch: 20–45°)
