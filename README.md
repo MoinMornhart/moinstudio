@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.40.0** (2026-10-01): Claude prüft jedes Thumbnail selbst (auch in Handygröße), geteilte Bilder im Streifenformat, Spiele-Vorlagen ohne Reste der alten Person
 - **0.39.0** (2026-09-30): Minecraft-Thumbnails wie bei BastiGHG: Grafik-Ebene, geteilte Bilder, Werkzeuge exakt wie im Spiel, Gegenüber mit Gesicht, alle Mobs geprüft
 - **0.38.0** (2026-09-30): Logos, Spiele-Vorlage für alles, Namen
 - **0.37.0** (2026-09-30): Thumbnail-Änderungen als Verlauf
 - **0.36.2** (2026-09-30): ContentStudio-Prompt: eigene Vorbilder
-- **0.36.1** (2026-09-30): Prompt für ContentStudio
 <!-- CHANGELOG:END -->
 
 ## Installation

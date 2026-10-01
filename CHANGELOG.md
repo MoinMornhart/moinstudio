@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-01
+
+> Claude prüft jedes Thumbnail selbst (auch in Handygröße), geteilte Bilder im Streifenformat, Spiele-Vorlagen ohne Reste der alten Person
+
 ### Added
 
 - Minecraft-Thumbnails: Claude prüft jedes gerenderte Bild selbst – in voller Größe und so klein, wie es auf dem Handy in der YouTube-Liste erscheint (erkennt man in unter einer Sekunde, worum es geht? Gesichter frei? Thema sichtbar? Grafikfehler?). Gefundene Probleme werden in der Szene korrigiert und neu gerendert.
