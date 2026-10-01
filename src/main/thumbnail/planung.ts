@@ -131,7 +131,9 @@ export function plane(vorlage: string, o: { beschreibung: string; kanal: string;
  * Prüft und repariert eine geplante Szene gegen den Katalog. Gibt die Fehler zurück, die sich nicht sicher
  * reparieren lassen (dann wird neu geplant); kleine Abweichungen werden still korrigiert.
  */
-export function pruefeSzene(s: Szene, k: Katalog, figurIds: string[]): string[] {
+/** `teilbild`: weiterer Teil eines geteilten Bilds – dort darf auch eine andere Figur vorn stehen („ich gegen SimPell“:
+ *  die zweite Hälfte zeigt nur SimPell, Test 01.10.). */
+export function pruefeSzene(s: Szene, k: Katalog, figurIds: string[], teilbild = false): string[] {
   const fehler: string[] = []
   const posen = new Set(k.posen.map((p) => p.name))
   const welten = new Set(k.welten.map((w) => w.name))
@@ -149,7 +151,9 @@ export function pruefeSzene(s: Szene, k: Katalog, figurIds: string[]): string[] 
     if (f.item && !/^[a-z0-9_]+$/.test(f.item.name)) fehler.push(`Ungültiges Item „${f.item.name}“`)
     if (f.item && f.item.hand !== 'r' && f.item.hand !== 'l') f.item.hand = 'l'
   }
-  if (s.figuren?.[0] && s.figuren[0].id !== figurIds[0]) fehler.push(`Die erste Figur muss „${figurIds[0]}“ sein`)
+  if (s.figuren?.[0] && (teilbild ? !figurIds.includes(s.figuren[0].id) : s.figuren[0].id !== figurIds[0])) {
+    fehler.push(teilbild ? `Die erste Figur muss eine von ${figurIds.map((f) => `„${f}“`).join(', ')} sein` : `Die erste Figur muss „${figurIds[0]}“ sein`)
+  }
   for (const m of s.mobs ?? []) if (!k.mobs.includes(m.art)) fehler.push(`Unbekannter Mob „${m.art}“`)
   for (const o of s.objekte ?? []) if (!bloecke.has(o.block) || o.block === 'luft') fehler.push(`Unbekannter Block „${o.block}“`)
   s.kamera = s.kamera ?? {}
@@ -193,7 +197,7 @@ export function liesPlan(structured: unknown, text: string, k: Katalog, figurIds
         v.split = { teile: teile.map((t) => ({ szene: t.szene, ...(t.etikett ? { etikett: String(t.etikett).split(/\s+/).slice(0, 3).join(' ') } : {}) })) }
         v.szene = teile[0]!.szene
         teile.slice(1).forEach((t, n) => {
-          for (const f of pruefeSzene(t.szene, k, figurIds)) fehler.push(`Variante ${i + 1}, Teil ${n + 2}: ${f}`)
+          for (const f of pruefeSzene(t.szene, k, figurIds, true)) fehler.push(`Variante ${i + 1}, Teil ${n + 2}: ${f}`)
         })
       }
     }

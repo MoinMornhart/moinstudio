@@ -61,6 +61,11 @@ describe('Thumbnail-Planung', () => {
     // Mob als Thema ist erlaubt
     const mitMob: Szene = { welt: { art: 'wiese' }, figuren: [{ id: 'ich', pose: 'schreck' }], mobs: [{ art: 'ghast' }], kamera: { thema: 'mob:0' } }
     expect(pruefeSzene(mitMob, k, ['ich'])).toEqual([])
+    // Teilbild eines geteilten Bilds: auch ein Freund darf vorn stehen, ein Unbekannter nicht
+    const nurSimpell = { ...mitMob, figuren: [{ id: 'simpell', pose: 'schreck' }] } as typeof mitMob
+    expect(pruefeSzene(nurSimpell, k, ['ich', 'simpell']).join()).toMatch(/erste Figur/)
+    expect(pruefeSzene(nurSimpell, k, ['ich', 'simpell'], true)).toEqual([])
+    expect(pruefeSzene({ ...nurSimpell, figuren: [{ id: 'fremd', pose: 'schreck' }] } as typeof mitMob, k, ['ich', 'simpell'], true).join()).toMatch(/erste Figur/)
     // Objekt als Thema (Diamantblock, auf den Philip zeigt); ein fehlendes Objekt nicht
     const mitObjekt: Szene = { welt: { art: 'hoehle' }, figuren: [{ id: 'ich', pose: 'zeigen' }], objekte: [{ block: 'tnt', position: [2, 2, 1], wichtig: true }], kamera: { thema: 'objekt:0' } }
     expect(pruefeSzene(mitObjekt, k, ['ich'])).toEqual([])
