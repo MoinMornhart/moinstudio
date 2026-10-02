@@ -21,7 +21,7 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moin.text import Schrift  # noqa: E402  (Bitmap-Schrift der Spieldatei, läuft auch ohne Blender)
@@ -44,6 +44,7 @@ class Leinwand:
         self.s = max(2, round(self.h / 720 * 4))
         self.belegt = []  # Kästen in Pixeln, die schon Grafik tragen
         self.geschuetzt = self._geschuetzt()
+        self.maske = None  # Figurenmaske (L, 255 = Figur/Mob/Item), wenn Blender eine gerendert hat
 
     # --- Hilfen -----------------------------------------------------------------------------------------------
     def _geschuetzt(self):
@@ -214,6 +215,7 @@ class Leinwand:
         x0 = (self.w - hotbar.width * s) // 2
         y0 = self.h - hotbar.height * s - s
         oben = y0
+        vorher = self.bild.copy()
         self.setzen(self.gross(hotbar), x0, y0)
         for i, name in enumerate((e.get("items") or [])[:9]):
             sym = self.item_symbol(str(name))
@@ -258,6 +260,11 @@ class Leinwand:
                 f = self.textur("gui", "sprites", "hud", name)
                 if f is not None:
                     self.setzen(self.gross(f), x, yh)
+        # Figuren stehen vor der Leiste (Nether-Test 02.10.: Hotbar lag über Philips Körper) – wie eine Ebene in
+        # Photoshop: wo die Figurenmaske ist, kommt das Bild von vorher wieder obenauf
+        if self.maske is not None:
+            box = (max(0, x0 - s), max(0, yh - s), min(self.w, x0 + (hotbar.width + 1) * s), self.h)
+            self.bild.paste(vorher.crop(box), box[:2], self.maske.crop(box))
 
     def level(self, e):
         """„Level 19“ in XP-Grün mit XP-Leiste darunter, groß und oben mittig (Basti 05, 09)."""
@@ -455,6 +462,11 @@ def main(bild, bericht_pfad, grafik_pfad, assets, ausgabe):
     with open(grafik_pfad, encoding="utf-8") as fh:
         grafik = json.load(fh)
     lw = Leinwand(Image.open(bild), bericht, assets)
+    maske = bericht_pfad.replace(".bericht.json", ".maske.png")
+    if maske != bericht_pfad and os.path.exists(maske):
+        m = Image.open(maske).convert("RGBA").resize(lw.bild.size)
+        r, _, _, a = m.split()
+        lw.maske = ImageChops.multiply(r, a)
     # Reihenfolge: große Flächen zuerst, damit kleine Elemente ihnen ausweichen
     ordnung = {"grosstext": 0, "hud": 1, "abzeichen": 2, "lupe": 3, "level": 4, "etikett": 5}
     for e in sorted(grafik, key=lambda e: ordnung.get(e.get("art"), 9)):

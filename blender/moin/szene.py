@@ -829,6 +829,12 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
             mlook.gesichtslicht(scene, cam, fig.kopf_mitte(), staerke * 0.6)
 
     gehalten = _items_anhaengen(figuren, texturen, cam, k)
+    # Das Werkzeug der Hauptfigur bekommt ein eigenes weiches Licht von vorn: das Gesichtslicht zielt auf den Kopf,
+    # Bogen und Waffen in der Hand lagen sonst im Schatten (Nether-Test 02.10.: Bogen fast schwarz)
+    if haupt_item.get("name") and szene["figuren"][0]["id"] in gehalten:
+        ob = gehalten[szene["figuren"][0]["id"]]
+        ecken = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+        mlook.gesichtslicht(scene, cam, sum(ecken, Vector()) / 8, staerke * 0.5)
     _verbindungen_bauen(szene, figuren, mobs, gehalten, texturen)
 
     scene.render.engine = "CYCLES"

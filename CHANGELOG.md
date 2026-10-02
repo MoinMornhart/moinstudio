@@ -6,6 +6,12 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Die Spiel-Leiste (Hotbar, Herzen, XP) lag über Philips Körper – jetzt steht er davor wie auf einer eigenen Ebene.
+- Werkzeuge und Waffen in der Hand bekommen ein eigenes weiches Licht von vorn und verschwinden nicht mehr im Schatten.
+- Lava leuchtet etwas schwächer: Ein großer Lavasee überstrahlte das Bild und färbte alles rot.
+
 ## [0.43.1] - 2026-10-02
 
 > Thumbnail-Aufträge laufen auch mit iCloud-Platzhaltern

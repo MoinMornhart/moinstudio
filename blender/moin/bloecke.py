@@ -1,4 +1,4 @@
-"""Blöcke mit echten Minecraft-Texturen (ROADMAP 4.3).
+﻿"""Blöcke mit echten Minecraft-Texturen (ROADMAP 4.3).
 
 Ein Block ist 16 Skin-Pixel groß (0,9 m), passend zur Figur aus figur.py. Welten werden als Raster
 {(x, y, z): blockname} beschrieben (z = Höhe, der Block (x, y, 0) liegt direkt unter der Standfläche z = 0).
@@ -42,7 +42,7 @@ ARTEN = {
     "oak_planks": {"alle": ("oak_planks", None)},
     "oak_leaves": {"alle": ("oak_leaves", LAUB), "durchsichtig": True},
     "water": {"alle": ("water_still", WASSER), "fluessig": True, "durchsichtig": True},
-    "lava": {"alle": ("lava_still", None), "fluessig": True, "leuchtet": 3.0},
+    "lava": {"alle": ("lava_still", None), "fluessig": True, "leuchtet": 1.8},
     "snow_block": {"alle": ("snow", None)},
     "ice": {"alle": ("ice", None), "durchsichtig": True},
     "netherrack": {"alle": ("netherrack", None)},
