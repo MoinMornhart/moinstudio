@@ -114,6 +114,8 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
         addDirs: [dirname(pfad)],
         maxTurns: 6,
         jsonSchema: SICHT_SCHEMA,
+        // Bildprüfung ist eine Zugabe: lieber ohne sie weiter als den Auftrag stundenlang blockieren
+        zeitlimitMs: 5 * 60 * 1000,
         ctx: ctx as JobContext<unknown>
       })
       return liesSichtUrteil(res.structured ?? JSON.parse(JSON_OBJEKT.exec(res.text)?.[0] ?? '{}')).probleme
@@ -189,13 +191,15 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
       }
       const warnungen = [...(bericht.warnungen ?? [])]
       // Bildprüfung durch Claude (groß und in Handygröße) – immer, auch neben Zahlen-Warnungen (die Kamera-Abweichung
-      // allein verhinderte sonst jede Prüfung, Test 01.10.); nicht beim letzten Versuch, dann gäbe es keine Korrektur mehr
-      if (versuch < KORREKTUREN) {
-        ctx.progress(anteil(versuch * 0.25 + 0.15), `Variante ${i + 1}/${anzahl}: Claude prüft das Bild (auch in Handygröße) …`)
-        warnungen.push(...(await sichtPruefen(pfad, v)).map((x) => SICHT_VORSILBE + x))
-      }
+      // allein verhinderte sonst jede Prüfung, Test 01.10.) und auch beim letzten Versuch: ohne sie hatte der letzte
+      // Versuch fast immer die wenigsten Warnungen und gewann, obwohl er schlechter war (Creeper-Test 02.10.: großer
+      // Creeper in Versuch 1, im Ergebnis kaum sichtbar)
+      ctx.progress(anteil(versuch * 0.25 + 0.15), `Variante ${i + 1}/${anzahl}: Claude prüft das Bild (auch in Handygröße) …`)
+      warnungen.push(...(await sichtPruefen(pfad, v)).map((x) => SICHT_VORSILBE + x))
       const ernst = ernsteWarnungen(warnungen)
-      if (!bestes || ernst.length < bestes.ernst.length) bestes = { versuch, ernst, warnungen }
+      // Gemessene Fehler (Mob nicht im Bild, Gesicht verdeckt …) wiegen dreifach, Anmerkungen der Bildprüfung einfach
+      const punkte = (w: string[]): number => w.reduce((s, x) => s + (x.startsWith(SICHT_VORSILBE) ? 1 : 3), 0)
+      if (!bestes || punkte(ernst) < punkte(bestes.ernst)) bestes = { versuch, ernst, warnungen }
       if (!ernst.length || versuch === KORREKTUREN) break
       // Claude korrigiert die Szene anhand des Prüfberichts
       try {

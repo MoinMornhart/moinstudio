@@ -99,6 +99,10 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Balancieren – die ganze Figur und der Ort müssen zu sehen sein), `gefahr` oder `tiefe` für Abgründe und Gruben (mit
    `hoehe` 20–40 für die Aufsicht), `held` für Heldenposen von unten. Die Kamera schaut nie auf eine leere helle Fläche:
    hinter Philip steht immer erkennbare Umgebung.
+   **Fällt jemand fast runter** (Klippe, Abgrund, Turm, Brücke): Der Abgrund ist die Aussage und muss im Bild sein –
+   dann `klippe` (oder `abgrund`) mit `"ueber_abgrund": true` statt `kampf`. Wer fällt, steht direkt an der `kante`, mit
+   `taumeln`, `fallen` oder `haengen`, Blick weg vom Abgrund; der andere kämpft daneben auf festem Boden (Test 02.10.:
+   Kampf auf der Klippe ohne sichtbare Klippe).
    **Gesten mit den Armen** (jubeln mit Armen oben, Schultern zucken, Hände vors Gesicht, zeigen, winken) brauchen
    `brust` oder `ganz`: Bei `nah` sind die Arme nicht im Bild und die Geste geht verloren.
 10. **Freie Posen:** Passt keine Katalog-Pose genau, nimm die ähnlichste und forme sie mit `posen_korrektur` (je Figur) zur

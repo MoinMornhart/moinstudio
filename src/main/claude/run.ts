@@ -41,7 +41,12 @@ export interface ClaudeRunOptions {
   /** Job-Kontext: Prozess wird angemeldet (Pause), Abbruch beendet Claude sauber */
   ctx?: JobContext<unknown>
   signal?: AbortSignal
+  /** Höchstdauer in ms (Standard 30 min): ein hängender Aufruf blockierte sonst den ganzen Auftrag (Test 02.10.:
+   *  Bildprüfung hing über sechs Stunden) */
+  zeitlimitMs?: number
 }
+
+export const STANDARD_ZEITLIMIT_MS = 30 * 60 * 1000
 
 export function buildArgs(o: ClaudeRunOptions): string[] {
   const args = ['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'dontAsk', '--strict-mcp-config']
@@ -120,9 +125,20 @@ export async function runClaude(o: ClaudeRunOptions): Promise<ClaudeResult> {
       child.kill()
     }
     signal?.addEventListener('abort', onAbort, { once: true })
-    child.once('error', reject)
+    let abgelaufen = false
+    const wache = setTimeout(() => {
+      abgelaufen = true
+      child.stdin.end()
+      child.kill()
+    }, o.zeitlimitMs ?? STANDARD_ZEITLIMIT_MS)
+    child.once('error', (err) => {
+      clearTimeout(wache)
+      reject(err)
+    })
     child.once('close', (code) => {
+      clearTimeout(wache)
       signal?.removeEventListener('abort', onAbort)
+      if (abgelaufen) return reject(new Error(`Claude hat nicht rechtzeitig geantwortet (nach ${Math.round((o.zeitlimitMs ?? STANDARD_ZEITLIMIT_MS) / 60000)} min abgebrochen)`))
       splitter.flush().forEach(handle)
       const lim = limit as { resetAt: Date | null; message: string } | null
       const res = result as ClaudeResult | null

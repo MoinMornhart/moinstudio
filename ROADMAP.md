@@ -28,6 +28,8 @@ Die vollständige, abhakbare Masterliste. Es wird **immer nur ein Schritt** bear
 | M8 Adobe (ungetestet) | ab 0.26.0 | Erkennung, Premiere-Sequenz (FCP7-XML), Photoshop-Datei mit Ebenen, Testpaket | 🔄 |
 | M5b Thumbnail Spitzenklasse | ab 0.42.0 | Lückenanalyse gegen Vorbilder, Look, Bildaufbau, Photoshop-Feinschliff, neuer Großtest | 🔄 |
 | M10 Video: Animation und Intros | ab 0.43.0 | Blender-Animation, Skin-Intro, Endcard, animierte Untertitel, Grafikpaket, Musik mit Lizenz | ⬜ |
+| M11 Clips-Werkstatt | ab 0.47.0 | Wunsch → Claude baut Intro/Outro/Einblendung, Bibliothek mit Häkchen, automatisch in jedes Video | ⬜ |
+| M12 Premiere als Schnitt-Motor | ab 0.48.0 | UXP-Plugin „MoinStudio Bridge“, Projekt + Render durch Premiere, Schalter „Zuschauen“ | ⬜ |
 | M9 Stabil | **1.0.0** | Politur, Release | ⬜ |
 
 ---
@@ -279,6 +281,30 @@ oder Skin-Moment; nie der Minecraft-Schriftzug im eigenen Branding; Musik nur mi
 - [ ] **A.6 Grafikpaket:** Kapitelkarten, Abo-Erinnerung, Namenseinblendung, Übergänge und Outro als Bausteine im Schnitt; per Sprache abrufbar. ✅ Freiform-Test mit 20 Wünschen.
 - [ ] **A.7 Musik mit Lizenz:** Bibliothek für eigene Musik und Geräusche (YouTube Audio Library, Pixabay, CC0), Lizenz je Datei gespeichert, Quellenangabe automatisch in der Videobeschreibung. ✅ Unit-Tests, Beschreibung enthält die Angaben.
 - [ ] **A.8 Premiere und Claude Desktop:** neue Bausteine als Clips im FCP7-Export und über `video_edit`. ✅ Unit-Tests, Adobe-Checkliste erweitert.
+
+## M11 – Clips-Werkstatt
+
+Ziel (Philip, 02.10.2026): „ein extra Modus, dass man dir etwas schreiben kann und du machst dann z. B. ein Intro oder
+sonst was draus und kannst sie gleich für die Videos mitreinnehmen, wenn ich ein Häkchen gemacht habe“.
+
+- [x] **C.1 Neu planen.** ✅ Plan steht hier (02.10.2026).
+- [ ] **C.2 Bibliothek:** `clips/clips.json` im Datenordner – Name, Rolle (Intro, Outro, Abo-Einblendung, Einblendung), Häkchen „in Videos verwenden“, Video mit Alphakanal und Vorschau; Hochladen vorhandener Animationen (Philips Abo-Animation). ✅ Unit-Tests.
+- [ ] **C.3 Wunsch → Clip:** Claude plant aus freiem Text eine Animation (Figur/Skin, Posen, Mimik, Kamera, Texte in Minecraft-Schrift, Hintergrund), Blender rendert, Änderungen in Worten. ✅ 10 freie Wünsche, Bilder geprüft.
+- [ ] **C.4 Automatisch in jedes Video:** angehakte Clips – Intro vor das Video, Outro ans Ende, Abo-Einblendung beim ersten „Abo“/„Like“ im Transkript (sonst bei 30 %). ✅ Testvideo mit allen drei Rollen.
+- [ ] **C.5 Reiter „Clips“:** Wunschfeld, Vorschau, Bibliothek mit Häkchen und Rolle. ✅ Aufnahme des Reiters.
+
+## M12 – Premiere als Schnitt-Motor
+
+Ziel (Philip, 02.10.2026): „alle meine Videos über Premiere Pro erstellt“ und im Schnitt ein Schalter „Zuschauen“: an =
+man sieht live, wie geschnitten wird; aus = im Hintergrund, nur das Ergebnis. Recherche 02.10.: Premiere 26.5 hat einen
+eingebauten MCP-Server (ohne Export/Effekte), ExtendScript/CEP laufen aus – Weg ist ein eigenes UXP-Plugin, das sich per
+WebSocket mit MoinStudio verbindet. Philip hat die Plugin-Installation erlaubt (02.10.).
+
+- [x] **P.1 Neu planen.** ✅ Plan steht hier (Recherche zu UXP, MCP, Media Encoder).
+- [ ] **P.2 Plugin „MoinStudio Bridge“:** UXP-Plugin (Manifest v5, Netzwerk nur 127.0.0.1), verbindet sich mit dem WebSocket-Server von MoinStudio, führt Befehle aus und meldet Fortschritt; Installation per Adobe-Installer (UPIA). ✅ Ping/Pong mit laufendem Premiere.
+- [ ] **P.3 Projekt bauen:** Projekt anlegen, Original importieren, Schnitt aus der FCP7-Sequenz, Zoom-Keyframes, Texte/Stings/Abo-Animation als Clips auf eigenen Spuren, Geräusche auf A2; was Premiere nicht kann (Tempo-Rampen, Zensur, Farbe), rendert MoinStudio vorab. ✅ Testprojekt öffnen und prüfen.
+- [ ] **P.4 Render durch Premiere:** Export mit YouTube-Preset (sofort oder über Media Encoder), Fortschritt in MoinStudio, gleiche Prüfung wie beim FFmpeg-Export. ✅ Export besteht die YouTube-Prüfung.
+- [ ] **P.5 Schalter „Zuschauen“:** an = Premiere vorne, Schritte sichtbar nacheinander; aus = minimiert über Media Encoder. FFmpeg bleibt als Rückfall, wenn Premiere fehlt. ✅ Beide Modi mit dem Testvideo.
 
 ## M9 – Stabil → 1.0.0
 
