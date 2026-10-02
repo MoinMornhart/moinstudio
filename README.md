@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.43.2** (2026-10-02): Hotbar hinter Philip, Werkzeug im Licht, Lava weniger grell
 - **0.43.1** (2026-10-02): Thumbnail-Aufträge laufen auch mit iCloud-Platzhaltern
 - **0.43.0** (2026-10-02): Laternen, Lagerfeuer und Co. in echter Form, keine schwebenden Blöcke
 - **0.42.0** (2026-10-02): Thumbnails veredelt wie bei großen Kanälen, Schwert sitzt richtig in der Faust
 - **0.41.5** (2026-10-02): Minecraft-Spieldateien lokal – iCloud synchronisiert wieder
-- **0.41.4** (2026-10-02): Keine falschen Sync-Konflikte mehr im Datenordner
 <!-- CHANGELOG:END -->
 
 ## Installation

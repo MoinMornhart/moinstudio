@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.43.2] - 2026-10-02
+
+> Hotbar hinter Philip, Werkzeug im Licht, Lava weniger grell
+
 ### Fixed
 
 - Die Spiel-Leiste (Hotbar, Herzen, XP) lag über Philips Körper – jetzt steht er davor wie auf einer eigenen Ebene.
