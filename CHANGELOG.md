@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-02
+
+> Laternen, Lagerfeuer und Co. in echter Form, keine schwebenden Blöcke
+
 ### Added
 
 - Blöcke mit eigener Form werden gebaut wie im Spiel – aus den Blockmodellen der Spieldatei statt als Würfel: Laternen, Lagerfeuer, Sculk-Sensor und -Kreischer, Fackeln, Treppen, Zäune und jeder andere Block mit eigener Form.
