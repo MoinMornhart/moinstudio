@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-02
+
+> Premiere-Brücke: Plugin für Premiere Pro (ungetestet)
+
 ### Added
 
 - Premiere-Brücke (M12, ungetestet): UXP-Plugin „MoinStudio Bridge“ für Premiere Pro (`premiere-plugin/`) und ein eigener kleiner WebSocket-Server in MoinStudio (nur 127.0.0.1). Das Plugin kennt nur feste Befehle (Projekt anlegen/öffnen, importieren, Sequenzen, speichern, exportieren) und führt sie nur mit dem Zufallsschlüssel aus, den MoinStudio bei jedem Start lokal ablegt.
