@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-10-02
+
+> Abo-Animation und andere Videos im Schnitt einblenden
+
 ### Added
 
 - Neuer Baustein „Video-Einblendung“ im Schnitt: Videos mit durchsichtigem Hintergrund (z. B. deine eigene Abo-Animation) laufen an einer Stelle einmal durch, mit ihrem Ton. Claude kennt ihn – „blend den Abo-Balken ein, wenn ich Abo sage“.
