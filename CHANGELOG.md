@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-02
+
+> Thumbnails veredelt wie bei großen Kanälen, Schwert sitzt richtig in der Faust
+
 ### Added
 
 - Thumbnails werden nach dem Render veredelt wie im Photoshop-Schritt großer Kanäle: Hintergrund weicher und etwas dunkler, Figuren und Mobs knackiger und farbiger, Randlicht in der Farbe der Umgebung und eine feine helle Kante – die Figuren stehen jetzt klar vor dem Hintergrund statt darin zu verschwimmen.
