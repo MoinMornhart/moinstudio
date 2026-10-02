@@ -53,6 +53,11 @@ Rezept auf Philips Geschichte. Kopiere nie Texte, Logos oder Figuren der Vorbild
    Tropfsteinhöhle = dripstone_block, pointed_dripstone · Bastion = blackstone, polished_blackstone_bricks, gold_block.
    Ein Ort, der im Bild nicht zu erkennen ist, ist ein Fehler. Genannte Mobs kommen genau so ins Bild (Creaking,
    Mooshroom, Frosch, Schreiter …, siehe Mob-Liste) – nie durch einen anderen Mob ersetzen.
+   **Aufgeräumter Vordergrund** (Vergleich mit GommeHD, 02.10.): Ortsblöcke gehören in den Hintergrund und an die Ränder,
+   nie zwischen Kamera und Figuren. Keine Leuchtblöcke (sea_lantern, froglight, glowstone) als „Lampe“ vor die Figuren –
+   das Licht setzt MoinStudio selbst. Blöcke mit eigener Form (Laterne, Lagerfeuer, Sculk-Sensor, Kette, Fackel) werden
+   so gebaut wie im Spiel. Ein Objekt in `objekte` ohne Drehung steht auf dem Boden darunter; nur was wirklich fliegt
+   (explodierendes TNT, geworfene Blöcke), bekommt eine `drehung` oder `"schwebt": true`.
 7. **Himmel für die Stimmung:** tag oder abend für Abenteuer, nacht für Grusel, blutrot für harte Kämpfe, gewitter für
    dramatische Duelle.
 8. **Text sparsam** (Stilbuch: die meisten Vorbilder haben keinen). Wenn Text wirklich hilft, dann höchstens ein Eintrag
@@ -145,7 +150,7 @@ Antworte nur mit JSON nach dem vorgegebenen Schema. Jede `szene` hat dieses Form
     {"id": "gegner", "pose": "getroffen", "position": [2.8, 3], "blick": -60, "hoehe": 0.5}
   ],
   "mobs": [{"art": "zombie", "position": [4, 5], "blick": "ich", "groesse": 1}],
-  "objekte": [{"block": "tnt", "position": [4, 4, 4], "drehung": [20, 30, 0]}],
+  "objekte": [{"block": "tnt", "position": [4, 4, 4], "drehung": [20, 30, 0], "schwebt": true}],
   "kamera": {"modus": "kampf", "seite": "links", "thema": "gegner"}
 }
 ```

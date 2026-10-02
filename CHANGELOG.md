@@ -6,6 +6,16 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Blöcke mit eigener Form werden gebaut wie im Spiel – aus den Blockmodellen der Spieldatei statt als Würfel: Laternen, Lagerfeuer, Sculk-Sensor und -Kreischer, Fackeln, Treppen, Zäune und jeder andere Block mit eigener Form.
+
+### Fixed
+
+- Schwebende Blöcke: Einzelblöcke ohne Drehung stehen auf dem Boden darunter (vorher hingen z. B. Seelenlaternen als Würfel über dem Kopf); nur Fliegendes wie explodierendes TNT schwebt.
+- Durchsichtige Stellen (Glas, Laub, Flammen, Ranken) bekamen im Entfernungsdunst ein bläuliches Rechteck.
+- Claude stellt keine Leuchtblöcke mehr als „Lampe“ vor die Figuren und hält den Vordergrund frei.
+
 ## [0.42.0] - 2026-10-02
 
 > Thumbnails veredelt wie bei großen Kanälen, Schwert sitzt richtig in der Faust

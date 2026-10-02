@@ -49,7 +49,7 @@ export interface Szene {
   himmel?: string
   figuren: { id: string; pose: string; position?: number[]; blick?: number | 'auto'; hoehe?: number; item?: { name: string; hand?: string }; [k: string]: unknown }[]
   mobs?: { art: string; position?: number[]; blick?: number | string; groesse?: number; [k: string]: unknown }[]
-  objekte?: { block: string; position?: number[]; drehung?: number[]; groesse?: number; wichtig?: boolean }[]
+  objekte?: { block: string; position?: number[]; drehung?: number[]; groesse?: number; wichtig?: boolean; schwebt?: boolean }[]
   kamera?: { modus?: string; seite?: string; thema?: string | number[]; [k: string]: unknown }
   [k: string]: unknown
 }

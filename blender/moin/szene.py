@@ -94,13 +94,23 @@ def _welt(w, texturen, himmel="tag"):
 
 def _objekte(liste, texturen):
     """Frei platzierte Einzelblöcke (fliegendes TNT, herumliegende Blöcke): {"block": "tnt", "position": [x, y, z],
-    "drehung": [rx, ry, rz], "groesse": 1}. Position in Blöcken (Mitte des Blocks), Drehung in Grad."""
+    "drehung": [rx, ry, rz], "groesse": 1, "schwebt": false}. Position in Blöcken (Mitte des Blocks), Drehung in Grad.
+    Ohne „schwebt“ und ohne Drehung liegt der Block auf dem Boden darunter (Test 02.10.: Seelenlaternen hingen in der
+    Luft über dem Kopf)."""
     import math as _m
     tex = bloecke.Texturen(texturen)
+    scene = bpy.context.scene
     for i, o in enumerate(liste or []):
         halb = 0.5 * BLOCK
-        ob = bloecke.baue({(0, 0, 1): o["block"]}, tex, f"objekt{i}", versatz=(-halb, -halb, -halb))
         x, y, z = o.get("position", (3, 3, 2))
+        if not o.get("schwebt") and not any(o.get("drehung") or ()):
+            bpy.context.view_layer.update()
+            treffer, ort, normale, *_ = scene.ray_cast(bpy.context.evaluated_depsgraph_get(), Vector((x * BLOCK, y * BLOCK, z * BLOCK - halb + 0.01)), Vector((0, 0, -1)))
+            boden = ort.z if treffer and normale.z > 0.5 else None
+            if boden is not None and z * BLOCK - halb > boden + 0.05:
+                print("MOIN_OBJEKT_GEERDET", o["block"], round(z, 2), "->", round(boden / BLOCK + 0.5, 2))
+                z = boden / BLOCK + 0.5
+        ob = bloecke.baue({(0, 0, 1): o["block"]}, tex, f"objekt{i}", versatz=(-halb, -halb, -halb))
         ob.location = (x * BLOCK, y * BLOCK, z * BLOCK)
         ob.rotation_euler = [_m.radians(g) for g in o.get("drehung", (0, 0, 0))]
         s = o.get("groesse", 1.0)
