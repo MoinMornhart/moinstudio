@@ -94,6 +94,12 @@ describe('OneDrive-Konflikte', () => {
     expect(conflictOriginal('01HX-DESKTOP-AB12-2.json', files)).toBe('01HX.json')
     expect(conflictOriginal('moinstudio-data.json', files)).toBeNull()
     expect(conflictOriginal('Main_neu-PC.png', new Set(['Main_neu.png']))).toBeNull()
+    // Fehlalarm aus der App (02.10.): Thumbnail-Runden und Prüfberichte sind keine OneDrive-Kopien
+    const runden = new Set(['v2.json', 'v2-r1.json', 'v2-r1.report.json', 'pruefung.json', 'pruefung-1.json'])
+    expect(conflictOriginal('v2-r1.json', runden)).toBeNull()
+    expect(conflictOriginal('v2-r1.report.json', runden)).toBeNull()
+    expect(conflictOriginal('pruefung-1.json', runden)).toBeNull()
+    expect(conflictOriginal('v2-LAPTOP.json', runden)).toBe('v2.json')
   })
 
   it('findet Konflikte rekursiv im Datenordner', async () => {

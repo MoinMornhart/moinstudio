@@ -65,13 +65,17 @@ const NICHT_SYNCHRON = new Set(['mc', 'node_modules', '.cache'])
 /**
  * Welche Datei ist das Original einer Konfliktkopie? OneDrive hängt „-GERÄTENAME“ (evtl. mit
  * Zähler „-2“) an; der Gerätename kann selbst Bindestriche enthalten („DESKTOP-AB12“).
- * Deshalb wird jede Bindestrich-Position als Trennstelle probiert.
+ * Deshalb wird jede Bindestrich-Position als Trennstelle probiert. Eigene Zwischenstände der App
+ * („v2-r1.json“, „v2-r1.report.json“, „pruefung-1.json“) sind keine Kopien: Ein Gerätename enthält
+ * keinen Punkt und ist weder eine reine Zahl noch eine Runde wie „r1“.
  */
 export function conflictOriginal(name: string, siblings: ReadonlySet<string>): string | null {
   const ext = SYNCED_EXT.exec(name)?.[0]
   if (!ext) return null
   const stem = name.slice(0, -ext.length)
   for (let i = stem.indexOf('-'); i > 0; i = stem.indexOf('-', i + 1)) {
+    const suffix = stem.slice(i + 1)
+    if (suffix.includes('.') || /^r?\d+$/i.test(suffix)) continue
     const candidate = `${stem.slice(0, i)}${ext}`
     if (siblings.has(candidate)) return candidate
   }
