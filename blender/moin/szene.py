@@ -625,7 +625,9 @@ def _nether_himmel(szene):
     schluessel = f"nether_{name}"
     mhimmel.VARIANTEN[schluessel] = {"oben": tuple(c * 0.25 for c in b["dunst"]), "horizont": b["dunst"], "wolken": b["dunst"],
                                      "staerke": 0.6, "sonne": 0.0, "sonne_farbe": (1, 1, 1), "sonne_hoehe": 60,
-                                     "rand": b["rand"], "gesicht": 34.0, "mob_licht": True, "mob_licht_faktor": 0.7,
+                                     # Mob von vorn neutral hell, Gegenlicht in Biomfarbe nur halb so stark: sonst wurde
+                                     # der weiße Ghast ganz orange (Nether-Test 02.10.)
+                                     "rand": b["rand"], "gesicht": 34.0, "mob_licht": True, "mob_licht_faktor": 0.3, "mob_rand_faktor": 0.4,
                                      "dunst": b["dunst"], "ohne_wolken": True}
     szene["himmel"] = schluessel
 
@@ -825,15 +827,27 @@ def baue(szene, texturen, ausgabe=None, bericht=None):
     # Dunkle Himmel: das Thema-Mob (Drache, Enderman, Warden …) bekommt Fülllicht und eine helle Randkante,
     # sonst verschwindet es vor dem Hintergrund
     t_mob = k.get("thema")
-    if (variante.get("gesicht") or variante.get("mob_licht")) and isinstance(t_mob, str) and (t_mob.startswith("mob:") or any(m["art"] == t_mob for m, _ in mobs)):
-        mob = mobs[int(t_mob[4:])][1] if t_mob.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == t_mob)
+    licht_mob = None
+    if isinstance(t_mob, str) and (t_mob.startswith("mob:") or any(m["art"] == t_mob for m, _ in mobs)):
+        licht_mob = mobs[int(t_mob[4:])][1] if t_mob.startswith("mob:") else next(mb for m, mb in mobs if m["art"] == t_mob)
+    elif isinstance(t_mob, (list, tuple)) and mobs:
+        # Thema als Punkt (z. B. zwischen drei Ghasts): der Mob, der ihm am nächsten ist, bekommt das Licht – sonst blieb
+        # der weiße Ghast im Nether-Licht lachsfarben (Test 02.10.)
+        ziel = Vector([c * BLOCK for c in t_mob])
+
+        def mitte_von(mb):
+            pts = [o.matrix_world @ Vector(c) for o in mb.teile.values() for c in o.bound_box]
+            return sum(pts, Vector()) / max(1, len(pts))
+        licht_mob = min((mb for _, mb in mobs), key=lambda mb: (mitte_von(mb) - ziel).length)
+    if (variante.get("gesicht") or variante.get("mob_licht")) and licht_mob is not None:
+        mob = licht_mob
         punkte = [o.matrix_world @ Vector(c) for o in mob.teile.values() for c in o.bound_box]
         mitte = sum(punkte, Vector()) / len(punkte)
         groesse = max((p - mitte).length for p in punkte)
         for nr, (richtung, energie, farbe) in enumerate(((cam.matrix_world.translation - mitte, 600, (1.0, 1.0, 1.0)), (mitte - cam.matrix_world.translation, 3000, variante.get("rand", (1, 1, 1))))):
             l = bpy.data.lights.new(f"mob_licht{nr}", "AREA")
             # gleiche Beleuchtungsstärke für jede Mob-Größe: Abstand wächst mit der Größe, Energie mit dem Abstand²
-            l.energy = energie * (max(0.5, groesse) / 3) ** 2 * variante.get("mob_licht_faktor", 1.0)
+            l.energy = energie * (max(0.5, groesse) / 3) ** 2 * variante.get("mob_licht_faktor", 1.0) * (variante.get("mob_rand_faktor", 1.0) if nr == 1 else 1.0)
             l.size = max(2.0, groesse)
             l.color = farbe
             lo = bpy.data.objects.new(l.name, l)
