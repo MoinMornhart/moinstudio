@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Datenordner meldete Hunderte falsche Sync-Konflikte: Eigene Zwischenstände der Thumbnails (Runden wie „v2-r1“ und ihre Prüfberichte) galten als Konfliktkopien. Jetzt erscheinen dort nur noch echte Kopien, die OneDrive beim gleichzeitigen Bearbeiten auf zwei Geräten anlegt.
+
 ## [0.41.3] - 2026-10-01
 
 > Beine fließen nicht mehr ineinander
