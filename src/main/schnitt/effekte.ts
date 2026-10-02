@@ -24,10 +24,15 @@ export type Effekt =
   /** Vorspann (ROADMAP E.3): Clips und Titelkarten vor dem Video; klang: false schaltet die automatischen Geräusche ab */
   | { art: 'intro'; teile: IntroTeil[]; klang?: boolean }
 
-/** Teil eines Intros: kurzer Moment aus dem Video (Schnittzeit) oder Titelkarte in Minecraft-Schrift */
+/** Teil eines Intros: kurzer Moment aus dem Video (Schnittzeit), Titelkarte in Minecraft-Schrift oder Skin-Sting
+ *  (M10, A.3: Philips Figur animiert aus Blender, z. B. Sprung ins Bild, dazu Kanalname) */
 export type IntroTeil =
   | { art: 'clip'; von: number; bis: number; tempo?: number }
   | { art: 'karte'; text: string; dauer?: number; farbe?: string; hintergrund?: 'unscharf' | 'schwarz' | 'bild'; bei?: number; bild?: string; klang?: string }
+  | { art: 'sting'; vorlage?: StingVorlage; text?: string; farbe?: string; dauer?: number; hintergrund?: 'unscharf' | 'schwarz' | 'bild'; bei?: number; bild?: string; klang?: string }
+
+export const STING_VORLAGEN = ['sprung', 'winken', 'schwert'] as const
+export type StingVorlage = (typeof STING_VORLAGEN)[number]
 
 export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'geraeusch', 'zensur', 'lautstaerke', 'intro', 'abblende'] as const
 
@@ -136,11 +141,15 @@ export interface EffektOptionen {
   /** Geräusch-Dateien je Klang */
   klaenge: Record<string, string>
   untertitel: string | null
+  /** fertig gerenderte Skin-Stings (Video mit Alphakanal) je Intro-Teil „Effekt.Teil“ */
+  stingVideos?: Record<string, string>
 }
 
 /** Dauer eines Intro-Teils in Sekunden */
 export function introDauer(t: IntroTeil): number {
-  return t.art === 'clip' ? Math.max(0.1, (t.bis - t.von) / klemme(t.tempo ?? 1, 0.25, 4)) : klemme(t.dauer ?? 2, 0.5, 6)
+  if (t.art === 'clip') return Math.max(0.1, (t.bis - t.von) / klemme(t.tempo ?? 1, 0.25, 4))
+  if (t.art === 'sting') return klemme(t.dauer ?? 2.2, 1, 4)
+  return klemme(t.dauer ?? 2, 0.5, 6)
 }
 
 /** Filtergraph für alle Effekte: Intro, Zeitleiste (Tempo, Einfrieren), dann Bild, Einblendungen, Ton. */
@@ -224,18 +233,36 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
         } else {
           teile.push(`color=c=0x101014:s=${o.breite}x${o.hoehe}:r=${o.fps}:d=${z(d)},${format}[kb${j}]`)
         }
+        const sting = t.art === 'sting' ? o.stingVideos?.[`${introIndex}.${j}`] : undefined
+        if (sting) {
+          // Skin-Sting mit Alphakanal über den Hintergrund; danach kommt der Kanalname im unteren Drittel dazu
+          const idx = neueEingabe({ vor: [], datei: sting })
+          teile.push(`[${idx}:v]format=rgba,scale=${o.breite}:${o.hoehe},fps=${o.fps},tpad=stop_mode=clone:stop_duration=${z(d)},trim=duration=${z(d)},setpts=PTS-STARTPTS[st${j}]`)
+          teile.push(`[kb${j}][st${j}]overlay=0:0:shortest=1,${format}[kb${j}s]`)
+        }
+        const hgName = sting ? `kb${j}s` : `kb${j}`
         const tb = o.textBilder[`${introIndex}.${j}`]
-        if (tb) {
+        if (tb && t.art === 'sting') {
+          // Kanalname ab 40 % der Dauer mit Pop im unteren Drittel
           const idx = neueEingabe({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(d)], datei: tb.datei })
-          const zeilen = Math.max(1, t.text.split('\n').length)
+          const breite = Math.min(Math.round(o.breite * 0.7), Math.round(o.hoehe * 0.12 * (tb.breite / Math.max(1, tb.hoehe))))
+          const ab = z(d * 0.4)
+          teile.push(`[${idx}:v]format=rgba,scale=w='${breite}*(0.5+0.5*min(1\\,max(0\\,t-${ab})/0.18))':h=-1:eval=frame[kt${j}]`)
+          teile.push(`[${hgName}][kt${j}]overlay=x='(W-w)/2':y='H*0.8-h/2':enable='gte(t\\,${ab})':shortest=1,${format}[ip${j}v]`)
+        } else if (tb) {
+          const idx = neueEingabe({ vor: ['-loop', '1', '-framerate', String(o.fps), '-t', z(d)], datei: tb.datei })
+          const zeilen = Math.max(1, (t.text ?? '').split('\n').length)
           const breite = Math.min(Math.round(o.breite * 0.9), Math.round(o.hoehe * 0.16 * (tb.breite / Math.max(1, tb.hoehe / zeilen))))
           teile.push(`[${idx}:v]format=rgba,scale=w='${breite}*(0.5+0.5*min(1\\,t/0.18))':h=-1:eval=frame[kt${j}]`)
           teile.push(`[kb${j}][kt${j}]overlay=x='(W-w)/2':y='(H-h)/2':shortest=1,${format}[ip${j}v]`)
         } else {
-          teile.push(`[kb${j}]null[ip${j}v]`)
+          teile.push(`[${hgName}]null[ip${j}v]`)
         }
         if (o.audio) teile.push(`aevalsrc=0|0:d=${z(d)}:s=48000[ip${j}a]`)
-        if (intro?.klang !== false) klangEreignisse.push({ zeit, klang: t.klang ?? 'boom', lautstaerke: 0.9 })
+        if (intro?.klang !== false && t.art === 'sting') {
+          // Sting: Wusch beim Sprung, Knall bei der Landung, Ding zum Kanalnamen
+          klangEreignisse.push({ zeit, klang: 'whoosh', lautstaerke: 0.8 }, { zeit: zeit + d * 0.35, klang: t.klang ?? 'boom', lautstaerke: 0.9 }, { zeit: zeit + d * 0.4, klang: 'ding', lautstaerke: 0.6 })
+        } else if (intro?.klang !== false) klangEreignisse.push({ zeit, klang: t.klang ?? 'boom', lautstaerke: 0.9 })
       }
       zeit += d
     })
@@ -435,6 +462,10 @@ export function pruefeEffekte(roh: unknown, laenge: number): { effekte: Effekt[]
             return bis - von >= 0.2 ? { ...t, von, bis } : null
           }
           if (t?.['art'] === 'karte' && String(t['text'] ?? '').trim()) return { ...t, text: String(t['text']) }
+          if (t?.['art'] === 'sting') {
+            const vorlage = (STING_VORLAGEN as readonly string[]).includes(String(t['vorlage'])) ? t['vorlage'] : 'sprung'
+            return { ...t, vorlage, ...(String(t['text'] ?? '').trim() ? { text: String(t['text']) } : { text: undefined }) }
+          }
           return null
         })
         .filter((t): t is NonNullable<typeof t> => t !== null)

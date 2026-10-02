@@ -31,7 +31,7 @@ export async function renderPlan(daten: string, p: Projekt, ziel: { quelle: stri
   const wellen = p.wellenform ? (JSON.parse(await readFile(join(ordner, 'wellenform.json'), 'utf8')) as { aufloesung: number; werte: number[] }) : null
   const e = einstellungen(p)
   // Effekte (ROADMAP E.2): Text-Bilder, Geräusche, neue Zeitleiste
-  const eff = hilfe ? await bereiteEffekteVor(daten, ordner, liste, hilfe) : null
+  const eff = hilfe ? await bereiteEffekteVor(daten, ordner, liste, hilfe, { breite: ziel.breite, hoehe: ziel.hoehe, fps: ziel.fps }) : null
   let untertitel: string | null = null
   if (e.untertitel !== 'aus' && abschnitte.length) {
     await writeFile(join(ordner, ziel.untertitelDatei), untertitelAss(abschnitte, liste, { breite: ziel.breite, hoehe: ziel.hoehe, karaoke: e.untertitel === 'karaoke', woerter: e.untertitel === 'karaoke' ? 4 : 7 }, eff?.endzeit))
@@ -48,7 +48,7 @@ export async function renderPlan(daten: string, p: Projekt, ziel: { quelle: stri
     audio: !!p.quelle?.audio,
     encoder: ziel.encoder,
     ausgabe: ziel.ausgabe,
-    ...(eff ? { effekte: { liste: eff.liste, textBilder: eff.textBilder, klaenge: eff.klaenge }, endzeit: eff.endzeit, laengeEnde: eff.laenge } : {})
+    ...(eff ? { effekte: { liste: eff.liste, textBilder: eff.textBilder, klaenge: eff.klaenge, stingVideos: eff.stingVideos }, endzeit: eff.endzeit, laengeEnde: eff.laenge } : {})
   }
 }
 

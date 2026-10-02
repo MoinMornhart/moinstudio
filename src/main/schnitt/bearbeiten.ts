@@ -111,7 +111,7 @@ export function bausteinText(): string {
     .join(', ')}
 - zensur {von, bis}: Bild unscharf, Ton stumm, Piep darüber
 - lautstaerke {von, bis, faktor 0–4}: lauter oder leiser
-- intro {teile, klang}: Vorspann vor dem Video, höchstens eins. teile: {art: "clip", von, bis, tempo} = kurzer Moment aus dem Video, {art: "karte", text, dauer 0.5–6, hintergrund unscharf|schwarz, bei, farbe} = Titelkarte (bei = Zeitpunkt für das unscharfe Hintergrundbild). Zwischen Clips kommt automatisch ein Wusch, zur Karte ein Knall (klang: false schaltet das ab).`
+- intro {teile, klang}: Vorspann vor dem Video, höchstens eins. teile: {art: "clip", von, bis, tempo} = kurzer Moment aus dem Video, {art: "karte", text, dauer 0.5–6, hintergrund unscharf|schwarz, bei, farbe} = Titelkarte (bei = Zeitpunkt für das unscharfe Hintergrundbild). Zwischen Clips kommt automatisch ein Wusch, zur Karte ein Knall (klang: false schaltet das ab). {art: "sting", vorlage sprung|winken|schwert, text, dauer 1–4, hintergrund unscharf|schwarz, bei} = Philips eigene Minecraft-Figur, animiert (sprung: springt ins Bild und reckt die Faust, winken: winkt in die Kamera, schwert: holt aus und schlägt zur Kamera), darunter der Text (z. B. der Kanalname) mit Wusch, Knall und Ding.`
 }
 
 export function wunschPrompt(o: { wunsch: string; kanal: string; liste: Schnittliste; saetze: { start: number; ende: number; text: string }[]; effekte: Effekt[]; laut: number[]; sicht?: string | null }): string {
@@ -139,7 +139,9 @@ Regeln:
 - Setze den Wunsch vollständig um und kombiniere Bausteine frei. Stil großer deutscher Minecraft- und Streamer-Kanäle:
   knackige Effekte genau an Höhepunkten (Ausrufe, laute Momente, Pointen), nicht überall.
 - Ein „Intro“ besteht aus 2–4 der stärksten Momente (je 0.8–2 s, gern mit Tempo) und einer Titelkarte mit kurzem, starkem
-  Titel; zusammen 4–8 s.
+  Titel; zusammen 4–8 s. Wie bei großen Kanälen kommt der stärkste Moment zuerst (Cold Open). Will Philip sich selbst, seine
+  Figur oder seinen Kanal im Intro („mit mir“, „mit meinem Skin“, „mit Kanalname“), nimm statt der Titelkarte einen kurzen
+  „sting“ (2 s, text = Kanalname ${o.kanal} oder ein kurzer Titel) – nie länger als 3 s.
 - „Am Ende“ heißt am Ende des fertigen Videos (letzte behaltene Stelle), „am Anfang“ an seinem Beginn – nicht beim
   letzten oder ersten Satz.
 - Effekt-Zeiten liegen in Stellen, die im Video bleiben (nicht in [raus]-Stellen, außer du holst sie zurück).

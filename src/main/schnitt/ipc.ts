@@ -6,7 +6,8 @@ import { IPC, type SchnittProjekt, type SchnittEffekt } from '@shared/app'
 import type { SettingsStore } from '../data/settings'
 import type { JobQueue } from '../jobs/queue'
 import type { ToolManager } from '../tools/manager'
-import { FFMPEG, UV } from '../tools/specs'
+import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG, UV } from '../tools/specs'
+import { ladeSkins } from '../thumbnail/ipc'
 import type { HardwareController } from '../hardware/controller'
 import { ProfileStore } from '../hardware/profile'
 import { localRoot } from '../tools/ipc'
@@ -41,6 +42,31 @@ export const VIDEO_ENDUNGEN = ['mp4', 'mkv', 'mov', 'avi', 'webm', 'flv', 'ts']
 
 /** Pfade für Effekte (ROADMAP E.2): Python für Texte in Minecraft-Schrift, Ordner für Geräusche */
 const effektHilfe = (ffmpeg: string): EffektHilfe => ({ ffmpeg, python: join(localRoot(), 'py', 'vorlage', 'Scripts', 'python.exe'), textSkript: join(resourceDir('blender'), 'text_bild.py'), lokal: localRoot() })
+
+/** Dazu Blender und Philips Skin für Skin-Stings im Intro (M10, A.3) – fehlt eins davon, gibt es den Sting ohne Figur */
+async function effektHilfeMitSting(ffmpeg: string, daten: string, tools: ToolManager, hardware: HardwareController): Promise<EffektHilfe> {
+  const hilfe = effektHilfe(ffmpeg)
+  try {
+    const ich = (await ladeSkins(daten)).find((s) => s.rolle === 'ich')
+    const profile = await hardware.profiles.load()
+    if (!ich || !profile) return hilfe
+    const config = ProfileStore.effective(profile)
+    const spec = [BLENDER_PRIMARY, BLENDER_FALLBACK].find((s) => s.version === config.blenderVersion)
+    const exe = spec ? await tools.exePath(spec) : null
+    if (!exe) return hilfe
+    return {
+      ...hilfe,
+      sting: {
+        blender: { exe, mesa: config.blenderMesa, geraet: config.final.engine === 'CYCLES' ? config.final.device : 'CPU' },
+        blenderDir: resourceDir('blender'),
+        figur: { skin: join(daten, 'skins', ich.datei), slim: ich.slim },
+        samples: Math.max(12, Math.min(32, Math.round(config.final.samples / 2)))
+      }
+    }
+  } catch {
+    return hilfe
+  }
+}
 
 export function registerSchnittIpc(
   queue: JobQueue,
@@ -208,7 +234,7 @@ export function registerSchnittIpc(
     if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
     const p = await ladeProjekt(daten, String(id))
     if (!p) throw new Error('Projekt nicht gefunden.')
-    const payload: VorschauPayload = { daten, projekt: p.id, ffmpeg, hilfe: effektHilfe(ffmpeg) }
+    const payload: VorschauPayload = { daten, projekt: p.id, ffmpeg, hilfe: await effektHilfeMitSting(ffmpeg, daten, tools, hardware) }
     const auftrag = await queue.enqueue('schnitt-vorschau', `Schnitt: ${p.name} Vorschau`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag
@@ -235,7 +261,7 @@ export function registerSchnittIpc(
     const p = await ladeProjekt(daten, String(id))
     if (!p) throw new Error('Projekt nicht gefunden.')
     const profile = await hardware.profiles.load()
-    const payload: ExportPayload = { daten, projekt: p.id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe'), encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', claudeCli: await findClaudeCli(), hilfe: effektHilfe(ffmpeg) }
+    const payload: ExportPayload = { daten, projekt: p.id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe'), encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', claudeCli: await findClaudeCli(), hilfe: await effektHilfeMitSting(ffmpeg, daten, tools, hardware) }
     const auftrag = await queue.enqueue('schnitt-export', `Schnitt: ${p.name} exportieren`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
     return auftrag

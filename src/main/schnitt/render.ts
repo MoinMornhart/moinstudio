@@ -159,7 +159,7 @@ export interface RenderOptionen {
   encoder: string[]
   ausgabe: string
   /** Effekte (ROADMAP E.2) mit fertigen Text-Bildern und Geräuschen; Zeiten im geschnittenen Video */
-  effekte?: { liste: Effekt[]; textBilder: Record<string, { datei: string; breite: number; hoehe: number }>; klaenge: Record<string, string> }
+  effekte?: { liste: Effekt[]; textBilder: Record<string, { datei: string; breite: number; hoehe: number }>; klaenge: Record<string, string>; stingVideos?: Record<string, string> }
   /** Mit Effekten: Schnittzeit → Endzeit und Länge des fertigen Videos */
   endzeit?: (t: number) => number
   laengeEnde?: number
@@ -169,7 +169,7 @@ export interface RenderOptionen {
 function effektTeil(o: RenderOptionen): EffektGraph | null {
   if (!o.effekte?.liste.length || o.hoch) return null
   const laenge = o.liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
-  return effektGraph({ effekte: o.effekte.liste, laenge, breite: o.breite, hoehe: o.hoehe, fps: o.fps, audio: o.audio, autoZooms: o.zooms, textBilder: o.effekte.textBilder, klaenge: o.effekte.klaenge, untertitel: o.untertitel })
+  return effektGraph({ effekte: o.effekte.liste, laenge, breite: o.breite, hoehe: o.hoehe, fps: o.fps, audio: o.audio, autoZooms: o.zooms, textBilder: o.effekte.textBilder, klaenge: o.effekte.klaenge, untertitel: o.untertitel, stingVideos: o.effekte.stingVideos })
 }
 
 const zahl = (x: number): string => x.toFixed(3)
