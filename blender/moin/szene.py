@@ -405,13 +405,33 @@ def _items_anhaengen(figuren, texturen, cam, k):
             # flache Items (Fackel, Brot: im Spiel 0,55) wären sonst kaum zu sehen und bekommen noch 1,3 dazu
             groesse = it.get("groesse", {"kampf": 1.25, "ganz": 1.4, "tiefe": 1.4, "abgrund": 1.4, "klippe_wand": 1.3, "mob": 1.15}.get(k.get("modus"), 1.0))
             seite = it.get("hand", "l")
-            ob = mitems.baue_item(it["name"], texturen, pixel=mfigur.PX)
-            anzeige = mitems.haltung(it["name"], texturen, seite)
+            name = it["name"]
+            # Bogen beim Zielen: gespannt (Spieltextur bow_pulling_2), aufrecht mit der Fläche zur Kamera und in der Mitte
+            # gegriffen wie bei den Vorbildern – in Spielhaltung sah man ihn nur von der Kante (Nether-Test 02.10.)
+            zielt = name == "bow" and "bogen" in str(f.get("pose", ""))
+            if zielt:
+                try:
+                    ob = mitems.baue_item("bow_pulling_2", texturen, pixel=mfigur.PX)
+                except Exception:
+                    ob = mitems.baue_item(name, texturen, pixel=mfigur.PX)
+            else:
+                ob = mitems.baue_item(name, texturen, pixel=mfigur.PX)
+            anzeige = mitems.haltung(name, texturen, seite)
             flach = anzeige["scale"][0] < 0.7  # „generated“: Fackel, Brot, Blumen …
             if "groesse" not in it and flach:
                 groesse *= 1.3
             mitems.mc_halten(ob, fig, seite, ob["pixel"], anzeige, groesse)
-            if cam is not None and flach:
+            if cam is not None and zielt:
+                mitems.aufrichten(ob, fig, seite, cam, griff=0.5)
+                # vors Gesicht geschoben? zur Seite der Hand hin vom Kopf weg, bis das Gesicht frei ist (Test: 60 %)
+                rechts = cam.matrix_world.to_3x3() @ Vector((1, 0, 0))
+                weg = rechts if (fig.hand(seite) - fig.kopf_mitte()).dot(rechts) >= 0 else -rechts
+                for _ in range(8):
+                    if _gesicht_sichtbar(bpy.context.scene, cam, fig) >= 0.8:
+                        break
+                    ob.matrix_world = mathutils_Matrix.Translation(weg * 1.5 * mfigur.PX) @ ob.matrix_world
+                    bpy.context.view_layer.update()
+            elif cam is not None and flach:
                 mitems.aufrichten(ob, fig, seite, cam)
             elif cam is not None:
                 mitems.handgelenk_drehen(ob, fig, seite, cam)

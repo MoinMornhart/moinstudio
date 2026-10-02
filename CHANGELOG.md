@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Bogen beim Zielen: gespannt mit Pfeil (echte Spieltextur), aufrecht mit der Fläche zur Kamera und in der Mitte gegriffen – vorher sah man ihn nur von der Kante als dunklen Zacken. Verdeckt er das Gesicht, rückt er zur Seite.
+
 ## [0.43.2] - 2026-10-02
 
 > Hotbar hinter Philip, Werkzeug im Licht, Lava weniger grell

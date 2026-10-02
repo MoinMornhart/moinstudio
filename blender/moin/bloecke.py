@@ -1,4 +1,4 @@
-﻿"""Blöcke mit echten Minecraft-Texturen (ROADMAP 4.3).
+"""Blöcke mit echten Minecraft-Texturen (ROADMAP 4.3).
 
 Ein Block ist 16 Skin-Pixel groß (0,9 m), passend zur Figur aus figur.py. Welten werden als Raster
 {(x, y, z): blockname} beschrieben (z = Höhe, der Block (x, y, 0) liegt direkt unter der Standfläche z = 0).

@@ -204,7 +204,7 @@ def mc_halten(item, figur, seite, pixel, anzeige, groesse=1.0):
     return item
 
 
-def aufrichten(item, figur, seite, kamera):
+def aufrichten(item, figur, seite, kamera, griff=0.2):
     """Flache Items (Fackel, Brot, Blume …) aufrecht in der Faust, Fläche zur Kamera: im Spiel zeigen sie bei hängendem
     Arm mit der Spitze nach vorn und sind von vorn nur ein Punkt (Werkzeug-Prüfbogen 01.10.: Fackel unsichtbar).
     Thumbnail-Künstler halten sie hoch wie eine Fackel."""
@@ -232,7 +232,7 @@ def aufrichten(item, figur, seite, kamera):
     vor = kamera.matrix_world.translation - faust
     vor.z = 0
     vor = vor.normalized() * 2.6 * PX * figur.wurzel.scale.x if vor.length > 1e-6 else Vector()
-    item.matrix_world = Matrix.Translation(Vector((vor.x, vor.y, faust.z - unten - hoehe * 0.2))) @ item.matrix_world
+    item.matrix_world = Matrix.Translation(Vector((vor.x, vor.y, faust.z - unten - hoehe * griff))) @ item.matrix_world
     bpy.context.view_layer.update()
     item["aufrecht"] = True
     return item
