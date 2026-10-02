@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Premiere ohne „Media offline“ auf jedem Gerät: Beim Start prüft MoinStudio alle Premiere-Sequenzen im Datenordner und schreibt sie neu, wenn sie auf Dateien eines anderen Geräts zeigen. Alte Sequenzen desselben Projekts unter anderem Namen werden entfernt. Die XML im Projektordner lässt sich so auf PC und Laptop direkt öffnen.
+
 ## [0.47.1] - 2026-10-02
 
 > Premiere: kein „Media offline“ mehr auf dem zweiten Gerät

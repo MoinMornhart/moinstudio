@@ -31,3 +31,10 @@ describe('Rohvideo für Premiere auf jedem Gerät („Media offline“)', () => 
     await expect(quelleFuerPremiere(daten, join(daten, 'schnitt', 'p3'), 'D:/weg/clip.mp4', 10)).rejects.toThrow(/nicht da/)
   })
 })
+
+describe('Premiere-Sequenzen beim Start auffrischen', () => {
+  it('liest verlinkte Pfade aus der XML', async () => {
+    const { verlinktePfade } = await import('../../src/main/adobe/premiere-auffrischen')
+    expect(verlinktePfade('<pathurl>file://localhost/C:/A%20B/v.mp4</pathurl><pathurl>file://localhost/D:/x&amp;y.png</pathurl>')).toEqual(['C:/A B/v.mp4', 'D:/x&y.png'])
+  })
+})

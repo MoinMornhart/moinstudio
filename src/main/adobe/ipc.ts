@@ -10,12 +10,24 @@ import { localRoot } from '../tools/ipc'
 import { erzeugeProben, premiereCheckliste, pruefePhotoshop } from './selbsttest'
 import type { SettingsStore } from '../data/settings'
 import { premiereDateien } from './premiere-export'
+import { premiereAuffrischen } from './premiere-auffrischen'
 import { IPC, type AdobeStatus } from '@shared/app'
 import { findeAdobe } from './erkennung'
 import { thumbDateiname } from '../thumbnail/dateiname'
 
 /** Adobe (ROADMAP M8, ungetestet): Erkennung für die Einstellungen; das Ergebnis wird bis zum nächsten „Neu suchen“ gemerkt. */
 export function registerAdobeIpc(settings: SettingsStore, queue: JobQueue, getWindow: () => BrowserWindow | undefined, tools: ToolManager): void {
+  // Premiere-Sequenzen beim Start auf dieses Gerät umstellen (PC ↔ Laptop über iCloud): Philip öffnet nur noch die
+  // XML im Projektordner, ohne „Media offline“
+  setTimeout(() => {
+    void settings
+      .load()
+      .then(async (s) => {
+        const daten = process.env['MOIN_TEST_DATEN'] ?? s.dataDir
+        if (daten) await premiereAuffrischen(daten, (t) => console.log(t))
+      })
+      .catch(() => undefined)
+  }, 8000)
   // Selbsttest (ROADMAP 8.5): Proben lokal erzeugen (nicht im geteilten Datenordner), Photoshop prüfen, Premiere-Checkliste öffnen
   ipcMain.handle(IPC.adobeSelbsttest, async () => {
     const ffmpeg = await tools.exePath(FFMPEG)
