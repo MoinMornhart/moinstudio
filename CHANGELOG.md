@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-10-02
+
+> Ghast im Nether wieder weiß
+
 ### Fixed
 
 - Weiße Mobs im Nether (Ghast) waren lachsfarben: Ist das Kamera-Thema ein Punkt statt eines Mobs, bekommt jetzt der nächste Mob das eigene Licht; im Nether neutral von vorn und mit schwächerem Gegenlicht in Biomfarbe.
