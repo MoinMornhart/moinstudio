@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Grundlage für Intros und Animationen (M10): Blender rendert kurze bewegte Szenen mit Philips Skin – Schlüsselposen werden weich ineinander überblendet, Mimik wechselt, die Kamera fährt, Rand- und Gesichtslicht laufen mit. Hintergrund durchsichtig (für den Schnitt) oder eine Thumbnail-Welt; Ausgabe als Bildfolge für Videos mit Alphakanal (ProRes 4444, VP9).
+
 ## [0.43.3] - 2026-10-02
 
 > Bogen gespannt und gut sichtbar

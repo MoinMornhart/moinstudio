@@ -272,7 +272,7 @@ Pillow), ohne neue Kosten. Maßstab aus der Recherche: erst der stärkste Moment
 oder Skin-Moment; nie der Minecraft-Schriftzug im eigenen Branding; Musik nur mit gespeicherter Lizenz.
 
 - [x] **A.1 Neu planen.** ✅ Plan steht hier (02.10.2026, Recherche zu Trends, Werkzeugen und Lizenzen).
-- [ ] **A.2 Blender-Animation:** Figur, Mobs, Kamera und Licht mit Keyframes (aus den vorhandenen Posen als Schlüsselposen), Video-Render mit EEVEE/Cycles nach Hardware-Profil, Ausgabe als Video mit Alphakanal. ✅ 3-s-Testanimation, Bilder ohne Flimmern geprüft.
+- [ ] **A.2 Blender-Animation:** Figur, Mobs, Kamera und Licht mit Keyframes (aus den vorhandenen Posen als Schlüsselposen), Video-Render mit EEVEE/Cycles nach Hardware-Profil, Ausgabe als Video mit Alphakanal. ✅ 3-s-Testanimation, Bilder ohne Flimmern geprüft. — begonnen: `blender/moin/animation.py` rendert Bild für Bild mit weich überblendeten Schlüsselposen, Mimik-Wechsel, Kamerafahrt und Rand-/Gesichtslicht; transparenter Hintergrund oder Thumbnail-Welt; FFmpeg macht daraus ProRes 4444 (.mov) und VP9 (.webm) mit Alphakanal. Test-Sting 2 s (Hechtsprung → Heldenpose → Siegesfaust) gerendert. Offen: Job in der App, Mobs, Bewegungsunschärfe.
 - [ ] **A.3 Skin-Intro (Sting):** 1–3 s mit Philips Skin (Sprung, Schlag, Pose zum Kanalnamen), je Kanal, Titel pro Video austauschbar; Baustein im Schnitt. ✅ 3 Varianten, Philip wählt.
 - [ ] **A.4 Endcard:** 10–20 s Abspann mit Skin, Platz für YouTube-Endelemente (Video- und Abo-Felder an den richtigen Stellen). ✅ Maße nach YouTube-Vorgabe geprüft.
 - [ ] **A.5 Animierte Untertitel:** Wort für Wort mit Hervorhebung, Pop und farbigen Schlüsselwörtern (Claude markiert sie), auch für Shorts. ✅ Testvideo, synchron ±0,1 s.
