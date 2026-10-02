@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-02
+
+> Skin-Intro: deine Figur springt ins Bild, darunter dein Kanalname
+
 ### Added
 
 - Skin-Intro im Schnitt: Neuer Intro-Teil „Sting“ – deine Minecraft-Figur springt ins Bild und reckt die Faust (oder winkt, oder schlägt mit dem Schwert zur Kamera), darunter erscheint dein Kanalname mit Wusch, Knall und Ding. Sag einfach „mach ein Intro mit mir“; wie bei großen Kanälen kommt erst der stärkste Moment, der Sting dauert höchstens 3 Sekunden.
