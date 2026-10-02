@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Minecraft-Spieldateien und Mob-Tabellen liegen jetzt lokal unter %LOCALAPPDATA%\MoinStudio\mc (wie Blender und Python) statt im Datenordner. Im iCloud-Datenordner blockierten die rund 14.000 kleinen Dateien die Synchronisierung; jedes Gerät lädt sie selbst oder übernimmt sie einmal aus dem alten Ort.
+
 ## [0.41.4] - 2026-10-02
 
 > Keine falschen Sync-Konflikte mehr im Datenordner

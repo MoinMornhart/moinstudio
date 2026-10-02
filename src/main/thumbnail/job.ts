@@ -4,7 +4,7 @@ import { runClaude, runClaudeInJob } from '../claude/run'
 import { runBlender } from '../jobs/blender'
 import type { JobContext } from '../jobs/queue'
 import { ladeKatalog } from './katalog'
-import { sichereMcAssets } from './minecraft'
+import { mcOrdner, sichereMcAssets } from './minecraft'
 import { lauf, sicherePakete, sichereUmgebung } from '../python'
 import { sichereMobs } from './mobimport'
 import { logoAufsetzen, type LogoWahl, type VarianteLogo } from '../logo/setzen'
@@ -91,7 +91,7 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
   ctx.progress(2, 'Minecraft-Texturen prüfen …')
   const mc = await sichereMcAssets(p.datenOrdner, { onProgress: (t) => ctx.progress(null, t) })
   // Alle Mobs der neuesten Vorschau (geprüfte behalten Vorrang)
-  const mobs = await sichereMobs(p.datenOrdner, { onProgress: (t) => ctx.progress(null, t), kuratiert: { tabelle: join(p.minecraftDir, 'mobs.json'), texturen: mc.textures } })
+  const mobs = await sichereMobs(dirname(mcOrdner(p.datenOrdner)), { onProgress: (t) => ctx.progress(null, t), kuratiert: { tabelle: join(p.minecraftDir, 'mobs.json'), texturen: mc.textures } })
   const katalog = await ladeKatalog(p.blenderDir, mobs.tabelle, join(mc.assets, 'models', 'block'))
   const vorbilder = await ladeVorbilder(p.configDir)
   const vorlage = await readFile(p.promptDatei, 'utf8')

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { createReadStream, existsSync } from 'node:fs'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
@@ -48,8 +48,18 @@ export function entpacke(archiv: string, ziel: string, pfade: string[]): Promise
   })
 }
 
+/**
+ * Wo die Spieldateien liegen: lokal in %LOCALAPPDATA%\MoinStudio\mc wie Blender und Python – nicht im Datenordner.
+ * Im iCloud-Datenordner blockierten die ~14.000 kleinen Dateien die Synchronisierung (Philip, 02.10.: „warum sind die
+ * Sachen noch nicht auf iCloud“); sie lassen sich jederzeit neu von Mojang laden. `MOIN_MC_DIR` überschreibt das.
+ */
+export function mcOrdner(datenOrdner: string): string {
+  if (process.env['MOIN_MC_DIR']) return process.env['MOIN_MC_DIR']
+  return process.env['LOCALAPPDATA'] ? join(process.env['LOCALAPPDATA'], 'MoinStudio', 'mc') : join(datenOrdner, 'mc')
+}
+
 export function mcPfade(datenOrdner: string, version: string): McAssets {
-  const assets = join(datenOrdner, 'mc', version, 'extracted', 'assets', 'minecraft')
+  const assets = join(mcOrdner(datenOrdner), version, 'extracted', 'assets', 'minecraft')
   return { version, assets, textures: join(assets, 'textures') }
 }
 
@@ -59,7 +69,8 @@ export function mcPfade(datenOrdner: string, version: string): McAssets {
  */
 export async function sichereMcAssets(datenOrdner: string, o: { fetcher?: typeof fetch; onProgress?: (text: string) => void } = {}): Promise<McAssets> {
   const fetcher = o.fetcher ?? fetch
-  const merker = join(datenOrdner, 'mc', 'aktuell.json')
+  const merker = join(mcOrdner(datenOrdner), 'aktuell.json')
+  await mkdir(mcOrdner(datenOrdner), { recursive: true })
   let version: string | null = null
   try {
     const manifest = await json<Manifest>(MANIFEST, fetcher)
@@ -70,10 +81,18 @@ export async function sichereMcAssets(datenOrdner: string, o: { fetcher?: typeof
       await writeFile(merker, JSON.stringify({ version }))
       return pfade
     }
+    // schon im alten Ort (Datenordner) entpackt: einmal herüberkopieren statt neu laden
+    const altOrdner = join(datenOrdner, 'mc', version)
+    if (altOrdner !== join(mcOrdner(datenOrdner), version) && existsSync(join(altOrdner, 'extracted', 'assets', 'minecraft', 'models', 'block', 'stone.json'))) {
+      o.onProgress?.('Übernehme die Minecraft-Texturen aus dem Datenordner …')
+      await cp(join(altOrdner, 'extracted'), join(mcOrdner(datenOrdner), version, 'extracted'), { recursive: true })
+      await writeFile(merker, JSON.stringify({ version }))
+      return pfade
+    }
     const eintrag = manifest.versions.find((v) => v.id === version)
     if (!eintrag) throw new Error(`Version ${version} fehlt im Manifest`)
     const info = await json<{ downloads: { client: { url: string; sha1: string } } }>(eintrag.url, fetcher)
-    const ordner = join(datenOrdner, 'mc', version)
+    const ordner = join(mcOrdner(datenOrdner), version)
     await mkdir(join(ordner, 'extracted'), { recursive: true })
     const jar = join(ordner, 'client.jar')
     if (!existsSync(jar) || (await sha1(jar)) !== info.downloads.client.sha1) {
