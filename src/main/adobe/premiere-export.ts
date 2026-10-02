@@ -1,5 +1,6 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { copyFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { basename, extname, join, relative, resolve } from 'node:path'
 import type { ExportErgebnis } from '../schnitt/export'
 import { ladeProjekt, projektOrdner } from '../schnitt/projekt'
 import { sauber, untertitelGruppen, zoomsAus } from '../schnitt/render'
@@ -16,6 +17,39 @@ import { sichererName, videoName } from '../dateinamen'
 export function pngGroesse(b: Buffer): { breite: number; hoehe: number } | null {
   if (b.length < 24 || b.readUInt32BE(0) !== 0x89504e47 || b.toString('ascii', 12, 16) !== 'IHDR') return null
   return { breite: b.readUInt32BE(16), hoehe: b.readUInt32BE(20) }
+}
+
+/**
+ * Rohvideo für Premiere auf diesem Gerät finden (Philip, 02.10.: „Media offline“ auf dem Laptop). Die Sequenz verlinkte
+ * den Pfad des PCs, auf dem das Video importiert wurde (z. B. C:\Projekte\…\sprache.mp4) – auf einem anderen Gerät
+ * gibt es ihn nicht. Reihenfolge: Kopie im Projektordner (quelle/), Originalpfad, gleicher Name im Projektordner.
+ * Liegt das Video außerhalb des Datenordners, wird es einmal in den Projektordner kopiert, damit es mit iCloud auf
+ * jedes Gerät kommt. Gleiche Prüfsumme-Größe = dieselbe Datei.
+ */
+export async function quelleFuerPremiere(daten: string, ordner: string, pfad: string, groesse: number): Promise<string> {
+  const kopie = join(ordner, 'quelle', `video${extname(pfad).toLowerCase() || '.mp4'}`)
+  const passt = async (f: string): Promise<boolean> => (await stat(f).catch(() => null))?.size === groesse
+  if (await passt(kopie)) return kopie
+  const imDatenordner = !relative(resolve(daten), resolve(pfad)).startsWith('..')
+  if (existsSync(pfad) && (await passt(pfad))) {
+    if (imDatenordner) return pfad
+    await mkdir(join(ordner, 'quelle'), { recursive: true })
+    await copyFile(pfad, `${kopie}.teil`)
+    await rename(`${kopie}.teil`, kopie)
+    return kopie
+  }
+  // Pfad eines anderen Geräts im selben (iCloud-)Datenordner: den Teil ab „schnitt/<id>“ hier anhängen
+  const teile = pfad.replace(/\\/g, '/').split('/')
+  const ab = teile.lastIndexOf('schnitt')
+  if (ab >= 0) {
+    const hier = join(daten, ...teile.slice(ab))
+    if (await passt(hier)) return hier
+  }
+  const gleichNamig = join(ordner, basename(pfad))
+  if (await passt(gleichNamig)) return gleichNamig
+  throw new Error(
+    `Das Rohvideo „${basename(pfad)}“ ist auf diesem Gerät nicht da (${pfad}). Exportiere die Premiere-Dateien einmal auf dem Gerät, auf dem das Video liegt – dann landet eine Kopie im iCloud-Ordner des Projekts.`
+  )
 }
 
 /** Schreibt Sequenz (FCP7-XML) und Untertitel (SRT) eines Schnitt-Projekts nach <Projekt>/premiere/ (ROADMAP 8.3). */
@@ -43,7 +77,9 @@ export async function premiereDateien(daten: string, id: string): Promise<{ xml:
     const groesse = info && info.mtimeMs >= stand ? pngGroesse(await readFile(datei)) : null
     if (groesse) textBilder[String(i)] = { datei, ...groesse }
   }
-  await writeFile(xml, premiereXml({ name, quelle: p.quelle, liste, zooms: einstellungen(p).zooms ? zoomsAus(abschnitte, liste, wellen) : [], kapitel: exp?.kapitel ?? [], effekte, textBilder }))
+  // Pfade für dieses Gerät: Rohvideo (notfalls als Kopie im Projekt), Textbilder aus dem eigenen Projektordner
+  const quelle = { ...p.quelle, pfad: await quelleFuerPremiere(daten, ordner, p.quelle.pfad, p.quelle.groesse) }
+  await writeFile(xml, premiereXml({ name, quelle, liste, zooms: einstellungen(p).zooms ? zoomsAus(abschnitte, liste, wellen) : [], kapitel: exp?.kapitel ?? [], effekte, textBilder }))
   const zeilen = untertitelGruppen(abschnitte, liste, 7).map((g) => ({ start: g.start, ende: g.ende, text: g.woerter.map((w) => sauber(w.wort)).join(' ') }))
   let srtPfad: string | null = null
   if (zeilen.length) {
