@@ -15,6 +15,7 @@ import { registerMcpIpc } from './mcp/ipc'
 import { startAppRpc } from './rpc/app-rpc'
 import { registerSetupIpc } from './setup/ipc'
 import { medienBedienen, medienSchemaAnmelden } from './schnitt/medien'
+import { installiereIcloudGeduld } from './data/icloud-geduld'
 
 const screenshotDir = parseScreenshotArg(process.argv)
 /** Integrationstests: Logo aus der Bibliothek (--moin-mit-logo=<id|standard>, --moin-logo-position=, --moin-logo-groesse=) */
@@ -24,6 +25,7 @@ const testLogo = ((): ThumbLogoWahl | undefined => {
   return id ? { id, position: (arg('logo-position') ?? 'auto') as ThumbLogoWahl['position'], groesse: (arg('logo-groesse') ?? 'mittel') as ThumbLogoWahl['groesse'] } : undefined
 })()
 medienSchemaAnmelden() // vor „app ready“
+installiereIcloudGeduld() // vor dem ersten Dateizugriff: iCloud-Sperren im Datenordner abwarten statt Fehler zeigen
 const mainWindow = (): BrowserWindow | undefined => BrowserWindow.getAllWindows()[0]
 const settings = new SettingsStore(app.getPath('userData'))
 const tools = new ToolManager(localRoot())

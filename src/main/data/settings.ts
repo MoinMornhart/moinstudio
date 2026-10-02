@@ -1,3 +1,4 @@
+import { setzeDatenordner } from './icloud-geduld'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { readJson, writeJsonAtomic } from './jsonfile'
@@ -29,6 +30,7 @@ export class SettingsStore {
     const res = await readJson(this.path, SettingsSchema)
     // Kaputte oder fehlende Datei: mit Standardwerten weiterarbeiten statt abzustürzen.
     this.cache = res.ok ? res.value : { ...DEFAULT_SETTINGS }
+    setzeDatenordner(process.env['MOIN_TEST_DATEN'] ?? this.cache.dataDir)
     return this.cache
   }
 
@@ -36,6 +38,7 @@ export class SettingsStore {
     const next = SettingsSchema.parse({ ...(await this.load()), ...patch })
     await writeJsonAtomic(this.path, next)
     this.cache = next
+    setzeDatenordner(process.env['MOIN_TEST_DATEN'] ?? next.dataDir)
     return next
   }
 }

@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- iCloud ohne Fehlermeldungen: Während iCloud Dateien hoch- oder herunterlädt, sperrt es sie kurz – die App zeigte dann Fehler. Lesen, Schreiben, Kopieren und Löschen im Datenordner warten solche Sperren jetzt bis zu zehn Sekunden ab. Außerdem stellt MoinStudio den Datenordner beim Start auf „Immer auf diesem Gerät behalten“, damit keine Platzhalter-Dateien mehr Blender, FFmpeg oder Premiere stören.
+
 ## [0.47.2] - 2026-10-02
 
 > Premiere-Projekte auf jedem Gerät direkt öffnen
