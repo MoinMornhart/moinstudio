@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Neuer Baustein „Video-Einblendung“ im Schnitt: Videos mit durchsichtigem Hintergrund (z. B. deine eigene Abo-Animation) laufen an einer Stelle einmal durch, mit ihrem Ton. Claude kennt ihn – „blend den Abo-Balken ein, wenn ich Abo sage“.
+- Testschalter `--moin-schnitt-export=<projekt>`: Export mit allen Effekten ohne Oberfläche.
+
 ## [0.45.1] - 2026-10-02
 
 > Ghast im Nether wieder weiß

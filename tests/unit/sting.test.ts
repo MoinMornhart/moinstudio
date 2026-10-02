@@ -29,6 +29,15 @@ describe('Skin-Sting im Intro (M10, A.3)', () => {
     expect(g.graph).toMatch(/\[kb0\]\[kt0\]overlay/)
   })
 
+  it('Video-Einblendung (Abo-Animation): ab „bei“ über das Bild, Ton dazugemischt, ohne Datei abgelehnt', () => {
+    const effekte: Effekt[] = [{ art: 'video', bei: 5, datei: 'C:/a/abo.mov', ton: true }]
+    const g = effektGraph(basis(effekte))
+    expect(g.eingaben.map((e) => e.datei)).toContain('C:/a/abo.mov')
+    expect(g.graph).toMatch(/setpts=PTS-STARTPTS\+5(\.0+)?\/TB\[vv0\]/)
+    expect(g.graph).toMatch(/adelay=5000:all=1\[vt0\]/)
+    expect(pruefeEffekte([{ art: 'video', bei: 5 }], 20).fehler[0]).toMatch(/Video-Datei fehlt/)
+  })
+
   it('Vorlagen skalieren mit der Dauer und rahmen am Ende eng', () => {
     const a = stingAnimation('sprung', { skin: 'C:/s/ich.png' }, { dauer: 3, breite: 1920, hoehe: 1080, fps: 30, samples: 16, geraet: 'CPU' }) as { figuren: { schluessel: { zeit: number }[] }[]; kamera: { schluessel: { zeit: number; position: number[] }[] }; hintergrund: string }
     expect(a.hintergrund).toBe('transparent')

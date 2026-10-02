@@ -18,6 +18,8 @@ export type Effekt =
   | { art: 'abblende'; von: number; bis: number; richtung: 'aus' | 'ein'; farbe?: 'weiss' | 'schwarz' }
   | { art: 'text'; von: number; bis: number; text: string; lage?: 'oben' | 'mitte' | 'unten'; farbe?: string; groesse?: number; animation?: 'pop' | 'fest' }
   | { art: 'bild'; von: number; bis: number; datei: string; lage?: 'oben' | 'mitte' | 'unten' | 'links' | 'rechts'; groesse?: number }
+  /** Video mit Alphakanal einblenden (Abo-Animation, Grafikpaket): läuft ab `bei` einmal durch, `ton` mischt seinen Ton dazu */
+  | { art: 'video'; bei: number; datei: string; lage?: 'oben' | 'mitte' | 'unten' | 'links' | 'rechts'; groesse?: number; ton?: boolean }
   | { art: 'geraeusch'; bei: number; klang: string; lautstaerke?: number }
   | { art: 'zensur'; von: number; bis: number }
   | { art: 'lautstaerke'; von: number; bis: number; faktor: number }
@@ -34,7 +36,7 @@ export type IntroTeil =
 export const STING_VORLAGEN = ['sprung', 'winken', 'schwert'] as const
 export type StingVorlage = (typeof STING_VORLAGEN)[number]
 
-export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'geraeusch', 'zensur', 'lautstaerke', 'intro', 'abblende'] as const
+export const EFFEKT_ARTEN = ['tempo', 'einfrieren', 'zoom', 'wackeln', 'farbe', 'blitz', 'uebergang', 'text', 'bild', 'video', 'geraeusch', 'zensur', 'lautstaerke', 'intro', 'abblende'] as const
 
 /** Stück der neuen Zeitleiste: normal (ggf. mit Tempo) oder ein eingefrorenes Standbild */
 export type Stueck = { a: number; b: number; faktor: number } | { frieren: number; dauer: number }
@@ -346,6 +348,22 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     teile.push(`[${v}][ov${i}]overlay=x='${x}':y='${y}':enable='${zwischen(von, bis)}':eof_action=pass[vo${i}]`)
     v = `vo${i}`
   })
+  // Video-Einblendungen (Abo-Animation): ab „bei“ einmal durchlaufen lassen; volle Größe = ganzes Bild (die Animation
+  // bringt ihre Lage selbst mit), kleiner nach „lage“ platziert
+  const videoTon: { idx: number; zeit: number }[] = []
+  o.effekte.forEach((e, i) => {
+    if (e.art !== 'video' || !e.datei) return
+    const von = E(e.bei)
+    const g = klemme(e.groesse ?? 1, 0.1, 1)
+    const idx = neueEingabe({ vor: [], datei: e.datei })
+    const lage = e.lage ?? 'unten'
+    const x = g >= 1 ? '0' : lage === 'links' ? 'W*0.04' : lage === 'rechts' ? 'W*0.96-w' : '(W-w)/2'
+    const y = g >= 1 ? '0' : lage === 'oben' ? 'H*0.06' : lage === 'mitte' ? '(H-h)/2' : 'H*0.94-h'
+    teile.push(`[${idx}:v]format=rgba,scale=${Math.round(o.breite * g)}:-2,fps=${o.fps},setpts=PTS-STARTPTS+${z(von)}/TB[vv${i}]`)
+    teile.push(`[${v}][vv${i}]overlay=x='${x}':y='${y}':eof_action=pass[vvo${i}]`)
+    v = `vvo${i}`
+    if (e.ton) videoTon.push({ idx, zeit: von })
+  })
   teile.push(`[${v}]format=yuv420p[v]`)
   // 9. Ton: Lautstärke, Zensur-Stille, Geräusche dazumischen
   if (o.audio) {
@@ -370,6 +388,10 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
         teile.push(`[${idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=${Math.round(k.zeit * 1000)}:all=1,volume=${z(k.lautstaerke)}[g${j}]`)
         mix.push(`[g${j}]`)
       })
+    videoTon.forEach((t, j) => {
+      teile.push(`[${t.idx}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=${Math.round(t.zeit * 1000)}:all=1[vt${j}]`)
+      mix.push(`[vt${j}]`)
+    })
     // Zensur bekommt automatisch ein Piep
     o.effekte
       .filter((e): e is Extract<Effekt, { art: 'zensur' }> => e.art === 'zensur' && !!o.klaenge['piep'])
@@ -474,6 +496,10 @@ export function pruefeEffekte(roh: unknown, laenge: number): { effekte: Effekt[]
         continue
       }
       effekte.push({ ...(e as object), teile } as Effekt)
+      continue
+    }
+    if (art === 'video' && !String(e['datei'] ?? '').trim()) {
+      fehler.push(`Effekt ${i + 1}: Video-Datei fehlt`)
       continue
     }
     if (art === 'text' && !String(e['text'] ?? '').trim()) {

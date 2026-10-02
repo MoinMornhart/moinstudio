@@ -211,6 +211,22 @@ if (toolsArg === 'install') {
       app.exit(1)
     }
   })
+} else if (process.argv.some((a) => a.startsWith('--moin-schnitt-export='))) {
+  // Integrationstest Schnitt-Export (ROADMAP 6.7) mit allen Effekten, ohne Oberfläche: --moin-schnitt-export=<projekt>
+  const id = process.argv.find((a) => a.startsWith('--moin-schnitt-export='))!.slice('--moin-schnitt-export='.length)
+  void app.whenReady().then(async () => {
+    await jobs.start()
+    try {
+      const auftrag = String(await schnitt.aufruf(IPC.schnittExport, id))
+      const info = await jobs.waitFor(auftrag)
+      console.log(`Ende: ${info.state} ${info.error ?? ''}`)
+      console.log(JSON.stringify(jobs.result(auftrag) ?? {}, null, 1))
+      app.exit(info.state === 'done' ? 0 : 1)
+    } catch (err) {
+      console.error(err)
+      app.exit(1)
+    }
+  })
 } else if (process.argv.some((a) => a.startsWith('--moin-schnitt-import='))) {
   // Integrationstest Schnitt-Import (ROADMAP 6.2) ohne Dateidialog
   const video = process.argv.find((a) => a.startsWith('--moin-schnitt-import='))!.slice('--moin-schnitt-import='.length)

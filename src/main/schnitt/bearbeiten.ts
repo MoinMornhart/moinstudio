@@ -109,6 +109,7 @@ export function bausteinText(): string {
 - geraeusch {bei, klang, lautstaerke 0–3}: Klänge: ${Object.entries(KLAENGE)
     .map(([k, v]) => `${k} (${v.beschreibung})`)
     .join(', ')}
+- video {bei, datei, lage, groesse 0.1–1, ton}: Video mit durchsichtigem Hintergrund einblenden, läuft ab „bei“ einmal durch (z. B. Philips Abo-Animation, wenn er „Abo“ oder „Like“ sagt; groesse 1 = ganzes Bild, die Animation bringt ihre Lage mit; ton true = ihr Klick-Sound)
 - zensur {von, bis}: Bild unscharf, Ton stumm, Piep darüber
 - lautstaerke {von, bis, faktor 0–4}: lauter oder leiser
 - intro {teile, klang}: Vorspann vor dem Video, höchstens eins. teile: {art: "clip", von, bis, tempo} = kurzer Moment aus dem Video, {art: "karte", text, dauer 0.5–6, hintergrund unscharf|schwarz, bei, farbe} = Titelkarte (bei = Zeitpunkt für das unscharfe Hintergrundbild). Zwischen Clips kommt automatisch ein Wusch, zur Karte ein Knall (klang: false schaltet das ab). {art: "sting", vorlage sprung|winken|schwert, text, dauer 1–4, hintergrund unscharf|schwarz, bei} = Philips eigene Minecraft-Figur, animiert (sprung: springt ins Bild und reckt die Faust, winken: winkt in die Kamera, schwert: holt aus und schlägt zur Kamera), darunter der Text (z. B. der Kanalname) mit Wusch, Knall und Ding.`
