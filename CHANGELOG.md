@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.47.2] - 2026-10-02
+
+> Premiere-Projekte auf jedem Gerät direkt öffnen
+
 ### Fixed
 
 - Premiere ohne „Media offline“ auf jedem Gerät: Beim Start prüft MoinStudio alle Premiere-Sequenzen im Datenordner und schreibt sie neu, wenn sie auf Dateien eines anderen Geräts zeigen. Alte Sequenzen desselben Projekts unter anderem Namen werden entfernt. Die XML im Projektordner lässt sich so auf PC und Laptop direkt öffnen.

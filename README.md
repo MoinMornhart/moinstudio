@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.47.2** (2026-10-02): Premiere-Projekte auf jedem Gerät direkt öffnen
 - **0.47.1** (2026-10-02): Premiere: kein „Media offline“ mehr auf dem zweiten Gerät
 - **0.47.0** (2026-10-02): Premiere-Brücke: Plugin für Premiere Pro (ungetestet)
 - **0.46.1** (2026-10-02): Bessere Thumbnail-Auswahl, kein Hängenbleiben mehr
 - **0.46.0** (2026-10-02): Abo-Animation und andere Videos im Schnitt einblenden
-- **0.45.1** (2026-10-02): Ghast im Nether wieder weiß
 <!-- CHANGELOG:END -->
 
 ## Installation
