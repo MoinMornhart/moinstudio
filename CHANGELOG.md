@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.43.1] - 2026-10-02
+
+> Thumbnail-Aufträge laufen auch mit iCloud-Platzhaltern
+
 ### Fixed
 
 - Thumbnail-Aufträge brachen auf dem Laptop ab („unknown error, copyfile“): Die einmalige Übernahme der Minecraft-Dateien aus dem iCloud-Datenordner scheiterte an Dateien, die nur als iCloud-Platzhalter da waren. Jetzt wird dann einfach frisch von Mojang geladen, und eine abgebrochene Kopie gilt nie als vollständig.
