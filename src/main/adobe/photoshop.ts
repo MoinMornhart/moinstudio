@@ -35,17 +35,19 @@ export async function thumbnailPsd(o: { bild: string; szene: string | null; ziel
   const ohneLogo = o.ohneLogo && (await gibtEs(o.ohneLogo)) ? rgba(o.ohneLogo, breite, hoehe) : null
   const fertig = ohneLogo ?? gesamt
   const fertigPfad = ohneLogo ? o.ohneLogo! : o.bild
-  // Bild ohne Text: <basis>.roh.png (Änderung) oder <basis>.png (Variante), nie das fertige Bild selbst
+  // Bild ohne Text: <basis>.fein.png (veredelt, M5b – auch wenn es schon das fertige Bild ist: dann ist die Text-Ebene
+  // leer), sonst <basis>.roh.png (Änderung) oder <basis>.png (Variante), nie das fertige Bild selbst
   const basis = o.szene?.replace(/\.szene\.json$/, '') ?? null
   let ohneTextPfad: string | null = null
-  for (const k of basis ? [`${basis}.roh.png`, `${basis}.png`] : []) {
+  if (basis && (await gibtEs(`${basis}.fein.png`))) ohneTextPfad = `${basis}.fein.png`
+  for (const k of basis && !ohneTextPfad ? [`${basis}.roh.png`, `${basis}.png`] : []) {
     if (k.toLowerCase() !== fertigPfad.toLowerCase() && k.toLowerCase() !== o.bild.toLowerCase() && (await gibtEs(k))) {
       ohneTextPfad = k
       break
     }
   }
   const ohneText = ohneTextPfad ? rgba(ohneTextPfad, breite, hoehe) : null
-  const maskePfad = ohneTextPfad ? ohneTextPfad.replace(/\.png$/, '.maske.png') : null
+  const maskePfad = ohneTextPfad ? ohneTextPfad.replace(/(\.fein)?\.png$/, '.maske.png') : null
   const maske = maskePfad && (await gibtEs(maskePfad)) ? rgba(maskePfad, breite, hoehe) : null
   const ebenen = thumbnailEbenen({ fertig, ohneText, maske }, breite * hoehe)
   const logo = ohneLogo ? logoEbene(gesamt, ohneLogo, breite * hoehe) : null

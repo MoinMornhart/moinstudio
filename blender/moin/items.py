@@ -13,6 +13,8 @@ from .figur import PX, _beuge_matrix
 
 # Größe in der Hand: Stilbuch 4 – mitgehaltenes Schwert 1,3–1,6 Kopfgrößen (Diagonale), Kopf = 8 px
 ITEM_PIXEL = 1.45 * 8 * PX / (16 * math.sqrt(2))
+# Griff von Werkzeugen und Waffen im zentrierten Item-Modell (Textur unten links, ca. Pixel 3/13 von oben links)
+GRIFF = Vector((-4.5 / 16, -4.5 / 16, 0.0))
 
 
 def _bild(ordner, name):
@@ -178,12 +180,16 @@ def mc_halten(item, figur, seite, pixel, anzeige, groesse=1.0):
         # (Werkzeug-Prüfbogen 01.10.)
         ry, rz, tx = -ry, -rz, -tx
     s = anzeige["scale"]
+    # Übergröße (größer als im Spiel) wächst um den Griff, nicht um die Mitte: sonst rutschte der Griff bei 1,15–1,4
+    # aus der Faust, das Schwert stand oben auf der Hand (Philip 02.10.: „Das Schwert ist falsch“)
+    griff = Matrix.Translation(GRIFF) @ Matrix.Diagonal((groesse, groesse, groesse, 1.0)) @ Matrix.Translation(-GRIFF)
     # 1. Minecraft: Item-Modell (0…1) → Modell-Arm-Raum (Einheit Block)
     a = (Matrix.Rotation(math.radians(-90), 4, "X") @ Matrix.Rotation(math.radians(180), 4, "Y")
          @ Matrix.Translation(((1 if rechts else -1) / 16, 2 / 16, -10 / 16))
          @ Matrix.Translation((tx, ty, tz))
          @ Matrix.Rotation(rx, 4, "X") @ Matrix.Rotation(ry, 4, "Y") @ Matrix.Rotation(rz, 4, "Z")
-         @ Matrix.Diagonal((s[0] * groesse, s[1] * groesse, s[2] * groesse, 1.0))
+         @ Matrix.Diagonal((s[0], s[1], s[2], 1.0))
+         @ griff
          @ Matrix.Translation((-0.5, -0.5, -0.5)))
     # 2. unser Item-Netz (Mitte im Ursprung, Textur in X/Z, vorn −Y, Kante `pixel`) → Item-Modell (0…1)
     k = 1.0 / (16 * pixel)
@@ -285,7 +291,13 @@ def handgelenk_drehen(item, figur, seite, kamera):
         drin = 1.0 if 0.02 < v.x < 0.98 and 0.02 < v.y < 0.98 and v.z > 0 else 0.0
         # Bewertung wie in v0.39 (Philip, 01.10.: „die Werkzeuge gingen doch mal, jetzt sind sie grauenhaft, besonders
         # Axt und Hacke“ – Zusatzregeln für Fläche und Spitze hatten den Werkzeugkopf verdreht)
-        return (1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5             + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + abs(grad) / 360
+        # Spitze nach unten wirkt wie falsch gehalten (Philip 02.10.: beim Hieb drehte das Handgelenk die Klinge um
+        # 135° nach unten hinten) – Vorbilder halten Waffen mit der Spitze nach oben
+        p = item.get("pixel", PX)
+        spitze = (item.matrix_world @ Vector((6 * p, 0, 6 * p))) - (item.matrix_world @ Vector((-6 * p, 0, -6 * p)))
+        unten = max(0.0, -spitze.normalized().z) if spitze.length > 1e-6 else 0.0
+        return (1 - _im_bild(item, kamera)) * 3 + (1 - drin) * 2 + verdeckt * 2.5 + max(0.0, -vorn) * 1.5 \
+            + max(0.0, _ueber_gesicht(item, figur, kamera) - 0.1) * 4 + unten * 1.6 + abs(grad) / 360
 
     bester = min((0, 45, -45, 90, -90, 135, -135, 180), key=wert)
 

@@ -1126,3 +1126,39 @@ def _maske(scene, vorne, pfad):
         scene.camera.data.dof.use_dof = False
     scene.render.filepath = pfad
     bpy.ops.render.render(write_still=True)
+    try:
+        _maske_durchsichtig(scene, wichtig, pfad)
+    except Exception as fehler:  # ohne zweiten Durchgang bleibt die einfache Maske
+        print("MOIN_WARNUNG Maske ohne Durchsichtigkeit", fehler)
+
+
+def _maske_durchsichtig(scene, wichtig, pfad):
+    """Zweiter Durchgang (M5b, 02.10.): Die Objektfarbe kennt keine durchsichtigen Texturstellen – der leere Kasten um
+    die Ohren des Wardens oder die zweite Skin-Ebene zählten als Vordergrund, beim Veredeln entstand ein Rechteck.
+    Nur der Vordergrund mit Texturen (Workbench beachtet deren Alpha), daraus die Deckkraft; mal der ersten Maske, die
+    weiter weiß, was davor liegt."""
+    import numpy as np
+
+    versteckt = []
+    for ob in bpy.data.objects:
+        if ob.type == "MESH" and ob not in wichtig and not ob.hide_render:
+            ob.hide_render = True
+            versteckt.append(ob)
+    scene.display.shading.color_type = "TEXTURE"
+    alpha_pfad = os.path.splitext(pfad)[0] + ".alpha.png"
+    scene.render.filepath = alpha_pfad
+    bpy.ops.render.render(write_still=True)
+    for ob in versteckt:
+        ob.hide_render = False
+    erst = bpy.data.images.load(pfad)
+    zweit = bpy.data.images.load(alpha_pfad)
+    a = np.empty(len(erst.pixels), dtype=np.float32)
+    b = np.empty(len(zweit.pixels), dtype=np.float32)
+    erst.pixels.foreach_get(a)
+    zweit.pixels.foreach_get(b)
+    a[3::4] *= b[3::4]
+    erst.pixels.foreach_set(a)
+    erst.filepath_raw = pfad
+    erst.file_format = "PNG"
+    erst.save()
+    os.remove(alpha_pfad)
