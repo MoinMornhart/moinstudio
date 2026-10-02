@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-10-02
+
+> Premiere: kein „Media offline“ mehr auf dem zweiten Gerät
+
 ### Fixed
 
 - Premiere zeigte „Media offline“: Die Sequenz verlinkte das Rohvideo am Pfad des Geräts, auf dem es importiert wurde – auf einem anderen Gerät gab es ihn nicht. Liegt das Video außerhalb des Datenordners, kommt beim Premiere-Export jetzt eine Kopie in den Projektordner (`quelle/`), die mit iCloud auf jedes Gerät wandert; die Sequenz wird bei jedem Export mit den Pfaden des aktuellen Geräts geschrieben. Auf dem anderen Gerät daher in MoinStudio erneut „In Premiere öffnen“ wählen statt die alte XML direkt zu öffnen.
