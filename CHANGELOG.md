@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-10-02
+
+> Bessere Thumbnail-Auswahl, kein Hängenbleiben mehr
+
 ### Fixed
 
 - Thumbnail-Auswahl bevorzugte den letzten Versuch: Er bekam keine Bildprüfung durch Claude und hatte deshalb fast immer die wenigsten Warnungen, auch wenn ein früherer Versuch viel besser war (Creeper-Test: großer Creeper im ersten Versuch, im Ergebnis kaum sichtbar). Jetzt wird jeder Versuch gleich geprüft, gemessene Fehler wiegen dreifach.

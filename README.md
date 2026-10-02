@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.46.1** (2026-10-02): Bessere Thumbnail-Auswahl, kein Hängenbleiben mehr
 - **0.46.0** (2026-10-02): Abo-Animation und andere Videos im Schnitt einblenden
 - **0.45.1** (2026-10-02): Ghast im Nether wieder weiß
 - **0.45.0** (2026-10-02): Skin-Intro: deine Figur springt ins Bild, darunter dein Kanalname
 - **0.44.0** (2026-10-02): Grundlage für Intros: bewegte Szenen mit deinem Skin
-- **0.43.3** (2026-10-02): Bogen gespannt und gut sichtbar
 <!-- CHANGELOG:END -->
 
 ## Installation
