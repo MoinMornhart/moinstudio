@@ -6,6 +6,18 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Thumbnails werden nach dem Render veredelt wie im Photoshop-Schritt großer Kanäle: Hintergrund weicher und etwas dunkler, Figuren und Mobs knackiger und farbiger, Randlicht in der Farbe der Umgebung und eine feine helle Kante – die Figuren stehen jetzt klar vor dem Hintergrund statt darin zu verschwimmen.
+- ROADMAP: neue Blöcke „Thumbnail in Spitzenklasse“ (M5b) und „Video: Animation und Intros“ (M10).
+
+### Fixed
+
+- Schwerter und Werkzeuge saßen nicht in der Faust: Bei Übergröße (Kampf, Mob, weite Einstellungen) wuchs das Item um seine Mitte, der Griff rutschte aus der Hand und das Schwert stand oben auf der Faust. Jetzt wächst es um den Griff.
+- Beim Hieb drehte das Handgelenk die Klinge nach unten hinten – Waffen zeigen jetzt mit der Spitze nach oben wie bei den Vorbildern.
+- Die Figurenmaske (für Photoshop-Ebenen und das Veredeln) zählte durchsichtige Texturstellen mit, z. B. den leeren Kasten um die Ohren des Wardens oder die zweite Skin-Ebene.
+- Photoshop-Datei: Die Text-Ebene enthält nur noch den Text, nicht die Veredelung.
+
 ## [0.41.5] - 2026-10-02
 
 > Minecraft-Spieldateien lokal – iCloud synchronisiert wieder

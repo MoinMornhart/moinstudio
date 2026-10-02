@@ -26,6 +26,8 @@ Die vollständige, abhakbare Masterliste. Es wird **immer nur ein Schritt** bear
 | M6b Schnitt: Effekte per Sprache | ab 0.30.0 | Effekt-Bausteine, Intros, Wünsche in Worten, Premiere-Export | 🔄 |
 | M7 Planung | 0.22.0–0.25.0 | Board, Kalender, Verbindung zu Thumbnail und Schnitt, Ideen mit Claude | 🔄 (Abnahme offen) |
 | M8 Adobe (ungetestet) | ab 0.26.0 | Erkennung, Premiere-Sequenz (FCP7-XML), Photoshop-Datei mit Ebenen, Testpaket | 🔄 |
+| M5b Thumbnail Spitzenklasse | ab 0.42.0 | Lückenanalyse gegen Vorbilder, Look, Bildaufbau, Photoshop-Feinschliff, neuer Großtest | 🔄 |
+| M10 Video: Animation und Intros | ab 0.43.0 | Blender-Animation, Skin-Intro, Endcard, animierte Untertitel, Grafikpaket, Musik mit Lizenz | ⬜ |
 | M9 Stabil | **1.0.0** | Politur, Release | ⬜ |
 
 ---
@@ -248,6 +250,35 @@ Grundlage: [Adobe-Recherche](docs/research/adobe.md).
 - [x] **8.4 Photoshop: Thumbnail mit Ebenen:** Thumbnail als PSD mit getrennten Ebenen (Hintergrund, Figuren, Text), damit Philip in Photoshop nachbessern kann; Knopf „Als Photoshop-Datei speichern“. ✅ PSD mit Python öffnen und Ebenen prüfen; zusammengesetzt pixelgleich zum PNG. — erledigt (ungetestet in Photoshop): eigener PSD-Schreiber (RGB, 8 Bit, Ebenen mit Unicode-Namen, Gesamtbild), Ebenen Hintergrund, Figuren (Maske aus einem zusätzlichen Workbench-Render in Blender, wenige Sekunden) und Text (exakter Unterschied zum Bild ohne Text); Knopf „Für Photoshop (ungetestet)“ an jeder Variante; mit echtem Thumbnail geprüft: Ebenen übereinander = fertiges PNG (Abweichung 0), Hintergrund pixelgleich; Pillow liest Datei, Namen und Gesamtbild. Absicherung: scheitert der Masken-Render ohne OpenGL, bleibt das Thumbnail gültig.
 - [x] **8.5 Adobe-Testpaket:** `tests/adobe/` mit Prüfskripten (Premiere: XML importieren, Sequenz und Marker zählen; Photoshop: PSD öffnen, Ebenen zählen) und einer Anleitung für den Rechner mit Adobe. ✅ Skripte laufen ohne Adobe sauber durch („übersprungen“). — erledigt: Knopf „Selbsttest“ in Einstellungen → Adobe und `npm run test:adobe` erzeugen neutrale Proben (Testbild-Video, Premiere-Sequenz, SRT, PSD mit 3 Ebenen), prüfen Photoshop automatisch per COM und schreiben eine Premiere-Checkliste mit erwarteten Werten ([Anleitung](tests/adobe/README.md)); ohne Adobe hier „übersprungen“, Proben mit Python-Parser und Pillow geprüft.
 - [ ] **8.6 Abnahme auf einem Rechner mit Adobe** (Philip). ✅ `tests/adobe/` grün, erst dann entfällt „ungetestet“.
+
+## M5b – Thumbnail in Spitzenklasse
+
+Ziel (Philip, 02.10.2026): Mit allen vorhandenen Mitteln „wirklich sehr qualitative Thumbnails“ – auf dem Niveau von
+GommeHD, BastiGHG und Paluten, nicht nur „gut für eine App“. Seit dem Laptop steht Photoshop zur Verfügung (per COM
+steuerbar, Selbsttest bestanden); MoinStudio braucht es aber nie. Gemessen wird immer Seite an Seite mit echten Vorbildern.
+
+- [x] **Q.1 Neu planen.** ✅ Plan steht hier (02.10.2026).
+- [ ] **Q.2 Lückenanalyse:** 10 aktuelle Renders je neben ihr Vorbild, Unterschiede benennen und nach Wirkung ordnen (Licht, Farbe, Trennung vom Hintergrund, Bildaufbau, Ausdruck, Details). ✅ Liste in `docs/tests/spitzenklasse.md`.
+- [ ] **Q.3 Look:** die drei größten Lücken aus Q.2 im Render und Compositing schließen. ✅ Vorher/nachher je Lücke auf der Werkstatt-Seite.
+- [ ] **Q.4 Bildaufbau:** Figuren und Gegner groß und angeschnitten wie bei den Vorbildern, höchstens drei Hauptelemente, nichts Zufälliges im Vordergrund. ✅ Automatische Prüfung + 10 Renders.
+- [ ] **Q.5 Photoshop-Feinschliff (optional):** Wenn Photoshop da ist, letzter Schliff per Skript (Schärfe, Tonwerte, Randlicht-Ebene) – ohne Photoshop identischer Weg über Python. ✅ Gleiches Bild mit und ohne Photoshop, Unterschied gering.
+- [ ] **Q.6 Großtest:** 50 Beschreibungen erneut, jedes Bild neben Vorbild bewertet. ✅ Mindestens 40 „gut“, Bericht in `docs/tests/spitzenklasse.md`.
+
+## M10 – Video: Animation und Intros
+
+Ziel (Philip, 02.10.2026): „qualitative Videos und Intros und co“. Heute rendert Blender nur Standbilder; Intros sind
+Clips plus Titelkarte. Neu: bewegte Szenen mit Philips Skin und Grafiken im Stil großer Kanäle – lokal (Blender, FFmpeg,
+Pillow), ohne neue Kosten. Maßstab aus der Recherche: erst der stärkste Moment (Cold Open), dann höchstens 1–3 s Logo-
+oder Skin-Moment; nie der Minecraft-Schriftzug im eigenen Branding; Musik nur mit gespeicherter Lizenz.
+
+- [x] **A.1 Neu planen.** ✅ Plan steht hier (02.10.2026, Recherche zu Trends, Werkzeugen und Lizenzen).
+- [ ] **A.2 Blender-Animation:** Figur, Mobs, Kamera und Licht mit Keyframes (aus den vorhandenen Posen als Schlüsselposen), Video-Render mit EEVEE/Cycles nach Hardware-Profil, Ausgabe als Video mit Alphakanal. ✅ 3-s-Testanimation, Bilder ohne Flimmern geprüft.
+- [ ] **A.3 Skin-Intro (Sting):** 1–3 s mit Philips Skin (Sprung, Schlag, Pose zum Kanalnamen), je Kanal, Titel pro Video austauschbar; Baustein im Schnitt. ✅ 3 Varianten, Philip wählt.
+- [ ] **A.4 Endcard:** 10–20 s Abspann mit Skin, Platz für YouTube-Endelemente (Video- und Abo-Felder an den richtigen Stellen). ✅ Maße nach YouTube-Vorgabe geprüft.
+- [ ] **A.5 Animierte Untertitel:** Wort für Wort mit Hervorhebung, Pop und farbigen Schlüsselwörtern (Claude markiert sie), auch für Shorts. ✅ Testvideo, synchron ±0,1 s.
+- [ ] **A.6 Grafikpaket:** Kapitelkarten, Abo-Erinnerung, Namenseinblendung, Übergänge und Outro als Bausteine im Schnitt; per Sprache abrufbar. ✅ Freiform-Test mit 20 Wünschen.
+- [ ] **A.7 Musik mit Lizenz:** Bibliothek für eigene Musik und Geräusche (YouTube Audio Library, Pixabay, CC0), Lizenz je Datei gespeichert, Quellenangabe automatisch in der Videobeschreibung. ✅ Unit-Tests, Beschreibung enthält die Angaben.
+- [ ] **A.8 Premiere und Claude Desktop:** neue Bausteine als Clips im FCP7-Export und über `video_edit`. ✅ Unit-Tests, Adobe-Checkliste erweitert.
 
 ## M9 – Stabil → 1.0.0
 

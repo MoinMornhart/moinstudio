@@ -218,6 +218,19 @@ export async function thumbnailJob(p: ThumbnailPayload, ctx: JobContext<Checkpoi
       const pfad = `${basis}.v${bestes.versuch}`
       let bild = `${pfad}.png`
       const warnungen = [...bestes.warnungen]
+      if (!v.split && p.uv && p.grafikPyDir) {
+        // Veredeln wie der Photoshop-Schritt großer Kanäle (M5b): Hintergrund weicher und dunkler, Figuren knackiger,
+        // Randlicht aus dem Hintergrund, feine helle Kante. Ohne Maske bleibt das Bild, wie es ist.
+        ctx.progress(anteil(0.78), `Variante ${i + 1}: veredeln …`)
+        try {
+          const python = await sichereUmgebung(p.uv, p.grafikPyDir, ctx as JobContext<unknown>)
+          await sicherePakete(p.uv, python, 'PIL, numpy', ['pillow', 'numpy'], ctx as JobContext<unknown>, 'Richte die Grafik-Werkzeuge ein (einmalig, klein) …')
+          await lauf(python, [join(p.blenderDir, 'veredeln.py'), bild, `${pfad}.maske.png`, `${pfad}.fein.png`], ctx as JobContext<unknown>)
+          bild = `${pfad}.fein.png`
+        } catch (err) {
+          warnungen.push(`Bild konnte nicht veredelt werden: ${err instanceof Error ? err.message.slice(0, 120) : String(err)}`)
+        }
+      }
       if (v.split) {
         // weitere Teile je einmal rendern und mit schrägen Trennlinien zusammensetzen
         ctx.progress(anteil(0.8), `Variante ${i + 1}: weitere Bildteile …`)
