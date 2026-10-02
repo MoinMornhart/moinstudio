@@ -77,22 +77,35 @@ export async function sichereMcAssets(datenOrdner: string, o: { fetcher?: typeof
     // Philip: immer das Neueste, auch Snapshots (neue Blöcke und Mobs vor dem offiziellen Release)
     version = manifest.latest.snapshot || manifest.latest.release
     const pfade = mcPfade(datenOrdner, version)
-    if (existsSync(join(pfade.textures, 'block', 'stone.png')) && existsSync(join(pfade.assets, 'models', 'block', 'stone.json'))) {
+    const ordner = join(mcOrdner(datenOrdner), version)
+    // Abgebrochene Übernahme (Merker liegt noch da): Reste weg, sonst gälte eine halbe Kopie als vollständig
+    const kopieMerker = join(ordner, 'kopie-laeuft')
+    if (existsSync(kopieMerker)) await rm(join(ordner, 'extracted'), { recursive: true, force: true })
+    if (!existsSync(kopieMerker) && existsSync(join(pfade.textures, 'block', 'stone.png')) && existsSync(join(pfade.assets, 'models', 'block', 'stone.json'))) {
       await writeFile(merker, JSON.stringify({ version }))
       return pfade
     }
-    // schon im alten Ort (Datenordner) entpackt: einmal herüberkopieren statt neu laden
+    // schon im alten Ort (Datenordner) entpackt: einmal herüberkopieren statt neu laden. Scheitert das (iCloud-
+    // Platzhalter, die nicht heruntergeladen sind: „UNKNOWN: unknown error, copyfile“ auf dem Laptop, 02.10.), wird
+    // ganz normal von Mojang geladen statt den Auftrag abzubrechen.
     const altOrdner = join(datenOrdner, 'mc', version)
-    if (altOrdner !== join(mcOrdner(datenOrdner), version) && existsSync(join(altOrdner, 'extracted', 'assets', 'minecraft', 'models', 'block', 'stone.json'))) {
+    if (altOrdner !== ordner && existsSync(join(altOrdner, 'extracted', 'assets', 'minecraft', 'models', 'block', 'stone.json'))) {
       o.onProgress?.('Übernehme die Minecraft-Texturen aus dem Datenordner …')
-      await cp(join(altOrdner, 'extracted'), join(mcOrdner(datenOrdner), version, 'extracted'), { recursive: true })
-      await writeFile(merker, JSON.stringify({ version }))
-      return pfade
+      await mkdir(ordner, { recursive: true })
+      await writeFile(kopieMerker, '')
+      try {
+        await cp(join(altOrdner, 'extracted'), join(ordner, 'extracted'), { recursive: true })
+        await rm(kopieMerker, { force: true })
+        await writeFile(merker, JSON.stringify({ version }))
+        return pfade
+      } catch {
+        await rm(join(ordner, 'extracted'), { recursive: true, force: true })
+        await rm(kopieMerker, { force: true })
+      }
     }
     const eintrag = manifest.versions.find((v) => v.id === version)
     if (!eintrag) throw new Error(`Version ${version} fehlt im Manifest`)
     const info = await json<{ downloads: { client: { url: string; sha1: string } } }>(eintrag.url, fetcher)
-    const ordner = join(mcOrdner(datenOrdner), version)
     await mkdir(join(ordner, 'extracted'), { recursive: true })
     const jar = join(ordner, 'client.jar')
     if (!existsSync(jar) || (await sha1(jar)) !== info.downloads.client.sha1) {

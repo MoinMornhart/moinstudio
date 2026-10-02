@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Thumbnail-Aufträge brachen auf dem Laptop ab („unknown error, copyfile“): Die einmalige Übernahme der Minecraft-Dateien aus dem iCloud-Datenordner scheiterte an Dateien, die nur als iCloud-Platzhalter da waren. Jetzt wird dann einfach frisch von Mojang geladen, und eine abgebrochene Kopie gilt nie als vollständig.
+- Philip winzig oder in die Ecke gequetscht: Die Bildprüfung meldet einen zu kleinen Kopf (unter 10 % der Bildhöhe, außer bei weiten Einstellungen) und einen Kopf direkt am Bildrand; die Kamerawahl meidet solche Einstellungen.
+
 ## [0.43.0] - 2026-10-02
 
 > Laternen, Lagerfeuer und Co. in echter Form, keine schwebenden Blöcke

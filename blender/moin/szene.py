@@ -529,6 +529,17 @@ def _messen(scene, cam, szene, figuren, mobs, gehalten, fehler):
               and f["kopf_box"][3] - f["kopf_box"][1] < 0.14):
             # Recherche: der Gegner füllt 45–70 % der Bildhöhe, sein Kopf also mindestens etwa 14 %
             warnungen.append(f"Gegner {fid} zu klein im Bild")
+    # Hauptfigur groß und nicht in die Ecke gequetscht (Test 02.10.: Philip winzig unten links, Vorbilder füllen mit
+    # ihm ein Drittel bis die Hälfte des Bildes); weite Einstellungen (ganz, tiefe, abgrund, klippe) dürfen kleiner sein
+    haupt_id = szene["figuren"][0]["id"]
+    hk = info["figuren"].get(haupt_id, {}).get("kopf_box")
+    weit = szene.get("kamera", {}).get("modus") in ("ganz", "tiefe", "abgrund", "klippe", "klippe_wand")
+    if hk and _im_bild(hk) >= 0.6:
+        mitte_x = (hk[0] + hk[2]) / 2
+        if not weit and hk[3] - hk[1] < 0.10:
+            warnungen.append(f"Kopf von {haupt_id} zu klein im Bild ({int((hk[3] - hk[1]) * 100)} % der Bildhöhe) – Kamera näher, Philip groß wie bei den Vorbildern")
+        if mitte_x < 0.13 or mitte_x > 0.87:
+            warnungen.append(f"Kopf von {haupt_id} klebt am Bildrand ({int(mitte_x * 100)} % von links) – Philip aufs linke oder rechte Drittel")
     for fid, it in info["items"].items():
         if _im_bild(it["box"]) < 0.9:
             warnungen.append(f"Item von {fid} kaum sichtbar ({int(_im_bild(it['box']) * 100)} % im Bild)")
