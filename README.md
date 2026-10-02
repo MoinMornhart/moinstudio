@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.41.5** (2026-10-02): Minecraft-Spieldateien lokal – iCloud synchronisiert wieder
 - **0.41.4** (2026-10-02): Keine falschen Sync-Konflikte mehr im Datenordner
 - **0.41.3** (2026-10-01): Beine fließen nicht mehr ineinander
 - **0.41.2** (2026-10-01): Axt und Spitzhacke zeigen ihre Form statt nur der Kante
 - **0.41.1** (2026-10-01): Werkzeuge wieder wie vorher, Beine fließen nicht mehr ineinander, Fackel und Brot gut sichtbar
-- **0.41.0** (2026-10-01): Schöne Gesichtsausdrücke, neue Posen, Blockgelenke statt Gummibeine, Planung erkennt Videos im Schnitt, Spiele-Vorlagen mit echten Handpositionen
 <!-- CHANGELOG:END -->
 
 ## Installation
