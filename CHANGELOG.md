@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Changed
+
+- Jede Version bekommt jetzt ein Installationspaket, auch reine Fehlerbehebungen – „Nach Updates suchen“ findet sie sofort.
+
 ## [0.48.1] - 2026-10-03
 
 > Transkript bricht bei Verbindungsproblemen nicht mehr ab
