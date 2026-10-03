@@ -22,8 +22,35 @@ HINWEIS = "Ähm, also, äh, ja, genau."
 BEGRIFFE = "Minecraft Creeper Enderdrache Enderman Nether Diamantschwert Netherite Villager Zombie Skelett Stream Chat Abo"
 
 
-def main(video, ziel, modell, geraet, genauigkeit, ffmpeg, dauer, modelle=None):
+def lade_modell(modell, geraet, genauigkeit, modelle):
+    """Whisper-Modell laden – erst ohne Internet aus dem Ordner, nur wenn es fehlt herunterladen, mit Wiederholungen.
+    Vorher fragte faster-whisper bei jedem Transkript den Download-Server; brach die Verbindung kurz ab, scheiterte das
+    ganze Transkript („httpx.RemoteProtocolError: Server disconnected“, Philip 03.10.)."""
     from faster_whisper import WhisperModel
+
+    try:
+        return WhisperModel(modell, device=geraet, compute_type=genauigkeit, download_root=modelle, local_files_only=True)
+    except Exception as lokal:
+        if "cuda" in str(lokal).lower() or "cublas" in str(lokal).lower() or "cudnn" in str(lokal).lower():
+            raise
+    os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "60")
+    os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "30")
+    letzter = None
+    for versuch in range(5):
+        try:
+            print("MOIN_MODELL_LADEN", modell, versuch + 1, flush=True)
+            return WhisperModel(modell, device=geraet, compute_type=genauigkeit, download_root=modelle)
+        except Exception as fehler:
+            text = str(fehler).lower()
+            if "cuda" in text or "cublas" in text or "cudnn" in text:
+                raise
+            letzter = fehler
+            print("MOIN_MODELL_WIEDERHOLUNG", type(fehler).__name__, str(fehler)[:120], flush=True)
+            time.sleep(min(30, 3 * 2 ** versuch))
+    raise RuntimeError(f"Sprachmodell konnte nicht geladen werden (Internet?): {letzter}")
+
+
+def main(video, ziel, modell, geraet, genauigkeit, ffmpeg, dauer, modelle=None):
 
     start = 0.0
     if os.path.exists(ziel):
@@ -33,12 +60,12 @@ def main(video, ziel, modell, geraet, genauigkeit, ffmpeg, dauer, modelle=None):
             start = zeilen[-1]["ende"]
     beginn = time.time()
     try:
-        m = WhisperModel(modell, device=geraet, compute_type=genauigkeit, download_root=modelle)
+        m = lade_modell(modell, geraet, genauigkeit, modelle)
     except Exception as fehler:  # z. B. CUDA-Bibliotheken fehlen: auf der CPU weiter
         if geraet == "cpu":
             raise
         print("MOIN_RUECKFALL", fehler, flush=True)
-        m = WhisperModel(modell, device="cpu", compute_type="int8", download_root=modelle)
+        m = lade_modell(modell, "cpu", "int8", modelle)
     # Ton in 10-Minuten-Stücken über FFmpeg lesen (16 kHz mono): wenig Speicher auch bei Stunden-Streams, jedes Stück
     # ist ein Fortsetzpunkt. Gestartet wird am Ende des letzten gespeicherten Abschnitts.
     stueck = 600.0

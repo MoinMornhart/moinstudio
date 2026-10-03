@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Fixed
+
+- Transkript brach mit „Server disconnected without sending a response“ ab: Das Sprachmodell fragte bei jedem Transkript den Download-Server, auch wenn es längst heruntergeladen war. Jetzt wird ein vorhandenes Modell ohne Internet geladen; nur ein fehlendes wird heruntergeladen, mit bis zu fünf Versuchen.
+
 ## [0.48.0] - 2026-10-02
 
 > iCloud ohne Fehlermeldungen, Premiere-Projekte auf jedem Gerät
