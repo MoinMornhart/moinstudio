@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.48.1** (2026-10-03): Transkript bricht bei Verbindungsproblemen nicht mehr ab
 - **0.48.0** (2026-10-02): iCloud ohne Fehlermeldungen, Premiere-Projekte auf jedem Gerät
 - **0.47.2** (2026-10-02): Premiere-Projekte auf jedem Gerät direkt öffnen
 - **0.47.1** (2026-10-02): Premiere: kein „Media offline“ mehr auf dem zweiten Gerät
 - **0.47.0** (2026-10-02): Premiere-Brücke: Plugin für Premiere Pro (ungetestet)
-- **0.46.1** (2026-10-02): Bessere Thumbnail-Auswahl, kein Hängenbleiben mehr
 <!-- CHANGELOG:END -->
 
 ## Installation
