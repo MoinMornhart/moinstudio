@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.48.3] - 2026-10-04
+
+> Videos werden auf jedem Gerät gefunden
+
 ### Fixed
 
 - Video „nicht gefunden“ auf dem anderen Gerät: Ein auf dem Laptop importiertes Video (Benutzer „pmorn“) suchte der PC unter genau diesem Pfad, obwohl der Benutzer dort „Morni“ heißt. MoinStudio überträgt Pfade jetzt beim Laden jedes Projekts auf dieses Gerät – für iCloud, OneDrive und alle Ordner unter dem Windows-Benutzer (Videos, Desktop …) – und findet sonst eine Kopie im Projektordner. Gilt für Vorschau, Export, Transkript, Highlights und Premiere, mit iCloud-Datenordner und mit lokalem. Videos, die schon in iCloud liegen, kopiert der Premiere-Export nicht mehr doppelt.
