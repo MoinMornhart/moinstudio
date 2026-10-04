@@ -30,7 +30,8 @@ export async function quelleFuerPremiere(daten: string, ordner: string, pfad: st
   const kopie = join(ordner, 'quelle', `video${extname(pfad).toLowerCase() || '.mp4'}`)
   const passt = async (f: string): Promise<boolean> => (await stat(f).catch(() => null))?.size === groesse
   if (await passt(kopie)) return kopie
-  const imDatenordner = !relative(resolve(daten), resolve(pfad)).startsWith('..')
+  // im Datenordner oder in einem geteilten Ordner (iCloud, OneDrive): auf jedem Gerät da – nicht kopieren
+  const imDatenordner = !relative(resolve(daten), resolve(pfad)).startsWith('..') || /[\\/](icloud ?drive|onedrive[^\\/]*)[\\/]/i.test(pfad)
   if (existsSync(pfad) && (await passt(pfad))) {
     if (imDatenordner) return pfad
     await mkdir(join(ordner, 'quelle'), { recursive: true })

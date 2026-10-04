@@ -1,7 +1,8 @@
-import { createReadStream } from 'node:fs'
+import { createReadStream, existsSync, statSync } from 'node:fs'
 import { mkdir, readdir, rm, stat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-import { join } from 'node:path'
+import { basename, extname, join } from 'node:path'
+import { homedir } from 'node:os'
 import { writeJsonAtomic } from '../data/jsonfile'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
 
@@ -58,11 +59,50 @@ export interface Projekt {
 export const projektOrdner = (daten: string, id: string): string => join(daten, 'schnitt', id)
 
 export async function ladeProjekt(daten: string, id: string): Promise<Projekt | null> {
+  let p: Projekt
   try {
-    return JSON.parse(await liesMitKonfliktkopien(join(projektOrdner(daten, id), 'projekt.json'))) as Projekt
+    p = JSON.parse(await liesMitKonfliktkopien(join(projektOrdner(daten, id), 'projekt.json'))) as Projekt
   } catch {
     return null
   }
+  // Rohvideo auf diesem Gerät: Pfade eines anderen Geräts (anderer Windows-Benutzer, iCloud, OneDrive) übertragen
+  if (p.quelle?.pfad) p.quelle = { ...p.quelle, pfad: dateiAufDiesemGeraet(p.quelle.pfad, { ordner: projektOrdner(daten, id), groesse: p.quelle.groesse }) }
+  return p
+}
+
+/** Die Ordner, die auf jedem Gerät unter dem eigenen Benutzer liegen (Teil hinter „C:\Users\<Name>\“ bleibt gleich). */
+const GETEILT = /^[a-z]:[\\/]users[\\/][^\\/]+[\\/](.+)$/i
+
+/**
+ * Findet eine Datei, deren Pfad auf einem anderen Gerät gespeichert wurde (Philip, 04.10.: Video auf dem Laptop unter
+ * C:\Users\pmorn\iCloudDrive\… importiert, auf dem PC heißt der Benutzer Morni – „data not found“). Reihenfolge:
+ * 1. den Pfad selbst, 2. denselben Teil unter dem Benutzerordner dieses Geräts (iCloud, OneDrive, Videos, Desktop …),
+ * 3. eine Kopie im Projektordner (quelle/video.*), 4. eine gleichnamige Datei im Projektordner. Gibt es nichts davon,
+ * bleibt der alte Pfad (die Fehlermeldung nennt ihn dann). Mit `groesse` muss die Dateigröße passen.
+ */
+export function dateiAufDiesemGeraet(pfad: string, o: { ordner?: string; groesse?: number; heim?: string } = {}): string {
+  const passt = (f: string): boolean => {
+    if (!existsSync(f)) return false
+    if (!o.groesse) return true
+    try {
+      return statSync(f).size === o.groesse
+    } catch {
+      return false
+    }
+  }
+  if (passt(pfad)) return pfad
+  const rest = GETEILT.exec(pfad)?.[1]
+  if (rest) {
+    const hier = join(o.heim ?? homedir(), ...rest.split(/[\\/]/))
+    if (passt(hier)) return hier
+  }
+  if (o.ordner) {
+    const kopie = join(o.ordner, 'quelle', `video${extname(pfad).toLowerCase() || '.mp4'}`)
+    if (passt(kopie)) return kopie
+    const gleich = join(o.ordner, basename(pfad.replace(/\\/g, '/')))
+    if (passt(gleich)) return gleich
+  }
+  return pfad
 }
 
 export async function speichereProjekt(daten: string, p: Projekt): Promise<void> {

@@ -38,3 +38,23 @@ describe('Premiere-Sequenzen beim Start auffrischen', () => {
     expect(verlinktePfade('<pathurl>file://localhost/C:/A%20B/v.mp4</pathurl><pathurl>file://localhost/D:/x&amp;y.png</pathurl>')).toEqual(['C:/A B/v.mp4', 'D:/x&y.png'])
   })
 })
+
+describe('Rohvideo eines anderen Geräts (anderer Windows-Benutzer)', () => {
+  it('überträgt C:\\Users\\<anderer>\\… auf den Benutzerordner dieses Geräts', async () => {
+    const { dateiAufDiesemGeraet } = await import('../../src/main/schnitt/projekt')
+    const heim = await mkdtemp(join(tmpdir(), 'moin-heim-'))
+    await mkdir(join(heim, 'iCloudDrive', 'Aufnahmen'), { recursive: true })
+    await writeFile(join(heim, 'iCloudDrive', 'Aufnahmen', 'folge 1.mkv'), 'z'.repeat(30))
+    expect(dateiAufDiesemGeraet('C:\\Users\\pmorn\\iCloudDrive\\Aufnahmen\\folge 1.mkv', { heim, groesse: 30 })).toBe(join(heim, 'iCloudDrive', 'Aufnahmen', 'folge 1.mkv'))
+    // falsche Größe: nicht nehmen
+    expect(dateiAufDiesemGeraet('C:\\Users\\pmorn\\iCloudDrive\\Aufnahmen\\folge 1.mkv', { heim, groesse: 31 })).toBe('C:\\Users\\pmorn\\iCloudDrive\\Aufnahmen\\folge 1.mkv')
+  })
+
+  it('findet die Kopie im Projektordner, wenn das Original nur auf dem anderen Gerät liegt', async () => {
+    const { dateiAufDiesemGeraet } = await import('../../src/main/schnitt/projekt')
+    const ordner = await mkdtemp(join(tmpdir(), 'moin-proj-'))
+    await mkdir(join(ordner, 'quelle'))
+    await writeFile(join(ordner, 'quelle', 'video.mkv'), 'q'.repeat(12))
+    expect(dateiAufDiesemGeraet('D:\\Aufnahmen\\roh.MKV', { ordner, groesse: 12 })).toBe(join(ordner, 'quelle', 'video.mkv'))
+  })
+})
