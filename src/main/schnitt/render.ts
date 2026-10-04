@@ -174,9 +174,24 @@ function effektTeil(o: RenderOptionen): EffektGraph | null {
 
 const zahl = (x: number): string => x.toFixed(3)
 
+/**
+ * Auswahl der behaltenen Stücke als FFmpeg-Ausdruck. Als ausgeglichener Baum (if(lt(t,Mitte),links,rechts)) statt einer
+ * langen Summe: Mit 180 Stücken (30-Minuten-Aufnahme) brach FFmpegs Ausdrucks-Leser ab und meldete irreführend
+ * „Cannot allocate memory“ (Philip, 04.10.). Der Baum ist auch bei tausend Stücken nur ~10 Ebenen tief.
+ */
+export function auswahlAusdruck(stuecke: { start: number; ende: number }[]): string {
+  const s = [...stuecke].sort((a, b) => a.start - b.start)
+  const baum = (von: number, bis: number): string => {
+    if (bis - von === 1) return `between(t\\,${zahl(s[von]!.start)}\\,${zahl(s[von]!.ende)})`
+    const mitte = Math.floor((von + bis) / 2)
+    return `if(lt(t\\,${zahl(s[mitte]!.start)})\\,${baum(von, mitte)}\\,${baum(mitte, bis)})`
+  }
+  return s.length ? baum(0, s.length) : '0'
+}
+
 /** Filtergraph (kommt in eine Datei – bei Stunden-Streams wäre er für die Windows-Befehlszeile zu lang). */
 export function filterGraph(o: RenderOptionen): string {
-  const auswahl = o.liste.behalten.map((b) => `between(t\\,${zahl(b.start)}\\,${zahl(b.ende)})`).join('+') || '0'
+  const auswahl = auswahlAusdruck(o.liste.behalten)
   const zoom = o.zooms.length
     ? `,scale=w='iw*(1+0.12*(${o.zooms.map((z) => `min(1\\,max(0\\,(t-${zahl(z.start)})/0.35))*min(1\\,max(0\\,(${zahl(z.ende)}-t)/0.35))`).join('+')}))':h=-2:eval=frame,crop=${o.breite}:${o.hoehe}`
     : ''
