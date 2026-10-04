@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.48.2] - 2026-10-04
+
+> Vorschau und Export langer Videos laufen durch
+
 ### Fixed
 
 - Vorschau und Export langer Videos brachen mit „FFmpeg … Cannot allocate memory“ ab: Bei vielen Schnitten (30-Minuten-Aufnahme, 180 Stücke) wurde der Auswahl-Ausdruck für FFmpeg zu lang. Er ist jetzt ein flacher Baum und funktioniert auch bei tausend Schnitten. Texteinblendungen werden außerdem nur noch erzeugt, solange sie zu sehen sind, statt ab Sekunde 0 – das spart bei vielen Texten viel Speicher.
