@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.50.1] - 2026-10-05
+
+> Abhängigkeiten aktualisiert (Electron 44.5.1)
+
 ### Changed
 
 - Abhängigkeiten aktualisiert: Electron 44.5.1, eslint 10.12, @types/node 26.6.4, @modelcontextprotocol/client und /server 2.3. Weiter zurückgestellt: vite 8, @vitejs/plugin-react 6 und TypeScript 7, weil electron-vite 5.0.0 nur vite bis 7 und typescript-eslint 8.71 TypeScript nur bis < 6.1 unterstützt.

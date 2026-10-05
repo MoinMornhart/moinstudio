@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.50.1** (2026-10-05): Abhängigkeiten aktualisiert (Electron 44.5.1)
 - **0.50.0** (2026-10-05): Schnitt: eigene Effekt-Bibliothek mit Greenscreen-Entfernung
 - **0.49.0** (2026-10-05): Schnitt: Kanal und Videotyp per Knopf, Regeln für Reaction und Gaming
 - **0.48.3** (2026-10-04): Videos werden auf jedem Gerät gefunden
 - **0.48.2** (2026-10-04): Vorschau und Export langer Videos laufen durch
-- **0.48.1** (2026-10-03): Transkript bricht bei Verbindungsproblemen nicht mehr ab
 <!-- CHANGELOG:END -->
 
 ## Installation
