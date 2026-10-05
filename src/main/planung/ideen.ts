@@ -28,6 +28,8 @@ export interface PlanungClaudePayload {
   projekt?: string
   /** Heute als „2026-09-29“ (für Tests fest vorgebbar) */
   heute?: string
+  /** Philips andere Termine aus Apple/Google/Outlook (nur woche), damit der Plan drumherum passt */
+  termine?: { titel: string; start: string; ende: string; ganztag: boolean }[]
   /** Nur für Tests: Skript vor den Claude-Argumenten (Attrappe der CLI) */
   claudePrefix?: string[]
 }
@@ -165,7 +167,7 @@ Stil-Beispiele großer Kanäle (nicht kopieren): ${o.vorbilder.slice(0, 8).join(
 Antworte nur mit JSON: {"titel":[{"titel":"…","warum":"…"}]}`
 }
 
-export function wochenPrompt(o: { karten: Karte[]; frei: { kanal: string; tag: string; zeit: string }[]; heute: string }): string {
+export function wochenPrompt(o: { karten: Karte[]; frei: { kanal: string; tag: string; zeit: string }[]; heute: string; termine?: { titel: string; start: string; ende: string; ganztag: boolean }[] }): string {
   const tag = (t: string): string => `${WOCHENTAGE_KURZ[wochentag(t)]} ${t.slice(8)}.${t.slice(5, 7)}.`
   return `Du planst die nächsten zwei Wochen für Philips YouTube-Kanäle. Heute ist ${tag(o.heute)} (${o.heute}).
 ${Object.entries(KANAL_BESCHREIBUNG)
@@ -175,12 +177,16 @@ ${Object.entries(KANAL_BESCHREIBUNG)
 Freie Upload-Termine laut Rhythmus:
 ${o.frei.map((f) => `- ${f.kanal}: ${tag(f.tag)} ${f.zeit} → Termin "${f.tag}T${f.zeit}"`).join('\n') || '(keine)'}
 
+Philips andere Termine (aus seinen Kalendern) – an vollen Tagen hat er wenig Zeit zum Aufnehmen und Schneiden:
+${(o.termine ?? []).slice(0, 60).map((t) => `- ${tag(t.start.slice(0, 10))}${t.ganztag ? (t.ende.slice(0, 10) > t.start.slice(0, 10) ? ` bis ${tag(t.ende.slice(0, 10))} (ganztägig)` : ' (ganztägig)') : ` ${t.start.slice(11, 16)}–${t.ende.slice(11, 16)}`}: ${t.titel}`).join('\n') || '(keine bekannt)'}
+
 Karten ohne Termin (id: Kanal, Stand, Titel):
 ${o.karten.map((k) => `- ${k.id}: ${k.kanal}, ${STAND[k.spalte]}, ${k.titel}`).join('\n') || '(keine)'}
 
 Aufgabe:
 - „plan“: Ordne Karten freien Terminen desselben Kanals zu. Videos, die schon weiter sind (Upload, Thumbnail, Schnitt), zuerst; eine Idee braucht noch Aufnahme und Schnitt, also frühestens in 5 Tagen. Nur Termine aus der Liste, jede Karte und jeder Termin höchstens einmal.
-- „aufnehmen“: bis zu 3 Karten, die Philip diese Woche aufnehmen sollte, damit die Termine klappen.
+- „aufnehmen“: bis zu 3 Karten, die Philip diese Woche aufnehmen sollte, damit die Termine klappen – an Tagen, an denen er laut Kalender Zeit hat (nenne den Tag im Grund).
+- Liegt Philip an einem Upload-Tag laut Kalender unterwegs oder im Urlaub, plane dort nur Videos, die schon fertig geschnitten sind.
 - „hinweis“: ein Satz, z. B. wenn Ideen fehlen.
 - „grund“: kurz, warum.
 
@@ -277,7 +283,7 @@ export async function planungClaudeJob(p: PlanungClaudePayload, ctx: JobContext<
     const frei = luecken(await rhythmus(p.daten), karten, heute, plusTage(heute, 13), heute)
     const ohne = karten.filter((k) => !k.termin && k.spalte !== 'veroeffentlicht')
     woche = { karten: ohne, frei }
-    prompt = wochenPrompt({ karten: ohne, frei, heute })
+    prompt = wochenPrompt({ karten: ohne, frei, heute, termine: p.termine })
   }
   const res = await runClaudeInJob({ cli: p.claudeCli, cliPrefix: p.claudePrefix, prompt, workDir: join(p.daten, 'claude-work', 'planung'), tools: [], maxTurns: 2, jsonSchema: SCHEMAS[p.art] }, ctx)
   if (!res.ok) throw new Error(`Claude hat nicht geantwortet: ${res.errors.join(', ') || res.subtype}`)

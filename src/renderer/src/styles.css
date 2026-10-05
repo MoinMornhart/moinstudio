@@ -541,3 +541,11 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .logo-variante .variant-open { background: repeating-conic-gradient(#3a3a44 0% 25%, #2a2a31 0% 50%) 0 0 / 16px 16px; }
 .logo-variante .variant-open img { object-fit: contain; }
 .mono { font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+/* Kalender-Abgleich (Apple, Google, Outlook) */
+.termin-pille.fremd-termin { cursor: default; background: transparent; border-left-style: dotted; color: var(--muted); }
+.termin-pille.fremd-termin .zeit { color: var(--kanal); }
+.chip.legende.k-andere { --kanal: #7c8a99; }
+.kalender-abgleich { display: grid; gap: 6px; }
+.kalender-verwalten { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; }
+.kalender-verwalten h4 { margin: 6px 0 0; font-size: 12.5px; }
+.kalender-verwalten input[type='color'] { width: 22px; height: 22px; padding: 0; border: 0; background: none; }

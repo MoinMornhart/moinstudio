@@ -37,6 +37,8 @@ export interface PlanungVerbindung {
   queue: JobQueue
   starteThumbnail: (start: ThumbStart) => Promise<string>
   starteImport: (video: string, kanal?: string) => Promise<string>
+  /** Termine aus den verbundenen Kalendern (für den Wochenplan) */
+  andereTermine?: () => Promise<{ titel: string; start: string; ende: string; ganztag: boolean }[]>
 }
 
 export function registerPlanungIpc(settings: SettingsStore, getWindow: () => BrowserWindow | undefined, v: PlanungVerbindung): { aufruf: (kanal: string, ...a: unknown[]) => Promise<unknown>; daten: () => Promise<string> } {
@@ -155,7 +157,11 @@ export function registerPlanungIpc(settings: SettingsStore, getWindow: () => Bro
     if (!(art in ART_TITEL)) throw new Error('Unbekannte Anfrage.')
     const claudeCli = await findClaudeCli()
     if (!claudeCli) throw new Error('Claude Code ist nicht eingerichtet (Einstellungen → Claude).')
-    const payload: PlanungClaudePayload = { art, daten: await daten(), claudeCli, configDir: resourceDir('config'), kanal: o.kanal ?? 'MoinMornhart', wunsch: o.wunsch, karte: o.karte, projekt: o.projekt }
+    // für den Wochenplan: andere Termine der nächsten zwei Wochen
+    const heute = new Date().toISOString().slice(0, 10)
+    const bis = new Date(Date.now() + 15 * 86_400_000).toISOString().slice(0, 10)
+    const termine = art === 'woche' && v.andereTermine ? (await v.andereTermine().catch(() => [])).filter((t) => t.ende.slice(0, 10) >= heute && t.start.slice(0, 10) <= bis).map(({ titel, start, ende, ganztag }) => ({ titel, start, ende, ganztag })) : undefined
+    const payload: PlanungClaudePayload = { art, daten: await daten(), claudeCli, configDir: resourceDir('config'), kanal: o.kanal ?? 'MoinMornhart', wunsch: o.wunsch, karte: o.karte, projekt: o.projekt, ...(termine ? { termine } : {}) }
     const titel = art === 'titel' && o.projekt ? `Schnitt: Namen fürs Video` : `Planung: ${ART_TITEL[art]}${art === 'ideen' ? ` für ${payload.kanal}` : ''}`
     return v.queue.enqueue('planung-claude', titel, payload)
   })

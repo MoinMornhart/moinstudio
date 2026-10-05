@@ -137,6 +137,17 @@ const api: MoinApi = {
   thumbPhotoshop: (jobId: string, index: number) => ipcRenderer.invoke(IPC.thumbPhotoshop, jobId, index),
   adobeSelbsttest: () => ipcRenderer.invoke(IPC.adobeSelbsttest),
   planungRhythmusSetzen: (rhythmus: Parameters<MoinApi['planungRhythmusSetzen']>[0]) => ipcRenderer.invoke(IPC.planungRhythmusSetzen, rhythmus),
+  kalenderStand: () => ipcRenderer.invoke(IPC.kalenderStand),
+  kalenderApple: (benutzer: string, passwort: string) => ipcRenderer.invoke(IPC.kalenderApple, benutzer, passwort),
+  kalenderAppleTrennen: () => ipcRenderer.invoke(IPC.kalenderAppleTrennen),
+  kalenderEinstellen: (e: unknown) => ipcRenderer.invoke(IPC.kalenderEinstellen, e),
+  kalenderLinkPruefen: (url: string) => ipcRenderer.invoke(IPC.kalenderLinkPruefen, url),
+  kalenderJetzt: () => ipcRenderer.invoke(IPC.kalenderJetzt),
+  onKalenderGeaendert(handler: () => void) {
+    const listener = (): void => handler()
+    ipcRenderer.on(IPC.kalenderGeaendert, listener)
+    return () => ipcRenderer.removeListener(IPC.kalenderGeaendert, listener)
+  },
   onPlanungGeaendert(handler: () => void) {
     const listener = (): void => handler()
     ipcRenderer.on(IPC.planungGeaendert, listener)

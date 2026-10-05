@@ -81,6 +81,13 @@ export const IPC = {
   schnittBibVorschau: 'schnitt:bib-vorschau',
   schnittBibPipette: 'schnitt:bib-pipette',
   schnittBibVerteilen: 'schnitt:bib-verteilen',
+  kalenderStand: 'kalender:stand',
+  kalenderApple: 'kalender:apple',
+  kalenderAppleTrennen: 'kalender:apple-trennen',
+  kalenderEinstellen: 'kalender:einstellen',
+  kalenderLinkPruefen: 'kalender:link-pruefen',
+  kalenderJetzt: 'kalender:jetzt',
+  kalenderGeaendert: 'kalender:geaendert',
   schnittListe: 'schnitt:liste',
   schnittUmschalten: 'schnitt:umschalten',
   schnittBereich: 'schnitt:bereich',
@@ -293,6 +300,37 @@ export interface BibChroma {
   spill: number
 }
 export type BibLage = 'oben-links' | 'oben' | 'oben-rechts' | 'links' | 'mitte' | 'rechts' | 'unten-links' | 'unten' | 'unten-rechts' | 'voll'
+/** Kalender-Abgleich (Planung ↔ Apple Kalender, Google, Outlook, iCal-Links) */
+export interface KalenderLink {
+  id: string
+  name: string
+  url: string
+  farbe?: string
+  an: boolean
+  fehler?: string
+}
+/** Termin aus einem anderen Kalender (nur zum Anzeigen); Zeiten lokal wie in der Planung */
+export interface FremderTermin {
+  id: string
+  uid: string
+  quelle: string
+  quelleName: string
+  farbe: string
+  titel: string
+  /** „YYYY-MM-DDTHH:MM“ oder bei ganztägigen „YYYY-MM-DD“ */
+  start: string
+  ende: string
+  ganztag: boolean
+  ort?: string
+}
+export interface KalenderStand {
+  apple: { benutzer: string; verbunden: boolean; eintragen: boolean; ausgeblendet: string[]; kalender: { href: string; name: string; farbe: string; moin: boolean }[]; fehler?: string } | null
+  links: KalenderLink[]
+  termine: FremderTermin[]
+  /** letzter erfolgreicher Abgleich (ISO) */
+  stand: string | null
+  laeuft: boolean
+}
 /** Effekt aus der Bibliothek (Spiegel von src/main/schnitt/bibliothek.ts) */
 export interface BibEffektDaten {
   id: string
@@ -568,6 +606,14 @@ export interface MoinApi {
   schnittBibPipette(id: string, datei: string, x: number, y: number, zeit: number): Promise<string>
   /** Effekte aus der Bibliothek (neu) ins Projekt setzen; automatisch gesetzte werden ersetzt. Gibt die Auftrags-ID zurück. */
   schnittBibVerteilen(id: string): Promise<string>
+  /** Kalender-Abgleich: Stand, Apple-ID verbinden, Einstellungen, Links, sofort abgleichen */
+  kalenderStand(): Promise<KalenderStand>
+  kalenderApple(benutzer: string, passwort: string): Promise<void>
+  kalenderAppleTrennen(): Promise<void>
+  kalenderEinstellen(e: { eintragen?: boolean; ausgeblendet?: string[]; links?: KalenderLink[] }): Promise<void>
+  kalenderLinkPruefen(url: string): Promise<number>
+  kalenderJetzt(): Promise<void>
+  onKalenderGeaendert(cb: () => void): () => void
   schnittListe(id: string): Promise<SchnittListe | null>
   /** Schnitt ändern (ROADMAP 6.5): Stelle an/aus, Bereich raus/zurück, Wunsch in Worten (Auftrag) */
   schnittUmschalten(id: string, index: number): Promise<SchnittListe>

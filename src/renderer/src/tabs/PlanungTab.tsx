@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PLANUNG_SPALTEN, type PlanungAenderung, type PlanungKanal, type PlanungKarte, type PlanungSpalte } from '@shared/app'
+import { PLANUNG_SPALTEN, type KalenderStand, type PlanungAenderung, type PlanungKanal, type PlanungKarte, type PlanungSpalte } from '@shared/app'
 import type { Rhythmus } from '@shared/kalender'
 import { PageHeader } from '../components/Panel'
 import { PlanungKalender } from '../components/PlanungKalender'
+import { KalenderAbgleich } from '../components/KalenderAbgleich'
 import { KartenVideo } from '../components/KartenVideo'
 import { IdeenFinder, TitelVorschlaege } from '../components/PlanungClaude'
 
@@ -40,6 +41,12 @@ export function PlanungTab(): React.JSX.Element {
   const [ansicht, setAnsicht] = useState<'board' | 'kalender'>('board')
   const [ideen, setIdeen] = useState(false)
   const [rhythmus, setRhythmus] = useState<Rhythmus>({})
+  const [kalender, setKalender] = useState<KalenderStand | null>(null)
+  const kalenderLaden = useCallback((): void => void window.moin.kalenderStand().then(setKalender).catch(() => undefined), [])
+  useEffect(() => {
+    kalenderLaden()
+    return window.moin.onKalenderGeaendert(kalenderLaden)
+  }, [kalenderLaden])
 
   const laden = useCallback((): void => {
     window.moin
@@ -124,7 +131,7 @@ export function PlanungTab(): React.JSX.Element {
       )}
       {fehler && <p className="warn">{fehler}</p>}
       {karten && ansicht === 'board' && <Board karten={imKanal} oeffne={setOffen} verschieben={verschieben} neu={neu} />}
-      {karten && ansicht === 'kalender' && <PlanungKalender karten={karten} rhythmus={rhythmus} setzeRhythmus={setzeRhythmus} oeffne={setOffen} aendern={aendern} />}
+      {karten && ansicht === 'kalender' && <PlanungKalender karten={karten} rhythmus={rhythmus} setzeRhythmus={setzeRhythmus} oeffne={setOffen} aendern={aendern} fremde={kalender?.termine} abgleich={<KalenderAbgleich stand={kalender} neuLaden={kalenderLaden} />} />}
       {offeneKarte && <KartenDetails key={offeneKarte.id} karte={offeneKarte} ersetze={ersetze} aendern={(a) => aendern(offeneKarte.id, a)} loeschen={() => loeschen(offeneKarte.id)} schliessen={() => setOffen(null)} />}
     </>
   )

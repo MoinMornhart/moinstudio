@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PlanungAenderung, PlanungKanal, PlanungKarte } from '@shared/app'
+import type { FremderTermin, PlanungAenderung, PlanungKanal, PlanungKarte } from '@shared/app'
 import {
   luecken,
   monatsRaster,
@@ -31,18 +31,24 @@ export function PlanungKalender({
   rhythmus,
   setzeRhythmus,
   oeffne,
-  aendern
+  aendern,
+  fremde = [],
+  abgleich
 }: {
   karten: PlanungKarte[]
   rhythmus: Rhythmus
   setzeRhythmus: (r: Rhythmus) => void
   oeffne: (id: string) => void
   aendern: (id: string, a: PlanungAenderung) => void
+  /** Termine aus Apple, Google, Outlook … (nur anzeigen) */
+  fremde?: FremderTermin[]
+  /** Bereich „Kalender-Abgleich“ für die Seitenleiste */
+  abgleich?: React.ReactNode
 }): React.JSX.Element {
   const heute = tagVon(new Date())
   const [ansicht, setAnsicht] = useState<'monat' | 'woche'>('monat')
   const [bezug, setBezug] = useState(heute)
-  const [sichtbar, setSichtbar] = useState<Record<string, boolean>>({ MoinMornhart: true, MoinMorni: true })
+  const [sichtbar, setSichtbar] = useState<Record<string, boolean>>({ MoinMornhart: true, MoinMorni: true, andere: true })
   const [ziel, setZiel] = useState<string | null>(null)
   const [ziehe, setZiehe] = useState<string | null>(null)
 
@@ -103,6 +109,12 @@ export function PlanungKalender({
                 {k.id}
               </button>
             ))}
+            {fremde.length > 0 && (
+              <button className={`chip legende k-andere${sichtbar['andere'] ? ' on' : ''}`} onClick={() => setSichtbar({ ...sichtbar, andere: !sichtbar['andere'] })}>
+                <span className="punkt-farbe" />
+                Andere Kalender
+              </button>
+            )}
             <span className="segment">
               <button className={ansicht === 'monat' ? 'on' : ''} onClick={() => setAnsicht('monat')}>
                 Monat
@@ -123,6 +135,8 @@ export function PlanungKalender({
           {tage.map((tag) => {
             const termine = mitTermin.filter((k) => k.termin!.startsWith(tag)).sort((x, y) => x.termin!.localeCompare(y.termin!))
             const frei = lueckenHier.filter((l) => l.tag === tag)
+            // fremde Termine: ganztägige über alle ihre Tage, sonst am Starttag; ganztägige zuerst
+            const andere = sichtbar['andere'] ? fremde.filter((f) => (f.ganztag ? f.start.slice(0, 10) <= tag && f.ende.slice(0, 10) >= tag : f.start.startsWith(tag))).sort((x, y) => Number(y.ganztag) - Number(x.ganztag) || x.start.localeCompare(y.start)) : []
             const fremd = ansicht === 'monat' && Number(tag.slice(5, 7)) !== b.getMonth() + 1
             return (
               <div
@@ -142,6 +156,13 @@ export function PlanungKalender({
                 }}
               >
                 <span className="kalender-nr">{ansicht === 'woche' ? tagText(tag) : Number(tag.slice(8))}</span>
+                {andere.map((f) => (
+                  <span key={f.id} className="termin-pille fremd-termin" style={{ ['--kanal' as string]: f.farbe }} title={`${f.quelleName}: ${f.titel}${f.ganztag ? ' (ganztägig)' : ` ${teileTermin(f.start).zeit}–${teileTermin(f.ende).zeit}`}${f.ort ? ` · ${f.ort}` : ''}`}>
+                    <span className="pille-text">
+                      {!f.ganztag && <span className="zeit">{teileTermin(f.start).zeit}</span>} {f.titel}
+                    </span>
+                  </span>
+                ))}
                 {termine.map((k) => (
                   <button key={k.id} className={`termin-pille ${klasse(k.kanal)}${k.spalte === 'veroeffentlicht' ? ' fertig' : ''}${k.spalte !== 'veroeffentlicht' && k.termin! < `${heute}T` ? ' spaet' : ''}`} title={`${k.kanal}: ${k.titel}`} onClick={() => oeffne(k.id)} {...ziehbar(k)}>
                     <span className="pille-text">
@@ -177,6 +198,7 @@ export function PlanungKalender({
           <h3>Nächste 4 Wochen</h3>
           <LueckenText luecken={lueckenBald} rhythmusLeer={Object.values(rhythmusGezeigt).every((s) => s.length === 0)} />
         </section>
+        {abgleich}
         <WochenPlaner karten={karten} termin={(id, termin) => aendern(id, { termin })} />
         <section>
           <h3>Upload-Rhythmus</h3>

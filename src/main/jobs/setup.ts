@@ -13,6 +13,7 @@ import { JobQueue } from './queue'
 import { registerThumbnailIpc } from '../thumbnail/ipc'
 import { registerSchnittIpc } from '../schnitt/ipc'
 import { registerPlanungIpc } from '../planung/ipc'
+import { registerKalenderIpc } from '../kalender/ipc'
 import { registerAdobeIpc } from '../adobe/ipc'
 import { registerBibliothekIpc } from '../schnitt/bibliothek-ipc'
 import { datenOrdner } from '../schnitt/ipc'
@@ -38,7 +39,10 @@ export function setupJobs(
   registerBibliothekIpc({ datenOrdner: () => datenOrdner(settings), ffmpeg: () => tools.exePath(FFMPEG), getWindow })
   registerAdobeIpc(settings, queue, getWindow, tools)
   const logo = registerLogoIpc(queue, settings, hardware, tools, getWindow)
-  const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport })
+  // Kalender-Abgleich startet nach der Planung (braucht deren Datenordner); der Wochenplan fragt ihn später nach Terminen
+  let kalender: ReturnType<typeof registerKalenderIpc> | null = null
+  const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport, andereTermine: async () => (await kalender?.stand())?.termine ?? [] })
+  kalender = registerKalenderIpc({ daten: planung.daten, geraet: root, getWindow })
 
   const enqueueProbe = async (): Promise<string> => {
     const profile = await hardware.profiles.load()
