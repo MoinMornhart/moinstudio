@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Premiere: Bibliotheks-Effekte (z. B. die Abo-Animation, Bilder) liegen jetzt als echte Clips auf Spur V3 – mit Größe und Lage wie im MoinStudio-Render –, Geräusche und der Ton der Animationen auf Spur A2, statt nur als Marker „von Hand setzen“. Greenscreen-Videos und WebM wandelt MoinStudio einmal in ein freigestelltes ProRes-4444-Video; lokale Geräusche und diese Wandlungen liegen im Projektordner (premiere/medien), damit Premiere sie auf PC und Laptop findet.
+
 ## [0.54.0] - 2026-10-05
 
 > Zuschauen beim Schneiden, Projekte nach iCloud-Konflikten wieder da

@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import type { Bereich, Schnittliste } from '../schnitt/rohschnitt'
 import { sauber, zeitAbbildung } from '../schnitt/render'
-import type { Effekt } from '../schnitt/effekte'
+import type { Effekt, EffektLage } from '../schnitt/effekte'
 import { effektText } from '@shared/effekt-text'
 
 /**
@@ -35,6 +35,31 @@ export interface PremiereOptionen {
   effekte?: Effekt[]
   /** Text-Bilder aus der Vorschau (Schlüssel = Index in effekte) */
   textBilder?: Record<string, { datei: string; breite: number; hoehe: number }>
+  /** Bibliotheks-Videos und -Bilder (Abo-Animation …) als echte Clips auf Spur V3 (Philip, 05.10.: statt nur Marker) */
+  einblendungen?: PremiereEinblendung[]
+  /** Geräusche und Ton der Einblendungen als Clips auf Spur A2 */
+  toene?: PremiereTon[]
+}
+
+export interface PremiereEinblendung {
+  datei: string
+  /** Zeit im geschnittenen Video und Dauer in Sekunden */
+  start: number
+  dauer: number
+  breite: number
+  hoehe: number
+  /** Anteil der Bildbreite (1 = ganzes Bild) und Lage wie im FFmpeg-Render */
+  groesse: number
+  lage: EffektLage
+  standbild: boolean
+}
+
+export interface PremiereTon {
+  datei: string
+  start: number
+  dauer: number
+  /** Lautstärke-Faktor (1 = unverändert) */
+  lautstaerke: number
 }
 
 /** Zoom-Bereich im geschnittenen Video; ohne faktor der automatische Zoom (1,12), x/y = Zielpunkt (0–1) */
@@ -90,7 +115,7 @@ const punkt = (m: { x: number; y: number }): string => `<horiz>${m.x}</horiz><ve
 
 /** Marker-Text für einen Effekt; Hinweis, wenn er in Premiere von Hand gesetzt werden muss */
 export function effektMarker(e: Effekt): { name: string; hinweis: string } {
-  const automatisch = e.art === 'zoom' || e.art === 'text'
+  const automatisch = e.art === 'zoom' || e.art === 'text' || e.art === 'video' || e.art === 'bild' || e.art === 'geraeusch'
   return { name: sauber(`Effekt: ${effektText(e)}`), hinweis: automatisch ? 'Effekt aus MoinStudio (in der Sequenz enthalten)' : 'Effekt aus MoinStudio – in Premiere von Hand setzen (die Vorschau zeigt, wie es aussehen soll)' }
 }
 
@@ -163,6 +188,29 @@ export function premiereXml(o: PremiereOptionen): string {
     return [`<clipitem id="clipitem-t${i}"><name>${x(sauber(e.text))}</name><enabled>TRUE</enabled><duration>${n}</duration>${rate(zb)}<start>${start}</start><end>${ende}</end><in>0</in><out>${n}</out>${bild}${bewegung(`<value>${skala}</value>`, `<value>${punkt({ x: 0, y: Math.round(y * 10000) / 10000 })}</value>`)}</clipitem>`]
   })
   const textSpur = texte.length ? `<track>${texte.join('')}</track>` : ''
+  // Einblendungen auf V3: Größe als Anteil der Bildbreite, Lage wie im Render (volle Größe = ganzes Bild, Mitte)
+  const einblendungen = (o.einblendungen ?? []).map((e, j) => {
+    const start = f(e.start)
+    const n = Math.max(1, f(e.dauer))
+    const g = Math.min(1, Math.max(0.05, e.groesse))
+    const skala = Math.round(((o.quelle.breite * g) / Math.max(1, e.breite)) * 1000) / 10
+    const b = g // Breite als Anteil
+    const h = (e.hoehe * skala) / 100 / o.quelle.hoehe
+    const voll = g >= 1 || e.lage === 'voll'
+    const mx = voll ? 0 : e.lage.includes('links') ? 0.04 + b / 2 - 0.5 : e.lage.includes('rechts') ? 0.96 - b / 2 - 0.5 : 0
+    const my = voll ? 0 : e.lage.includes('oben') ? 0.06 + h / 2 - 0.5 : e.lage === 'mitte' || e.lage === 'links' || e.lage === 'rechts' ? 0 : 0.94 - h / 2 - 0.5
+    const datei = `<file id="file-e${j}"><name>${x(basename(e.datei))}</name><pathurl>${x(dateiUrl(e.datei))}</pathurl>${rate(zb)}<duration>${n}</duration><media><video><samplecharacteristics><width>${e.breite}</width><height>${e.hoehe}</height></samplecharacteristics></video></media></file>`
+    return `<clipitem id="clipitem-e${j}"><name>${x(sauber(basename(e.datei)))}</name><enabled>TRUE</enabled><duration>${n}</duration>${rate(zb)}<start>${start}</start><end>${start + n}</end><in>0</in><out>${n}</out>${datei}${bewegung(`<value>${skala}</value>`, `<value>${punkt({ x: Math.round(mx * 10000) / 10000, y: Math.round(my * 10000) / 10000 })}</value>`)}</clipitem>`
+  })
+  const einblendSpur = einblendungen.length ? `<track>${einblendungen.join('')}</track>` : ''
+  // Töne auf A2 (Geräusche, Klick der Abo-Animation)
+  const toene = (o.toene ?? []).map((t, j) => {
+    const start = f(t.start)
+    const n = Math.max(1, f(t.dauer))
+    const pegel = t.lautstaerke !== 1 ? `<filter><effect><name>Audio Levels</name><effectid>audiolevels</effectid><effectcategory>audiolevels</effectcategory><effecttype>audiolevels</effecttype><mediatype>audio</mediatype><parameter><parameterid>level</parameterid><name>Level</name><valuemin>0</valuemin><valuemax>3.98109</valuemax><value>${Math.min(3.98, Math.max(0, t.lautstaerke))}</value></parameter></effect></filter>` : ''
+    return `<clipitem id="clipitem-g${j}"><name>${x(sauber(basename(t.datei)))}</name><enabled>TRUE</enabled><duration>${n}</duration>${rate(zb)}<start>${start}</start><end>${start + n}</end><in>0</in><out>${n}</out><file id="file-g${j}"><name>${x(basename(t.datei))}</name><pathurl>${x(dateiUrl(t.datei))}</pathurl>${rate(zb)}<duration>${n}</duration><media><audio><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics><channelcount>2</channelcount></audio></media></file><sourcetrack><mediatype>audio</mediatype><trackindex>1</trackindex></sourcetrack>${pegel}</clipitem>`
+  })
+  const tonSpur = toene.length ? `<track>${toene.join('')}</track>` : ''
   const effektMarkerXml = effekte
     .filter((e) => effektZeit(e) >= 0 && effektZeit(e) <= laenge)
     .sort((a, b) => effektZeit(a) - effektZeit(b))
@@ -179,7 +227,7 @@ export function premiereXml(o: PremiereOptionen): string {
   const format = `<format><samplecharacteristics>${rate(zb)}<width>${o.quelle.breite}</width><height>${o.quelle.hoehe}</height><pixelaspectratio>square</pixelaspectratio><fielddominance>none</fielddominance></samplecharacteristics></format>`
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xmeml>
-<xmeml version="5"><sequence id="sequence-1"><name>${x(o.name)}</name><duration>${pos}</duration>${rate(zb)}<timecode>${rate(zb)}<string>00:00:00:00</string><frame>0</frame><displayformat>NDF</displayformat></timecode><media><video>${format}<track>${video}</track>${textSpur}</video>${audio}</media>${marker}${effektMarkerXml}</sequence></xmeml>
+<xmeml version="5"><sequence id="sequence-1"><name>${x(o.name)}</name><duration>${pos}</duration>${rate(zb)}<timecode>${rate(zb)}<string>00:00:00:00</string><frame>0</frame><displayformat>NDF</displayformat></timecode><media><video>${format}<track>${video}</track>${textSpur}${einblendSpur}</video>${audio || tonSpur ? (audio ? audio.replace('</track></audio>', `</track>${tonSpur}</audio>`) : `<audio><numOutputChannels>2</numOutputChannels>${tonSpur}</audio>`) : ''}</media>${marker}${effektMarkerXml}</sequence></xmeml>
 `
 }
 
