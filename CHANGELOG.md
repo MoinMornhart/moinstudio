@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.53.1] - 2026-10-05
+
+> Export mit Lautheit läuft wieder
+
 ### Fixed
 
 - Export mit YouTube-Lautheit brach ab: Beim Einhängen der Lautheits-Normalisierung wurde nicht nur der Ton-Ausgang „[a]“ umbenannt, sondern jedes einzelne „a“ im Filtergraphen (aus „scale“ wurde „sc[aroh]le“) – FFmpeg konnte den Graphen nicht lesen. Der Test prüft jetzt, dass sonst nichts verändert wird.
