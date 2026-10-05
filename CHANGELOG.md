@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-10-05
+
+> Schnitt: Effekte aus der Bibliothek automatisch und per Wunsch
+
 ### Added
 
 - Schnitt: Effekte aus der Bibliothek werden nach dem Rohschnitt automatisch gesetzt – je nach ihren Knöpfen (Kanal, Videotyp, in jedem Video / jedes n-te / X % der Videos). „Fester Zeitpunkt“ landet genau dort (z. B. 10 s vor dem Ende), „KI entscheidet“ sucht Claude eine passende Stelle aus dem Transkript. Feste Grenzen: nicht im Hook (erste 15 s), nicht auf lauten Höhepunkten, nie zwei Effekte gleichzeitig, mindestens 20 s Abstand. Passt Claudes Vorschlag nicht, verteilt eine Regel den Effekt auf ein Satzende. Mit „Bibliotheks-Effekte neu verteilen“ geht das jederzeit noch einmal; von Hand gesetzte Effekte bleiben.
