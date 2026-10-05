@@ -6,6 +6,16 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Schnitt: Timeline über der ganzen Aufnahme – oben der Schnitt (grün bleibt, rot fliegt raus; Klick auf Rot lässt die Stelle doch drin und zurück), darunter Spuren für Bibliotheks-Effekte, Bild & Text, Kamera & Tempo und Ton. Klick auf einen Effekt springt hin und schaltet ihn an/aus oder löscht ihn; Zoom-Regler für lange Streams. Timeline und Effektliste bleiben gleich.
+
+### Changed
+
+- Export mindestens in 1080p (kleinere Aufnahmen werden hochskaliert), Gaming-Videos immer mit 60 fps, sonst mindestens 30 fps.
+- Export-Ton auf YouTube-Lautheit gebracht (−14 LUFS, Spitzen höchstens −1 dBTP), damit das Video weder zu leise ist noch von YouTube heruntergeregelt wird.
+- Effekt-Bibliothek nimmt die ganze Breite ein.
+
 ## [0.51.0] - 2026-10-05
 
 > Schnitt: Effekte aus der Bibliothek automatisch und per Wunsch

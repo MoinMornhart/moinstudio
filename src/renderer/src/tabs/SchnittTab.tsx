@@ -3,6 +3,7 @@ import type { SchnittAbschnitt, SchnittExport, SchnittHighlight, SchnittListe, S
 import { Card, PageHeader } from '../components/Panel'
 import { EffektListe, WunschFeld } from '../components/SchnittWunsch'
 import { EffektBibliothek } from '../components/EffektBibliothek'
+import { SchnittZeitleiste } from '../components/SchnittZeitleiste'
 import { abholen, OEFFNE_EREIGNIS } from '../navigation'
 import { Fortschritt, useClaudeAuftrag } from '../components/PlanungClaude'
 
@@ -474,6 +475,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
           }}
         />
       )}
+      {liste && dauer > 0 && <SchnittZeitleiste p={p} liste={liste} setListe={setListe} zeit={zeit} springe={springe} />}
       {liste && (
         <label className="row" style={{ alignItems: 'center' }}>
           <input type="checkbox" checked={geschnitten} onChange={(e) => setGeschnitten(e.target.checked)} /> Geschnitten abspielen (entfernte Stellen überspringen)

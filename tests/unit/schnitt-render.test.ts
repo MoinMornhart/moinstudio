@@ -55,6 +55,11 @@ describe('Schnitt: Untertitel, Zooms, Render (ROADMAP 6.6)', () => {
     expect(g).toContain('subtitles=vorschau.ass')
     expect(g).toContain("[0:a]aselect='")
     expect(renderArgs(o, 'f.txt')).toEqual(expect.arrayContaining(['-/filter_complex', 'f.txt', '-map', '[a]']))
+    expect(g).not.toContain('loudnorm')
+    // Export: Ton auf YouTube-Lautheit, Ausgang bleibt [a] (genau einmal)
+    const laut = filterGraph({ ...o, lautheit: true })
+    expect(laut).toContain('[aroh]loudnorm=I=-14:TP=-1:LRA=11,aresample=48000[a]')
+    expect(laut.match(/\[a\]/g)).toHaveLength(1)
   })
 
   it('Auswahl auch bei Hunderten Stücken: flacher Baum, wählt genau die behaltenen Zeiten', () => {

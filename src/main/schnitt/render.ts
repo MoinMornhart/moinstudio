@@ -163,6 +163,8 @@ export interface RenderOptionen {
   /** Mit Effekten: Schnittzeit → Endzeit und Länge des fertigen Videos */
   endzeit?: (t: number) => number
   laengeEnde?: number
+  /** Ton auf YouTube-Lautheit bringen (−14 LUFS, Spitzen höchstens −1 dBTP) – nur beim Export */
+  lautheit?: boolean
 }
 
 /** Effektteil des Graphen (nur ohne Hochformat): gleiche Eingaben für filterGraph und renderArgs */
@@ -191,6 +193,12 @@ export function auswahlAusdruck(stuecke: { start: number; ende: number }[]): str
 
 /** Filtergraph (kommt in eine Datei – bei Stunden-Streams wäre er für die Windows-Befehlszeile zu lang). */
 export function filterGraph(o: RenderOptionen): string {
+  const g = filterGraphRoh(o)
+  // [a] ist immer nur Ausgang des Graphen: umbenennen und die Lautheits-Normalisierung dahinter hängen
+  return o.lautheit && o.audio ? `${g.replace(/[a]/g, '[aroh]')};[aroh]loudnorm=I=-14:TP=-1:LRA=11,aresample=48000[a]` : g
+}
+
+function filterGraphRoh(o: RenderOptionen): string {
   const auswahl = auswahlAusdruck(o.liste.behalten)
   const zoom = o.zooms.length
     ? `,scale=w='iw*(1+0.12*(${o.zooms.map((z) => `min(1\\,max(0\\,(t-${zahl(z.start)})/0.35))*min(1\\,max(0\\,(${zahl(z.ende)}-t)/0.35))`).join('+')}))':h=-2:eval=frame,crop=${o.breite}:${o.hoehe}`

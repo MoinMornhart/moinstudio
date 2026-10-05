@@ -540,7 +540,7 @@ export function EffektBibliothek(): React.JSX.Element {
   const laden = (): void => void window.moin.schnittBib().then(setListe, (e: unknown) => setFehler(fehlerText(e)))
   useEffect(laden, [])
   return (
-    <Card title="Effekt-Bibliothek" badge={`${liste.length}`}>
+    <Card title="Effekt-Bibliothek" badge={`${liste.length}`} breit>
       {fehler && <p className="warn small">{fehler}</p>}
       {offen ? (
         <Bearbeiten

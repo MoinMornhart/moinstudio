@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SchnittEffekt, SchnittProjekt } from '@shared/app'
 import { effektText } from '@shared/effekt-text'
+import { EFFEKTE_GEAENDERT } from './SchnittZeitleiste'
 
 const BEISPIELE = ['Mach mir ein geiles Intro', 'Zeitlupe, wenn der Creeper explodiert', 'Mehr Action!', 'Schreib WAS?! drauf, wenn ich erschrecke', 'Am Ende schwarz ausblenden', 'Nimm die Stelle mit den Fackeln raus']
 
@@ -71,10 +72,17 @@ export function EffektListe({ p, springe, neuLaden }: { p: SchnittProjekt; sprin
   useEffect(() => {
     if (!p.auftrag) void window.moin.schnittEffekte(p.id).then(setListe)
   }, [p.id, p.auftrag, p.antwort?.zeit])
+  // Änderungen aus der Timeline übernehmen
+  useEffect(() => {
+    const neu = (): void => void window.moin.schnittEffekte(p.id).then(setListe)
+    window.addEventListener(EFFEKTE_GEAENDERT, neu)
+    return () => window.removeEventListener(EFFEKTE_GEAENDERT, neu)
+  }, [p.id])
   if (!liste.length) return null
   const aendern = (i: number, a: { aus: boolean } | null): void =>
     void window.moin.schnittEffektAendern(p.id, i, a).then((l) => {
       setListe(l)
+      window.dispatchEvent(new Event(EFFEKTE_GEAENDERT))
       neuLaden()
     })
   return (

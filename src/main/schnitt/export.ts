@@ -9,6 +9,7 @@ import { filterGraph, renderArgs, zeitAbbildung } from './render'
 import { liesAbschnitte } from './transkript'
 import { renderPlan } from './vorschau'
 import type { EffektHilfe } from './effekt-vorbereitung'
+import type { VideoTyp } from './regeln'
 
 /**
  * Export für YouTube (ROADMAP 6.7): volle Qualität aus dem Original, nach YouTubes Upload-Empfehlung (H.264 High,
@@ -17,11 +18,18 @@ import type { EffektHilfe } from './effekt-vorbereitung'
  * Prüfung der fertigen Datei.
  */
 
-/** Zielgröße: Auflösung der Aufnahme (gerade Zahlen, höchstens 4K), Bildrate wie aufgenommen (höchstens 60). */
-export function zielFormat(breite: number, hoehe: number, fps: number): { breite: number; hoehe: number; fps: number } {
-  const f = Math.min(1, 3840 / Math.max(breite, 1), 2160 / Math.max(hoehe, 1))
+/**
+ * Zielgröße: Auflösung der Aufnahme (gerade Zahlen), mindestens 1080p (kleinere Aufnahmen werden hochskaliert –
+ * YouTube gibt 1080p deutlich mehr Bitrate), höchstens 4K. Bildrate wie aufgenommen (30–60); Gaming immer 60 fps
+ * (Philip, 05.10.).
+ */
+export function zielFormat(breite: number, hoehe: number, fps: number, typ?: VideoTyp): { breite: number; hoehe: number; fps: number } {
+  const b = breite || 1920
+  const h = hoehe || 1080
+  const hoch = Math.max(1, 1080 / Math.max(1, Math.min(b, h)))
+  const f = Math.min(hoch, 3840 / Math.max(b, 1), 2160 / Math.max(h, 1), b >= h ? Infinity : 2160 / Math.max(b, 1))
   const gerade = (x: number): number => Math.max(2, Math.round((x * f) / 2) * 2)
-  return { breite: gerade(breite || 1920), hoehe: gerade(hoehe || 1080), fps: Math.min(60, Math.round(fps) || 30) }
+  return { breite: gerade(b), hoehe: gerade(h), fps: typ === 'gaming' ? 60 : Math.min(60, Math.max(30, Math.round(fps) || 30)) }
 }
 
 /** YouTube-Bitrate (SDR) in Mbit/s nach Auflösung und Bildrate. */
@@ -181,8 +189,8 @@ export async function exportJob(p: ExportPayload, ctx: JobContext<{ claudeSessio
   const pr = await ladeProjekt(p.daten, p.projekt)
   if (!pr?.quelle || !pr.rohschnitt) throw new Error('Erst Import und Rohschnitt abwarten.')
   const ordner = projektOrdner(p.daten, p.projekt)
-  const ziel = zielFormat(pr.quelle.breite, pr.quelle.hoehe, pr.quelle.fps)
-  const plan = await renderPlan(p.daten, pr, { quelle: pr.quelle.pfad, ...ziel, encoder: encoderArgs(p.encoder, ziel.hoehe, ziel.fps), ausgabe: 'export.mp4', untertitelDatei: 'export.ass' }, p.hilfe)
+  const ziel = zielFormat(pr.quelle.breite, pr.quelle.hoehe, pr.quelle.fps, pr.typ)
+  const plan = { ...(await renderPlan(p.daten, pr, { quelle: pr.quelle.pfad, ...ziel, encoder: encoderArgs(p.encoder, ziel.hoehe, ziel.fps), ausgabe: 'export.mp4', untertitelDatei: 'export.ass' }, p.hilfe)), lautheit: true }
   const abb = zeitAbbildung(plan.liste.behalten)
   // Mit Effekten (Zeitlupe, Standbild) verschieben sich alle Zeiten: Kapitel gelten für das fertige Video
   const imSchnitt = (t: number): number | null => {
