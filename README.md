@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.56.0** (2026-10-05): Effekt-Ordner: neue Dateien werden automatisch zu Effekten
 - **0.55.0** (2026-10-05): Premiere: Abo-Animation und Sounds als echte Clips
 - **0.54.0** (2026-10-05): Zuschauen beim Schneiden, Projekte nach iCloud-Konflikten wieder da
 - **0.53.1** (2026-10-05): Export mit Lautheit läuft wieder
 - **0.53.0** (2026-10-05): Planung: Kalender-Abgleich mit Apple Kalender, Google und Outlook
-- **0.52.0** (2026-10-05): Schnitt: Timeline, Export in 1080p/60 fps mit YouTube-Lautheit
 <!-- CHANGELOG:END -->
 
 ## Installation
