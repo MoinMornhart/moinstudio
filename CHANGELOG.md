@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-10-05
+
+> Schnitt: eigene Effekt-Bibliothek mit Greenscreen-Entfernung
+
 ### Added
 
 - Schnitt: Effekt-Bibliothek. Eigene Effekte mit Namen anlegen (z. B. „Abonnieren-Animation“, „Vine-Boom“) aus Video mit Transparenz, Greenscreen-Video, Bild und/oder Sound. Alles per Knopf: Häufigkeit (in jedem Video / nur in manchen – jedes n-te oder X % / nur manuell), Kanal, Videotyp, Platzierung (fester Zeitpunkt nach dem Start oder vor dem Ende / KI entscheidet), Position im Bild und Größe. Die Bibliothek liegt im Datenordner, PC und Laptop teilen sie.
