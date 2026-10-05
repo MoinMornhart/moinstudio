@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-10-05
+
+> Zuschauen beim Schneiden, Projekte nach iCloud-Konflikten wieder da
+
 ### Added
 
 - Schnitt: Schalter **„Zuschauen“**. An: Du siehst live, wie geschnitten wird – die Schritte (Import, Transkript, Rohschnitt, Effekte, Vorschau, Export) mit Fortschritt und beim Rendern jede Sekunde das aktuelle Bild; nach den Effekten startet die Vorschau von selbst. Aus: Alles läuft im Hintergrund bis zum fertigen Export, dann kommt eine Windows-Benachrichtigung. Das Live-Bild liegt lokal, nicht in iCloud.
