@@ -10,6 +10,7 @@ import { pruefeEffekte, type Effekt } from './effekte'
 import { ladeEffekte } from './effekt-vorbereitung'
 import { KLAENGE } from './klaenge'
 import { lauteMomente } from './highlights'
+import { regelText, typName, type VideoTyp } from './regeln'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /**
@@ -115,11 +116,14 @@ export function bausteinText(): string {
 - intro {teile, klang}: Vorspann vor dem Video, höchstens eins. teile: {art: "clip", von, bis, tempo} = kurzer Moment aus dem Video, {art: "karte", text, dauer 0.5–6, hintergrund unscharf|schwarz, bei, farbe} = Titelkarte (bei = Zeitpunkt für das unscharfe Hintergrundbild). Zwischen Clips kommt automatisch ein Wusch, zur Karte ein Knall (klang: false schaltet das ab). {art: "sting", vorlage sprung|winken|schwert, text, dauer 1–4, hintergrund unscharf|schwarz, bei} = Philips eigene Minecraft-Figur, animiert (sprung: springt ins Bild und reckt die Faust, winken: winkt in die Kamera, schwert: holt aus und schlägt zur Kamera), darunter der Text (z. B. der Kanalname) mit Wusch, Knall und Ding.`
 }
 
-export function wunschPrompt(o: { wunsch: string; kanal: string; liste: Schnittliste; saetze: { start: number; ende: number; text: string }[]; effekte: Effekt[]; laut: number[]; sicht?: string | null }): string {
+export function wunschPrompt(o: { wunsch: string; kanal: string; typ?: VideoTyp; liste: Schnittliste; saetze: { start: number; ende: number; text: string }[]; effekte: Effekt[]; laut: number[]; sicht?: string | null }): string {
   const { liste } = o
   const raus = (a: number, b: number): boolean => liste.entfernt.some((e) => !e.aus && (a + b) / 2 >= e.start && (a + b) / 2 <= e.ende)
   const nachher = liste.behalten.reduce((s, b) => s + b.ende - b.start, 0)
-  return `Philip schneidet ein Video für seinen YouTube-Kanal ${o.kanal}. Sein Wunsch: „${o.wunsch}“
+  return `Philip schneidet ein Video für seinen YouTube-Kanal ${o.kanal} (Videotyp ${typName(o.typ)}). Sein Wunsch: „${o.wunsch}“
+
+Halte dich dabei an die Schnitt-Regeln für diesen Typ (wie erfolgreiche Creator schneiden):
+${regelText(o.typ)}
 
 Du kannst (1) Stellen entfernen oder zurückholen und (2) Effekte setzen. Alle Zeiten sind Sekunden der Originalaufnahme
 (${t2(liste.dauer)} s lang, nach dem aktuellen Schnitt ${t2(nachher)} s).
@@ -163,7 +167,7 @@ export async function wunschJob(p: WunschPayload, ctx: JobContext<{ claudeSessio
   const effekte = await ladeEffekte(ordner, liste.dauer)
   ctx.progress(10, 'Claude setzt deinen Wunsch um …')
   const sicht = p.ffmpeg && pr.quelle ? await sichtbogen(p.ffmpeg, pr.proxy ? join(ordner, 'proxy.mp4') : pr.quelle.pfad, ordner, liste.dauer) : null
-  let prompt = wunschPrompt({ wunsch: p.wunsch, kanal: pr.kanal, liste, saetze, effekte, laut: lauteMomente(wellen), sicht })
+  let prompt = wunschPrompt({ wunsch: p.wunsch, kanal: pr.kanal, typ: pr.typ, liste, saetze, effekte, laut: lauteMomente(wellen), sicht })
   let a: { schritte?: { art: 'entfernen' | 'zurueck'; von: number; bis: number; warum?: string }[]; effekte?: unknown; antwort?: string } = {}
   let geprueft: Effekt[] = effekte
   for (let versuch = 0; versuch < 2; versuch++) {
@@ -174,7 +178,7 @@ export async function wunschJob(p: WunschPayload, ctx: JobContext<{ claudeSessio
     geprueft = r.effekte
     if (!r.fehler.length) break
     ctx.progress(50, 'Claude korrigiert die Effekte …')
-    prompt = `${wunschPrompt({ wunsch: p.wunsch, kanal: pr.kanal, liste, saetze, effekte, laut: lauteMomente(wellen), sicht })}\n\n# Korrektur\nDeine letzte Antwort hatte diese Fehler, behebe sie:\n${r.fehler.map((f) => `- ${f}`).join('\n')}`
+    prompt = `${wunschPrompt({ wunsch: p.wunsch, kanal: pr.kanal, typ: pr.typ, liste, saetze, effekte, laut: lauteMomente(wellen), sicht })}\n\n# Korrektur\nDeine letzte Antwort hatte diese Fehler, behebe sie:\n${r.fehler.map((f) => `- ${f}`).join('\n')}`
   }
   for (const s of a.schritte ?? []) liste = bereichSetzen(liste, s.von, s.bis, s.art === 'entfernen', s.warum)
   await writeFile(join(ordner, 'schnitt.json'), JSON.stringify(liste, null, 1))

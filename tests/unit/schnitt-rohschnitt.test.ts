@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { claudePrompt, laenge, regelSchnitt, schnittliste, vereinige } from '../../src/main/schnitt/rohschnitt'
+import { claudePrompt, laenge, regelSchnitt, schnittliste, vereinige, schnittEinstellungen } from '../../src/main/schnitt/rohschnitt'
 import { liesAbschnitte } from '../../src/main/schnitt/transkript'
 
 // Transkript des synthetischen Testvideos (Windows-Stimme): Pausen von 3,5 s, 4 s und 3 s, ein „ähm“ und ein
@@ -46,6 +46,14 @@ describe('Schnitt: Rohschnitt (ROADMAP 6.4)', () => {
   it('gibt Claude jeden Satz mit Nummer und Zeit und schützt Reaktionen aufs Spiel', () => {
     const p = claudePrompt(abschnitte.slice(0, 3), 'MoinMornhart')
     expect(p).toContain('0 [0.0–4.1] Moin Leute')
-    expect(p).toContain('Nicht entfernen: Reaktionen auf das Spiel')
+    expect(p).toContain('Nicht entfernen: Reaktionen')
+  })
+
+  it('wendet die Regeln des gewählten Videotyps an', () => {
+    expect(claudePrompt(abschnitte.slice(0, 1), 'MoinMorni', 'reaction')).toContain('Videotyp REACTION')
+    expect(claudePrompt(abschnitte.slice(0, 1), 'MoinMornhart', 'gaming')).toContain('Videotyp GAMING')
+    expect(schnittEinstellungen('reaction').maxPause).toBe(0.5)
+    expect(schnittEinstellungen('gaming').maxPause).toBe(0.6)
+    expect(schnittEinstellungen(undefined).maxPause).toBe(0.8)
   })
 })

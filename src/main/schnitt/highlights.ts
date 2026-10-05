@@ -11,6 +11,7 @@ import { filterGraph, renderArgs, untertitelAss, zeitAbbildung, type RenderOptio
 import type { Bereich, Schnittliste } from './rohschnitt'
 import { liesAbschnitte, type Abschnitt } from './transkript'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
+import { regelText, typName, type VideoTyp } from './regeln'
 import { clipDateiname, videoName } from '../dateinamen'
 
 /**
@@ -70,8 +71,12 @@ const SCHEMA = {
   }
 } as const
 
-export function highlightPrompt(abschnitte: Abschnitt[], laut: number[], kanal: string): string {
-  return `Du schneidest Highlights aus einem Livestream von Philip (Kanal ${kanal}, deutsch, Gaming/Minecraft). Unten das
+export function highlightPrompt(abschnitte: Abschnitt[], laut: number[], kanal: string, typ?: VideoTyp): string {
+  return `Du schneidest Highlights aus einem Livestream von Philip (Kanal ${kanal}, deutsch, Videotyp ${typName(typ)}).
+So erkennen erfolgreiche Creator Highlights für diesen Typ:
+${regelText(typ)}
+
+Unten das
 Transkript (Sekunde im Stream) und laute Momente (Explosionen, Schreien, Lachen). Finde die besten Momente für
 Highlight-Clips und Shorts: lustig, spannend, überraschend, emotional – nicht Begrüßung, nicht Leerlauf.
 Jeder Moment 15–60 s, mit etwas Anlauf vor dem Höhepunkt und kurz danach enden. Pro Moment: start, ende (Sekunden),
@@ -104,7 +109,7 @@ export async function highlightJob(p: HighlightPayload, ctx: JobContext<{ claude
       ctx.progress(5 + (t / pr.quelle.dauer) * 90, 'Claude sucht die Höhepunkte …')
       const teil = abschnitte.filter((a) => a.start >= t - 30 && a.start < t + block)
       if (!teil.length) continue
-      const res = await runClaudeInJob({ cli: p.claudeCli, prompt: highlightPrompt(teil, laut.filter((s) => s >= t && s < t + block), pr.kanal), workDir: join(p.daten, 'claude-work', 'schnitt'), tools: [], maxTurns: 2, jsonSchema: SCHEMA }, ctx)
+      const res = await runClaudeInJob({ cli: p.claudeCli, prompt: highlightPrompt(teil, laut.filter((s) => s >= t && s < t + block), pr.kanal, pr.typ), workDir: join(p.daten, 'claude-work', 'schnitt'), tools: [], maxTurns: 2, jsonSchema: SCHEMA }, ctx)
       if (!res.ok) continue
       const a = (res.structured ?? JSON.parse(/\{[\s\S]*\}/.exec(res.text)?.[0] ?? '{}')) as { highlights?: Highlight[] }
       gefunden.push(...(a.highlights ?? []))

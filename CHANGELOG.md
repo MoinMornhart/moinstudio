@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Schnitt: Nach dem Hochladen legst du per Knopf fest, was das Video ist – Kanal (MoinMornhart / MoinMorni) und Videotyp (Reaction / Gaming; bei MoinMornhart automatisch Gaming). Erst dann wird „Schneiden starten“ aktiv; die KI rät den Typ nicht.
+- Schnitt-Regeln je Videotyp nach Recherche erfolgreicher Creator (Hook, Rhythmus, Stream-Leerlauf, Reaktionen betonen, Highlights, Text und Sounds). Rohschnitt, Effekt-Wünsche und Highlight-Suche halten sich daran; Pausen werden bei Reaction ab 0,5 s, bei Gaming ab 0,6 s gekürzt (vorher 0,8 s), mit knapperem Puffer.
+
 ## [0.48.3] - 2026-10-04
 
 > Videos werden auf jedem Gerät gefunden

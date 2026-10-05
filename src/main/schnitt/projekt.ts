@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { basename, extname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { writeJsonAtomic } from '../data/jsonfile'
+import type { VideoTyp } from './regeln'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
 
 /**
@@ -30,6 +31,8 @@ export interface Projekt {
   /** Von Philip gewählter YouTube-Titel (Namensvorschlag); steht beim Export vor Claudes Titeln */
   youtubeTitel?: string
   kanal: string
+  /** Videotyp, per Knopf von Philip gewählt (nie geraten); ohne Typ wartet der Rohschnitt auf die Wahl */
+  typ?: VideoTyp
   erstellt: string
   quelle: QuellInfo | null
   /** Arbeitsschritte, die schon fertig sind */

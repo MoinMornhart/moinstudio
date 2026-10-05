@@ -27,6 +27,7 @@ import type { EffektHilfe } from './effekt-vorbereitung'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
 import { videoDateiname, videoName } from '../dateinamen'
+import { KANAELE, VIDEO_TYPEN, type VideoTyp } from './regeln'
 import { aendereKarte, ladeKarten } from '../planung/karten'
 
 /** Schnitt-Reiter (ROADMAP 6.x): Projekte, Import, Vorschau. */
@@ -99,6 +100,7 @@ export function registerSchnittIpc(
       id: p.id,
       name: p.name,
       kanal: p.kanal,
+      typ: p.typ ?? (p.rohschnitt ? 'gaming' : null),
       erstellt: p.erstellt,
       quelle: p.quelle ? { pfad: p.quelle.pfad, dauer: p.quelle.dauer, breite: p.quelle.breite, hoehe: p.quelle.hoehe, fps: p.quelle.fps, groesse: p.quelle.groesse, audio: p.quelle.audio } : null,
       proxyUrl: p.proxy ? medienUrl(join(ordner, 'proxy.mp4')) : null,
@@ -152,8 +154,8 @@ export function registerSchnittIpc(
     const payload: TranskriptPayload = { daten, projekt: id, ffmpeg, uv, pyDir: join(localRoot(), 'py', 'vorlage'), skript: join(resourceDir('blender'), 'transkript.py'), whisper, lokal: localRoot() }
     const auftrag = await queue.enqueue('schnitt-transkript', `Schnitt: ${projekt.name} Transkript`, payload)
     await aendereProjekt(daten, id, (neu) => ({ auftraege: [...(neu.auftraege ?? []), auftrag] }))
-    // danach der Rohschnitt, ebenfalls von selbst
-    await starteRohschnitt(id)
+    // danach der Rohschnitt – aber erst, wenn Philip Kanal und Typ per Knopf gewählt hat
+    if (projekt.typ) await starteRohschnitt(id)
     return auftrag
   }
 
@@ -191,6 +193,15 @@ export function registerSchnittIpc(
   })
   biete(IPC.schnittTranskriptStart, async (id: unknown) => starteTranskript(String(id)))
   biete(IPC.schnittRohschnittStart, async (id: unknown) => starteRohschnitt(String(id)))
+  biete(IPC.schnittZuordnen, async (id: unknown, kanal: unknown, typ: unknown) => {
+    if (!KANAELE.includes(kanal as (typeof KANAELE)[number])) throw new Error('Unbekannter Kanal.')
+    if (!VIDEO_TYPEN.includes(typ as VideoTyp)) throw new Error('Unbekannter Videotyp.')
+    const daten = await datenOrdner(settings)
+    // MoinMornhart ist reiner Minecraft-Gaming-Kanal
+    const t: VideoTyp = kanal === 'MoinMornhart' ? 'gaming' : (typ as VideoTyp)
+    await aendereProjekt(daten, String(id), () => ({ kanal: String(kanal), typ: t }))
+    return starteRohschnitt(String(id))
+  })
   // Schnitt ändern (ROADMAP 6.5): direkt in der Schnittliste, Wunsch in Worten als Auftrag
   const aendereListe = async (id: string, f: (l: Schnittliste) => Schnittliste): Promise<Schnittliste> => {
     const daten = await datenOrdner(settings)

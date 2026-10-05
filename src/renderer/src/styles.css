@@ -349,6 +349,11 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .kanal-knopf { display: grid; gap: 2px; text-align: left; background: var(--bg-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; font: inherit; cursor: pointer; }
 .kanal-knopf:hover { border-color: var(--muted); }
 .kanal-knopf.on { border-color: var(--accent); background: #33301f; }
+.kanal-knopf.gross { min-width: 190px; padding: 12px 18px; }
+.kanal-knopf.gross strong { font-size: 16px; }
+.kanal-knopf.on { box-shadow: 0 0 0 1px var(--accent) inset; }
+.kanal-knopf:disabled { opacity: 0.4; cursor: not-allowed; }
+.zuordnung { display: grid; gap: 8px; justify-items: start; padding: 14px; margin-bottom: 12px; border: 1px solid var(--accent); border-radius: 12px; background: var(--bg-2); }
 .board-scroll { overflow-x: auto; padding-bottom: 6px; }
 .board { min-width: 900px; align-items: start; }
 .board-col { display: flex; flex-direction: column; gap: 8px; border: 1px solid transparent; transition: border-color 0.1s; }

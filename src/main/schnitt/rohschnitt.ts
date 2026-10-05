@@ -4,6 +4,7 @@ import { runClaudeInJob } from '../claude/run'
 import type { JobContext } from '../jobs/queue'
 import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
 import { liesAbschnitte, type Abschnitt } from './transkript'
+import { regelText, typName, type VideoTyp } from './regeln'
 
 /**
  * Automatischer Rohschnitt (ROADMAP 6.4). Ergebnis ist eine Schnittliste (EDL-JSON) in schnitt.json: welche Bereiche
@@ -44,7 +45,14 @@ export const EINSTELLUNGEN = {
   minEntfernen: 0.35
 }
 
-const FUELLWOERTER = /^(ähm+|äh+|öhm+|ehm+|hm+|mhm)[.,!?…]*$/i
+/** Pausen-Schnitt je Typ (Recherche 05.10.): kürzere Pausen und knapperer Puffer als früher (0,8 s / 0,15 s / 0,3 s) */
+export function schnittEinstellungen(typ: VideoTyp | undefined): typeof EINSTELLUNGEN {
+  if (typ === 'reaction') return { ...EINSTELLUNGEN, maxPause: 0.5, vorlauf: 0.1, nachlauf: 0.15 }
+  if (typ === 'gaming') return { ...EINSTELLUNGEN, maxPause: 0.6, vorlauf: 0.1, nachlauf: 0.15 }
+  return EINSTELLUNGEN
+}
+
+const FUELLWOERTER =/^(ähm+|äh+|öhm+|ehm+|hm+|mhm)[.,!?…]*$/i
 
 const normal = (t: string): string => t.toLowerCase().replace(/[^a-zäöüß0-9 ]/g, '').replace(/\s+/g, ' ').trim()
 
@@ -134,14 +142,19 @@ const SCHEMA = {
   }
 } as const
 
-export function claudePrompt(abschnitte: Abschnitt[], kanal: string): string {
+export function claudePrompt(abschnitte: Abschnitt[], kanal: string, typ?: VideoTyp): string {
   const zeilen = abschnitte.map((a, i) => `${i} [${a.start.toFixed(1)}–${a.ende.toFixed(1)}] ${a.text}`).join('\n')
-  return `Du schneidest ein YouTube-Video von Philip (Kanal ${kanal}, deutsch, Minecraft/Gaming). Unten steht das Transkript,
+  return `Du schneidest ein YouTube-Video von Philip (Kanal ${kanal}, deutsch, Videotyp ${typName(typ)}). So schneiden
+erfolgreiche Creator diesen Typ – beachte vor allem, was rausfliegt:
+${regelText(typ)}
+
+Unten steht das Transkript,
 ein Satz pro Zeile mit Nummer und Zeit. Markiere NUR Sätze, die im fertigen Video stören:
 - versprecher: abgebrochener oder verhaspelter Satz, der gleich danach richtig gesagt wird
 - wiederholung: derselbe Inhalt wird kurz danach noch einmal gesagt (die schwächere Fassung entfernen)
-- leerlauf: inhaltsleeres Gemurmel ohne Bezug zum Geschehen (z. B. „mal schauen … hm … ja“)
-Nicht entfernen: Reaktionen auf das Spiel („Oh nein!“, „Puh“), Witze, Begrüßung, Verabschiedung, Abo-Hinweise –
+- leerlauf: inhaltsleeres Gemurmel ohne Bezug zum Geschehen (z. B. „mal schauen … hm … ja“), auch Stream-Leerlauf
+  wie Chat vorlesen ohne Pointe, Warten, Laden, Werbung, „ich schau mir das jetzt an“
+Nicht entfernen: Reaktionen („Oh nein!“, „Puh“, Lachen), Witze, Begrüßung, Verabschiedung, Abo-Hinweise –
 die machen das Video lebendig. Im Zweifel drin lassen. Antworte nur mit JSON nach dem Schema.
 
 ${zeilen}`
@@ -160,7 +173,7 @@ export async function rohschnittJob(p: RohschnittPayload, ctx: JobContext<{ clau
   const abschnitte = liesAbschnitte(await readFile(join(ordner, 'transkript.jsonl'), 'utf8').catch(() => ''))
   const wellen = pr.wellenform ? (JSON.parse(await readFile(join(ordner, 'wellenform.json'), 'utf8')) as { aufloesung: number; werte: number[] }) : null
   ctx.progress(10, 'Pausen und „ähm“ finden …')
-  const entfernt = regelSchnitt(abschnitte, pr.quelle.dauer, wellen)
+  const entfernt = regelSchnitt(abschnitte, pr.quelle.dauer, wellen, schnittEinstellungen(pr.typ))
 
   // Claude liest das Transkript (in Blöcken, damit auch Stunden-Streams passen); ohne Claude bleibt es beim Regelschnitt
   if (p.claudeCli && abschnitte.length) {
@@ -170,7 +183,7 @@ export async function rohschnittJob(p: RohschnittPayload, ctx: JobContext<{ clau
       ctx.progress(20 + (i / abschnitte.length) * 70, 'Claude liest das Transkript …')
       const teil = abschnitte.slice(i, i + block)
       const res = await runClaudeInJob(
-        { cli: p.claudeCli, prompt: claudePrompt(teil, pr.kanal), workDir: join(p.daten, 'claude-work', 'schnitt'), tools: [], maxTurns: 2, jsonSchema: SCHEMA },
+        { cli: p.claudeCli, prompt: claudePrompt(teil, pr.kanal, pr.typ), workDir: join(p.daten, 'claude-work', 'schnitt'), tools: [], maxTurns: 2, jsonSchema: SCHEMA },
         ctx
       )
       if (!res.ok) continue

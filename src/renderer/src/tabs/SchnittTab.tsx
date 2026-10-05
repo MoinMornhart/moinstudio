@@ -354,6 +354,70 @@ function VideoName({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void })
   )
 }
 
+/** Nach dem Hochladen: Kanal und Videotyp per Knopf (Philip, 05.10.: „die KI rät das nicht selbst“). Erst wenn beides
+ *  gewählt ist, lässt sich der Schnitt starten; MoinMornhart ist immer Gaming. */
+function Zuordnung({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): React.JSX.Element {
+  const [kanal, setKanal] = useState<string | null>(null)
+  const [typ, setTyp] = useState<'reaction' | 'gaming' | null>(null)
+  const [fehler, setFehler] = useState<string | null>(null)
+  const [laeuft, setLaeuft] = useState(false)
+  const waehleKanal = (k: string): void => {
+    setKanal(k)
+    if (k === 'MoinMornhart') setTyp('gaming')
+  }
+  const starten = (): void => {
+    if (!kanal || !typ) return
+    setLaeuft(true)
+    setFehler(null)
+    window.moin.schnittZuordnen(p.id, kanal, typ).then(
+      () => neuLaden(),
+      (err: unknown) => {
+        setFehler(err instanceof Error ? err.message : String(err))
+        setLaeuft(false)
+      }
+    )
+  }
+  const KNOEPFE_KANAL = [
+    { id: 'MoinMornhart', info: 'Minecraft-Gaming' },
+    { id: 'MoinMorni', info: 'Stream-Highlights' }
+  ]
+  const KNOEPFE_TYP = [
+    { id: 'reaction' as const, name: 'Reaction', info: 'Ich reagiere auf ein Video' },
+    { id: 'gaming' as const, name: 'Gaming', info: 'Ich spiele ein Spiel' }
+  ]
+  return (
+    <div className="zuordnung">
+      <strong>Was ist das für ein Video?</strong>
+      <span className="muted small">Kanal</span>
+      <div className="kanal-wahl">
+        {KNOEPFE_KANAL.map((k) => (
+          <button key={k.id} className={`kanal-knopf gross${kanal === k.id ? ' on' : ''}`} aria-pressed={kanal === k.id} onClick={() => waehleKanal(k.id)}>
+            <strong>{k.id}</strong>
+            <span className="muted small">{k.info}</span>
+          </button>
+        ))}
+      </div>
+      <span className="muted small">Videotyp</span>
+      <div className="kanal-wahl">
+        {KNOEPFE_TYP.map((t) => {
+          const gesperrt = kanal === 'MoinMornhart' && t.id === 'reaction'
+          return (
+            <button key={t.id} className={`kanal-knopf gross${typ === t.id ? ' on' : ''}`} aria-pressed={typ === t.id} disabled={gesperrt} title={gesperrt ? 'MoinMornhart ist reiner Gaming-Kanal' : undefined} onClick={() => setTyp(t.id)}>
+              <strong>{t.name}</strong>
+              <span className="muted small">{t.info}</span>
+            </button>
+          )
+        })}
+      </div>
+      <button className="btn primary" disabled={!kanal || !typ || laeuft} onClick={starten}>
+        {laeuft ? 'Startet …' : 'Schneiden starten'}
+      </button>
+      {!p.transkript && <span className="muted small">Das Transkript läuft schon im Hintergrund – der Schnitt beginnt direkt danach.</span>}
+      {fehler && <p className="warn small">{fehler}</p>}
+    </div>
+  )
+}
+
 function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void; neuLaden: () => void }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
@@ -376,7 +440,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
     if (video.current) video.current.currentTime = Math.max(0, Math.min(dauer, s))
   }
   return (
-    <Card title={p.name} badge={p.kanal}>
+    <Card title={p.name} badge={p.typ ? `${p.kanal} · ${p.typ === 'reaction' ? 'Reaction' : 'Gaming'}` : 'Noch zuordnen'}>
       <div className="row wrap" style={{ marginTop: 0, marginBottom: 12 }}>
         <button className="btn small" onClick={zurueck}>
           ← Alle Projekte
@@ -386,6 +450,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
         </button>
       </div>
       <VideoName p={p} neuLaden={neuLaden} />
+      {p.typ === null && <Zuordnung p={p} neuLaden={neuLaden} />}
       {p.auftrag && (
         <p className={p.auftrag.state === 'failed' ? 'warn' : 'muted'}>
           {p.auftrag.state === 'failed' ? `Fehler: ${p.auftrag.error}` : `${p.auftrag.step || 'Wartet …'}${p.auftrag.progress !== null ? ` (${Math.round(p.auftrag.progress)} %)` : ''}`}
@@ -461,7 +526,6 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
 export function SchnittTab(): React.JSX.Element {
   const [projekte, setProjekte] = useState<SchnittProjekt[]>([])
   const [offen, setOffen] = useState<string | null>(() => abholen('schnitt'))
-  const [kanal, setKanal] = useState(KANAELE[0]!)
   useEffect(() => {
     const sprung = (e: Event): void => {
       const d = (e as CustomEvent<{ tab: string; ziel?: string }>).detail
@@ -484,7 +548,7 @@ export function SchnittTab(): React.JSX.Element {
   const importieren = async (): Promise<void> => {
     setFehler(null)
     try {
-      const id = await window.moin.schnittImport(kanal)
+      const id = await window.moin.schnittImport(KANAELE[0]!)
       if (id) {
         setOffen(id)
         laden()
@@ -515,13 +579,8 @@ export function SchnittTab(): React.JSX.Element {
         ) : (
           <>
             <Card title="Neues Video">
-              <p className="muted small">Wähle dein Rohvideo (Aufnahme oder Stream). Es bleibt, wo es liegt – MoinStudio erstellt nur eine Vorschau zum Schneiden.</p>
+              <p className="muted small">Wähle dein Rohvideo (Aufnahme oder Stream). Es bleibt, wo es liegt. Danach wählst du Kanal und Videotyp, und MoinStudio schneidet.</p>
               <div className="row wrap">
-                <select className="input" value={kanal} onChange={(e) => setKanal(e.target.value)} style={{ flex: '0 0 170px' }}>
-                  {KANAELE.map((k) => (
-                    <option key={k}>{k}</option>
-                  ))}
-                </select>
                 <button className="btn primary" onClick={() => void importieren()}>
                   Rohvideo wählen …
                 </button>

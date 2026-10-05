@@ -73,6 +73,7 @@ export const IPC = {
   schnittTranskript: 'schnitt:transkript',
   schnittTranskriptStart: 'schnitt:transkript-start',
   schnittRohschnittStart: 'schnitt:rohschnitt-start',
+  schnittZuordnen: 'schnitt:zuordnen',
   schnittListe: 'schnitt:liste',
   schnittUmschalten: 'schnitt:umschalten',
   schnittBereich: 'schnitt:bereich',
@@ -282,6 +283,8 @@ export interface SchnittProjekt {
   id: string
   name: string
   kanal: string
+  /** Videotyp; null = noch nicht gewählt (dann wartet der Schnitt auf die Knöpfe) */
+  typ: 'reaction' | 'gaming' | null
   erstellt: string
   quelle: { pfad: string; dauer: number; breite: number; hoehe: number; fps: number; groesse: number; audio: boolean } | null
   /** moin-media://…-Adressen, sobald die Datei fertig ist */
@@ -514,6 +517,8 @@ export interface MoinApi {
   schnittTranskriptStart(id: string): Promise<string>
   /** Rohschnitt neu berechnen; Schnittliste (behalten/entfernt) lesen */
   schnittRohschnittStart(id: string): Promise<string>
+  /** Kanal und Videotyp per Knopf festlegen und den Schnitt starten (Philip, 05.10.: „die KI rät das nicht selbst“) */
+  schnittZuordnen(id: string, kanal: string, typ: 'reaction' | 'gaming'): Promise<string>
   schnittListe(id: string): Promise<SchnittListe | null>
   /** Schnitt ändern (ROADMAP 6.5): Stelle an/aus, Bereich raus/zurück, Wunsch in Worten (Auftrag) */
   schnittUmschalten(id: string, index: number): Promise<SchnittListe>

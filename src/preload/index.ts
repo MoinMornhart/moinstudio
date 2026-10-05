@@ -95,6 +95,7 @@ const api: MoinApi = {
   schnittTranskript: (id: string) => ipcRenderer.invoke(IPC.schnittTranskript, id),
   schnittTranskriptStart: (id: string) => ipcRenderer.invoke(IPC.schnittTranskriptStart, id),
   schnittRohschnittStart: (id: string) => ipcRenderer.invoke(IPC.schnittRohschnittStart, id),
+  schnittZuordnen: (id: string, kanal: string, typ: 'reaction' | 'gaming') => ipcRenderer.invoke(IPC.schnittZuordnen, id, kanal, typ),
   schnittListe: (id: string) => ipcRenderer.invoke(IPC.schnittListe, id),
   schnittUmschalten: (id: string, index: number) => ipcRenderer.invoke(IPC.schnittUmschalten, id, index),
   schnittBereich: (id: string, start: number, ende: number, raus: boolean, text?: string) => ipcRenderer.invoke(IPC.schnittBereich, id, start, ende, raus, text),
