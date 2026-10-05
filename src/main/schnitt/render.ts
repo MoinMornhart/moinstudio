@@ -195,7 +195,9 @@ export function auswahlAusdruck(stuecke: { start: number; ende: number }[]): str
 export function filterGraph(o: RenderOptionen): string {
   const g = filterGraphRoh(o)
   // [a] ist immer nur Ausgang des Graphen: umbenennen und die Lautheits-Normalisierung dahinter hängen
-  return o.lautheit && o.audio ? `${g.replace(/[a]/g, '[aroh]')};[aroh]loudnorm=I=-14:TP=-1:LRA=11,aresample=48000[a]` : g
+  // Nur die Marke „[a]“ ersetzen – /[a]/ ohne Backslashes traf jedes einzelne „a“ (scale → sc[aroh]le) und jeder Export
+  // mit Lautheit scheiterte (Laptop 05.10.)
+  return o.lautheit && o.audio ? `${g.split('[a]').join('[aroh]')};[aroh]loudnorm=I=-14:TP=-1:LRA=11,aresample=48000[a]` : g
 }
 
 function filterGraphRoh(o: RenderOptionen): string {

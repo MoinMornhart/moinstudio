@@ -60,6 +60,9 @@ describe('Schnitt: Untertitel, Zooms, Render (ROADMAP 6.6)', () => {
     const laut = filterGraph({ ...o, lautheit: true })
     expect(laut).toContain('[aroh]loudnorm=I=-14:TP=-1:LRA=11,aresample=48000[a]')
     expect(laut.match(/\[a\]/g)).toHaveLength(1)
+    // sonst unverändert: nur die Marke wird umbenannt, kein „a“ in Filternamen (scale, aselect) – Fehler 05.10.
+    expect(laut).toContain('crop=960:540')
+    expect(laut.replace(';[aroh]loudnorm=I=-14:TP=-1:LRA=11,aresample=48000[a]', '').split('[aroh]').join('[a]')).toBe(g)
   })
 
   it('Auswahl auch bei Hunderten Stücken: flacher Baum, wählt genau die behaltenen Zeiten', () => {
