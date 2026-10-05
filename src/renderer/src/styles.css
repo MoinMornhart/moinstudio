@@ -136,6 +136,8 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .desktop-connect p { margin: 0 0 8px; }
 .ok-note { background: #173524; border: 1px solid #2b6143; color: #c9f5da; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
 .row.wrap { flex-wrap: wrap; }
+.bib-popup { width: min(900px, 100%); max-height: 100%; overflow: auto; background: var(--bg); border: 1px solid var(--accent); border-radius: 16px; padding: 18px 20px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.bib-ordner { display: grid; gap: 2px; margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; }
 .setup-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(8, 8, 12, 0.92); display: grid; place-items: center; padding: 24px; }
 .setup-panel { width: min(1100px, 100%); height: min(760px, 100%); background: var(--bg); border: 1px solid var(--border); border-radius: 16px; display: grid; grid-template-columns: 230px 1fr; grid-template-rows: 1fr auto; overflow: hidden; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
 .setup-steps { grid-row: 1 / 3; list-style: none; margin: 0; padding: 26px 16px; background: var(--bg-2); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }

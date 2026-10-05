@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { dialog, ipcMain, type BrowserWindow } from 'electron'
-import { IPC, type BibEffektDaten, type BibDateiErgebnis } from '@shared/app'
+import { dialog, ipcMain, Notification, type BrowserWindow } from 'electron'
+import { IPC, type BibEffektDaten, type BibDateiErgebnis, type BibNeu } from '@shared/app'
+import { beobachteOrdner, ladeOrdner, ordnerEntfernen, ordnerHinzu, pruefeOrdner, type NeuerEffekt } from './bib-ordner'
 import { dateiInBibliothek, ladeBibliothek, loescheBibEffekt, speichereBibEffekt, STANDARD_CHROMA, type BibEffekt, type Chroma } from './bibliothek'
 import { dauerVon, keyFarbeErkennen, pixelFarbe, vorschauBild } from './chroma'
 import { ladeProjekte, projektOrdner } from './projekt'
@@ -54,6 +55,33 @@ export function registerBibliothekIpc(o: { datenOrdner: () => Promise<string>; f
     const proxy = projekt ? join(projektOrdner(daten, projekt.id), 'proxy.mp4') : null
     return vorschauBild(await ffmpeg(), { video, bild, chroma: v.chroma ?? null, zeit: v.zeit ?? 0.5, hintergrund: proxy && existsSync(proxy) ? proxy : null, roh: !!v.roh })
   })
+
+  // Effekt-Ordner (Philip, 05.10.): beobachten, neue Dateien als Effekt anlegen und an die Oberfläche melden
+  const melde = (neu: NeuerEffekt[]): void => {
+    const liste: BibNeu[] = neu.map((n) => ({ effekt: n.effekt as BibEffektDaten, art: n.art, quelle: n.quelle }))
+    o.getWindow()?.webContents.send(IPC.schnittBibNeu, liste)
+    const fenster = o.getWindow()
+    if (fenster && !fenster.isFocused() && Notification.isSupported()) {
+      new Notification({ title: liste.length === 1 ? 'Neuer Effekt gefunden' : `${liste.length} neue Effekte gefunden`, body: `${liste.map((l) => l.effekt.name).join(', ')} – in MoinStudio einrichten` }).show()
+    }
+  }
+  beobachteOrdner(o.datenOrdner, o.ffmpeg, melde)
+  ipcMain.handle(IPC.schnittBibOrdner, async (): Promise<string[]> => (await ladeOrdner(await o.datenOrdner())).ordner)
+  ipcMain.handle(IPC.schnittBibOrdnerHinzu, async (): Promise<string[]> => {
+    const win = o.getWindow()
+    const opts = { title: 'Ordner mit Effekten wählen', properties: ['openDirectory' as const] }
+    const wahl = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    const daten = await o.datenOrdner()
+    if (wahl.canceled || !wahl.filePaths[0]) return (await ladeOrdner(daten)).ordner
+    const d = await ordnerHinzu(daten, wahl.filePaths[0])
+    // gleich durchsehen: was schon im Ordner liegt, kommt sofort als Popup
+    void ffmpeg()
+      .then((ff) => pruefeOrdner(daten, ff))
+      .then((neu) => neu.length && melde(neu))
+      .catch((err: unknown) => console.error('Effekt-Ordner', err))
+    return d.ordner
+  })
+  ipcMain.handle(IPC.schnittBibOrdnerEntfernen, async (_e, pfad: unknown): Promise<string[]> => (await ordnerEntfernen(await o.datenOrdner(), String(pfad))).ordner)
 
   ipcMain.handle(IPC.schnittBibPipette, async (_e, id: unknown, datei: unknown, x: unknown, y: unknown, zeit: unknown): Promise<string> => {
     const daten = await o.datenOrdner()

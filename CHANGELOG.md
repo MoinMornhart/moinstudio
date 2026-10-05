@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Effekt-Bibliothek: **ganze Ordner beobachten** („Ordner hinzufügen …“, auch mit Unterordnern). Jede neue Datei darin wird automatisch zum Effekt – Name ist der Dateiname, die Art wird erkannt (Greenscreen samt Key-Farbe, Video mit Transparenz, normales Video, Bild, Sound) – und in der App erscheint ein Fenster zum Einrichten (Häufigkeit, Kanal, Platzierung, Position). Mehrere neue Dateien kommen nacheinander; „Später einrichten“ lässt den Effekt auf „nur manuell“. Ist die App im Hintergrund, kommt zusätzlich eine Windows-Benachrichtigung. Die Ordnerliste teilen PC und Laptop; was schon übernommen ist, wird nie doppelt angelegt.
+
 ## [0.55.0] - 2026-10-05
 
 > Premiere: Abo-Animation und Sounds als echte Clips

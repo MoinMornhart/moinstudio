@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { BibChroma, BibEffektDaten, BibLage } from '@shared/app'
+import type { BibChroma, BibEffektDaten, BibLage, BibNeu } from '@shared/app'
 import { Card } from './Panel'
 
 /**
@@ -8,7 +8,7 @@ import { Card } from './Panel'
  * Videotyp, wann und wo im Bild. Greenscreen wird mit FFmpeg entfernt, Regler und Pipette mit Live-Vorschau.
  */
 
-type Entwurf = Omit<BibEffektDaten, 'erstellt'> & { erstellt?: string }
+export type Entwurf = Omit<BibEffektDaten, 'erstellt'> & { erstellt?: string }
 
 const STANDARD_CHROMA: BibChroma = {
   farbe: '#00ff00',
@@ -160,7 +160,7 @@ function Vorschau({ e, setE }: { e: Entwurf; setE: (f: (x: Entwurf) => Entwurf) 
   )
 }
 
-function Bearbeiten({ start, fertig }: { start: Entwurf; fertig: () => void }): React.JSX.Element {
+export function Bearbeiten({ start, fertig }: { start: Entwurf; fertig: () => void }): React.JSX.Element {
   const [e, setE] = useState<Entwurf>(start)
   const [fehler, setFehler] = useState<string | null>(null)
   const [hinweis, setHinweis] = useState<string | null>(null)
@@ -537,8 +537,12 @@ export function EffektBibliothek(): React.JSX.Element {
   const [liste, setListe] = useState<BibEffektDaten[]>([])
   const [offen, setOffen] = useState<Entwurf | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
+  const [ordner, setOrdner] = useState<string[]>([])
   const laden = (): void => void window.moin.schnittBib().then(setListe, (e: unknown) => setFehler(fehlerText(e)))
   useEffect(laden, [])
+  useEffect(() => void window.moin.schnittBibOrdner().then(setOrdner), [])
+  // neue Effekte aus Ordnern: Liste auffrischen (das Popup selbst zeigt App.tsx)
+  useEffect(() => window.moin.onSchnittBibNeu(() => laden()), [])
   return (
     <Card title="Effekt-Bibliothek" badge={`${liste.length}`} breit>
       {fehler && <p className="warn small">{fehler}</p>}
@@ -584,9 +588,67 @@ export function EffektBibliothek(): React.JSX.Element {
             >
               Neuer Effekt
             </button>
+            <button type="button" className="btn" title="Ganzen Ordner beobachten: jede neue Datei darin wird automatisch zum Effekt (Name = Dateiname), und ein Fenster zum Einrichten erscheint" onClick={() => void window.moin.schnittBibOrdnerHinzu().then(setOrdner, (e: unknown) => setFehler(fehlerText(e)))}>
+              Ordner hinzufügen …
+            </button>
           </div>
+          {ordner.length > 0 && (
+            <div className="bib-ordner">
+              <span className="muted small">Beobachtete Ordner – neue Dateien darin werden automatisch zu Effekten (Greenscreen, Transparenz, Bild oder Sound wird erkannt):</span>
+              {ordner.map((o) => (
+                <div key={o} className="row" style={{ alignItems: 'center', marginTop: 4 }}>
+                  <code className="small" style={{ flex: 1 }}>
+                    {o}
+                  </code>
+                  <button type="button" className="btn small" onClick={() => void window.moin.schnittBibOrdnerEntfernen(o).then(setOrdner)}>
+                    nicht mehr beobachten
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </Card>
+  )
+}
+
+const ART_TEXT: Record<BibNeu['art'], string> = {
+  transparenz: 'Video mit Transparenz',
+  greenscreen: 'Greenscreen-Video – Hintergrund wird automatisch entfernt',
+  video: 'Video ohne Transparenz – läuft als ganzes Bild',
+  bild: 'Bild',
+  sound: 'Sound'
+}
+
+/**
+ * Popup für neue Effekte aus beobachteten Ordnern (Philip, 05.10.): erscheint überall in der App, zeigt die erkannte Art
+ * und das Einrichten-Formular. Mehrere neue Dateien kommen nacheinander. „Später“ lässt den Effekt auf „nur manuell“.
+ */
+export function NeueEffektePopup(): React.JSX.Element | null {
+  const [schlange, setSchlange] = useState<BibNeu[]>([])
+  useEffect(() => window.moin.onSchnittBibNeu((neu) => setSchlange((s) => [...s, ...neu.filter((n) => !s.some((x) => x.effekt.id === n.effekt.id))])), [])
+  const jetzt = schlange[0]
+  if (!jetzt) return null
+  const weiter = (): void => setSchlange((s) => s.slice(1))
+  return (
+    <div className="setup-overlay" role="dialog" aria-modal="true" aria-label="Neuer Effekt">
+      <div className="bib-popup">
+        <div className="card-head">
+          <h2>Neuer Effekt gefunden{schlange.length > 1 ? ` (1 von ${schlange.length})` : ''}</h2>
+        </div>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          „{jetzt.effekt.name}“ aus <code>{jetzt.quelle}</code>
+          <br />
+          Erkannt: <strong>{ART_TEXT[jetzt.art]}</strong>. Steht auf „nur manuell“, bis du ihn hier einrichtest.
+        </p>
+        <Bearbeiten key={jetzt.effekt.id} start={{ ...jetzt.effekt }} fertig={weiter} />
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <button type="button" className="btn small" onClick={weiter}>
+            Später einrichten
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

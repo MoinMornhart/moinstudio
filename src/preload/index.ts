@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   IPC,
   isTabId,
+  type BibNeu,
   type ExternalLink,
   type JobAction,
   type MoinApi,
@@ -102,6 +103,14 @@ const api: MoinApi = {
   schnittBibDatei: (id: string | null, rolle: string, greenscreen?: boolean) => ipcRenderer.invoke(IPC.schnittBibDatei, id, rolle, greenscreen),
   schnittBibVorschau: (id: string, o: unknown) => ipcRenderer.invoke(IPC.schnittBibVorschau, id, o),
   schnittBibPipette: (id: string, datei: string, x: number, y: number, zeit: number) => ipcRenderer.invoke(IPC.schnittBibPipette, id, datei, x, y, zeit),
+  schnittBibOrdner: () => ipcRenderer.invoke(IPC.schnittBibOrdner),
+  schnittBibOrdnerHinzu: () => ipcRenderer.invoke(IPC.schnittBibOrdnerHinzu),
+  schnittBibOrdnerEntfernen: (pfad: string) => ipcRenderer.invoke(IPC.schnittBibOrdnerEntfernen, pfad),
+  onSchnittBibNeu(handler: (neu: BibNeu[]) => void) {
+    const listener = (_e: IpcRendererEvent, neu: BibNeu[]): void => handler(neu)
+    ipcRenderer.on(IPC.schnittBibNeu, listener)
+    return () => ipcRenderer.removeListener(IPC.schnittBibNeu, listener)
+  },
   schnittBibVerteilen: (id: string) => ipcRenderer.invoke(IPC.schnittBibVerteilen, id),
   schnittListe: (id: string) => ipcRenderer.invoke(IPC.schnittListe, id),
   schnittUmschalten: (id: string, index: number) => ipcRenderer.invoke(IPC.schnittUmschalten, id, index),

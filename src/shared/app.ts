@@ -81,6 +81,10 @@ export const IPC = {
   schnittBibVorschau: 'schnitt:bib-vorschau',
   schnittBibPipette: 'schnitt:bib-pipette',
   schnittBibVerteilen: 'schnitt:bib-verteilen',
+  schnittBibOrdner: 'schnitt:bib-ordner',
+  schnittBibOrdnerHinzu: 'schnitt:bib-ordner-hinzu',
+  schnittBibOrdnerEntfernen: 'schnitt:bib-ordner-entfernen',
+  schnittBibNeu: 'schnitt:bib-neu',
   kalenderStand: 'kalender:stand',
   kalenderApple: 'kalender:apple',
   kalenderAppleTrennen: 'kalender:apple-trennen',
@@ -357,6 +361,13 @@ export interface BibDateiErgebnis {
   erkannt: boolean
 }
 
+/** Neu aus einem beobachteten Ordner übernommener Effekt (Art automatisch erkannt) */
+export interface BibNeu {
+  effekt: BibEffektDaten
+  art: 'transparenz' | 'greenscreen' | 'video' | 'bild' | 'sound'
+  quelle: string
+}
+
 export interface SchnittProjekt {
   id: string
   name: string
@@ -608,6 +619,11 @@ export interface MoinApi {
   schnittBibPipette(id: string, datei: string, x: number, y: number, zeit: number): Promise<string>
   /** Effekte aus der Bibliothek (neu) ins Projekt setzen; automatisch gesetzte werden ersetzt. Gibt die Auftrags-ID zurück. */
   schnittBibVerteilen(id: string): Promise<string>
+  /** Effekt-Ordner (05.10.): beobachtete Ordner; neue Dateien werden zu Effekten und melden sich per onSchnittBibNeu */
+  schnittBibOrdner(): Promise<string[]>
+  schnittBibOrdnerHinzu(): Promise<string[]>
+  schnittBibOrdnerEntfernen(pfad: string): Promise<string[]>
+  onSchnittBibNeu(handler: (neu: BibNeu[]) => void): () => void
   /** Kalender-Abgleich: Stand, Apple-ID verbinden, Einstellungen, Links, sofort abgleichen */
   kalenderStand(): Promise<KalenderStand>
   kalenderApple(benutzer: string, passwort: string): Promise<void>
