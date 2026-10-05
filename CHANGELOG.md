@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-10-05
+
+> Schnitt: Kanal und Videotyp per Knopf, Regeln für Reaction und Gaming
+
 ### Added
 
 - Schnitt: Nach dem Hochladen legst du per Knopf fest, was das Video ist – Kanal (MoinMornhart / MoinMorni) und Videotyp (Reaction / Gaming; bei MoinMornhart automatisch Gaming). Erst dann wird „Schneiden starten“ aktiv; die KI rät den Typ nicht.
