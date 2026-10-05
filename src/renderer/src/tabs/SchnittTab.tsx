@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SchnittAbschnitt, SchnittExport, SchnittHighlight, SchnittListe, SchnittProjekt } from '@shared/app'
 import { Card, PageHeader } from '../components/Panel'
 import { EffektListe, WunschFeld } from '../components/SchnittWunsch'
+import { EffektBibliothek } from '../components/EffektBibliothek'
 import { abholen, OEFFNE_EREIGNIS } from '../navigation'
 import { Fortschritt, useClaudeAuftrag } from '../components/PlanungClaude'
 
@@ -602,6 +603,7 @@ export function SchnittTab(): React.JSX.Element {
                 </button>
               ))}
             </Card>
+            <EffektBibliothek />
           </>
         )}
       </div>

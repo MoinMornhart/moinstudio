@@ -5,7 +5,7 @@ import { IPC } from '@shared/app'
 import { benchScriptPath, type HardwareController } from '../hardware/controller'
 import { ProfileStore } from '../hardware/profile'
 import type { ToolManager } from '../tools/manager'
-import { BLENDER_FALLBACK, BLENDER_PRIMARY } from '../tools/specs'
+import { BLENDER_FALLBACK, BLENDER_PRIMARY, FFMPEG } from '../tools/specs'
 import { probeRenderJob, type ProbeRenderPayload } from './blender'
 import { registerJobsIpc } from './ipc'
 import type { SettingsStore } from '../data/settings'
@@ -14,6 +14,8 @@ import { registerThumbnailIpc } from '../thumbnail/ipc'
 import { registerSchnittIpc } from '../schnitt/ipc'
 import { registerPlanungIpc } from '../planung/ipc'
 import { registerAdobeIpc } from '../adobe/ipc'
+import { registerBibliothekIpc } from '../schnitt/bibliothek-ipc'
+import { datenOrdner } from '../schnitt/ipc'
 import { registerLogoIpc } from '../logo/ipc'
 
 /**
@@ -33,6 +35,7 @@ export function setupJobs(
   const { starteThumbnail, starteVideo, starteReaktion, starteSpielvorlage, starteAenderung } = registerThumbnailIpc(queue, settings, hardware, tools, getWindow)
   const schnitt = registerSchnittIpc(queue, settings, tools, hardware, getWindow, starteVideo)
   const { starteImport, starteWunsch } = schnitt
+  registerBibliothekIpc({ datenOrdner: () => datenOrdner(settings), ffmpeg: () => tools.exePath(FFMPEG), getWindow })
   registerAdobeIpc(settings, queue, getWindow, tools)
   const logo = registerLogoIpc(queue, settings, hardware, tools, getWindow)
   const planung = registerPlanungIpc(settings, getWindow, { queue, starteThumbnail, starteImport })

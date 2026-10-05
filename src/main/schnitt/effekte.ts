@@ -1,4 +1,24 @@
 import type { Bereich } from './rohschnitt'
+import type { Chroma } from './bibliothek'
+import { alphaDecoder, chromaFilter } from './chroma'
+
+/** Lage im Bild; Ecken für Effekte aus der Bibliothek (Abo-Animation unten rechts …), „voll“ = ganzes Bild */
+export type EffektLage = 'oben' | 'mitte' | 'unten' | 'links' | 'rechts' | 'oben-links' | 'oben-rechts' | 'unten-links' | 'unten-rechts' | 'voll'
+/** Effekt stammt aus der Bibliothek (Name für die Zeitleiste, automatisch oder per Wunsch gesetzt) */
+export interface BibMarke {
+  id: string
+  name: string
+  auto?: boolean
+}
+
+/** x/y-Ausdruck für overlay aus der Lage (4–6 % Randabstand, unten über der Player-Leiste) */
+export function lageXY(lage: EffektLage | undefined, std: EffektLage): { x: string; y: string } {
+  const l = lage ?? std
+  if (l === 'voll') return { x: '0', y: '0' }
+  const x = l.endsWith('links') || l === 'links' ? 'W*0.04' : l.endsWith('rechts') || l === 'rechts' ? 'W*0.96-w' : '(W-w)/2'
+  const y = l.startsWith('oben') ? 'H*0.06' : l.startsWith('unten') ? 'H*0.86-h' : '(H-h)/2'
+  return { x, y }
+}
 
 /**
  * Effekte im Schnitt (ROADMAP E.2): kombinierbare Bausteine statt fester Effektliste. Zeiten stehen im geschnittenen
@@ -17,10 +37,10 @@ export type Effekt =
   /** Ausblenden (bleibt dunkel, z. B. am Ende) oder Einblenden (aus Schwarz, z. B. am Anfang); Ton geht mit */
   | { art: 'abblende'; von: number; bis: number; richtung: 'aus' | 'ein'; farbe?: 'weiss' | 'schwarz' }
   | { art: 'text'; von: number; bis: number; text: string; lage?: 'oben' | 'mitte' | 'unten'; farbe?: string; groesse?: number; animation?: 'pop' | 'fest' }
-  | { art: 'bild'; von: number; bis: number; datei: string; lage?: 'oben' | 'mitte' | 'unten' | 'links' | 'rechts'; groesse?: number }
+  | { art: 'bild'; von: number; bis: number; datei: string; lage?: EffektLage; groesse?: number; bib?: BibMarke }
   /** Video mit Alphakanal einblenden (Abo-Animation, Grafikpaket): läuft ab `bei` einmal durch, `ton` mischt seinen Ton dazu */
-  | { art: 'video'; bei: number; datei: string; lage?: 'oben' | 'mitte' | 'unten' | 'links' | 'rechts'; groesse?: number; ton?: boolean }
-  | { art: 'geraeusch'; bei: number; klang: string; lautstaerke?: number }
+  | { art: 'video'; bei: number; datei: string; lage?: EffektLage; groesse?: number; ton?: boolean; chroma?: Chroma; bib?: BibMarke }
+  | { art: 'geraeusch'; bei: number; klang: string; lautstaerke?: number; bib?: BibMarke }
   | { art: 'zensur'; von: number; bis: number }
   | { art: 'lautstaerke'; von: number; bis: number; faktor: number }
   /** Vorspann (ROADMAP E.3): Clips und Titelkarten vor dem Video; klang: false schaltet die automatischen Geräusche ab */
@@ -344,8 +364,9 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
     const breite = e.art === 'text' ? Math.round(o.hoehe * klemme(e.groesse ?? 0.12, 0.07, 0.4) * ((tb?.breite ?? 1) / Math.max(1, (tb?.hoehe ?? 1) / Math.max(1, e.text.split('\n').length)))) : Math.round(o.breite * klemme(e.groesse ?? 0.3, 0.05, 1))
     const pop = e.art === 'text' && (e.animation ?? 'pop') === 'pop' ? `*(0.55+0.45*min(1\\,max(0\\,(t-${z(von)})/0.12)))` : ''
     const lage = e.lage ?? (e.art === 'text' ? 'oben' : 'rechts')
-    const x = lage === 'links' ? 'W*0.05' : lage === 'rechts' ? 'W*0.95-w' : '(W-w)/2'
-    const y = lage === 'oben' ? 'H*0.08' : lage === 'unten' ? 'H*0.78-h' : '(H-h)/2'
+    const ecke = lage.includes('-') || lage === 'voll'
+    const x = ecke ? lageXY(lage, 'rechts').x : lage === 'links' ? 'W*0.05' : lage === 'rechts' ? 'W*0.95-w' : '(W-w)/2'
+    const y = ecke ? lageXY(lage, 'rechts').y : lage === 'oben' ? 'H*0.08' : lage === 'unten' ? 'H*0.78-h' : '(H-h)/2'
     teile.push(`[${idx}:v]setpts=PTS-STARTPTS+${z(von)}/TB,format=rgba,scale=w='${Math.min(o.breite, breite)}${pop}':h=-1:eval=frame,fade=t=in:st=${z(von)}:d=0.1:alpha=1,fade=t=out:st=${z(bis - 0.15)}:d=0.15:alpha=1[ov${i}]`)
     teile.push(`[${v}][ov${i}]overlay=x='${x}':y='${y}':enable='${zwischen(von, bis)}':eof_action=pass[vo${i}]`)
     v = `vo${i}`
@@ -356,12 +377,12 @@ export function effektGraph(o: EffektOptionen): EffektGraph {
   o.effekte.forEach((e, i) => {
     if (e.art !== 'video' || !e.datei) return
     const von = E(e.bei)
-    const g = klemme(e.groesse ?? 1, 0.1, 1)
-    const idx = neueEingabe({ vor: [], datei: e.datei })
-    const lage = e.lage ?? 'unten'
-    const x = g >= 1 ? '0' : lage === 'links' ? 'W*0.04' : lage === 'rechts' ? 'W*0.96-w' : '(W-w)/2'
-    const y = g >= 1 ? '0' : lage === 'oben' ? 'H*0.06' : lage === 'mitte' ? '(H-h)/2' : 'H*0.94-h'
-    teile.push(`[${idx}:v]format=rgba,scale=${Math.round(o.breite * g)}:-2,fps=${o.fps},setpts=PTS-STARTPTS+${z(von)}/TB[vv${i}]`)
+    const g = e.lage === 'voll' ? 1 : klemme(e.groesse ?? 1, 0.1, 1)
+    const idx = neueEingabe({ vor: alphaDecoder(e.datei), datei: e.datei })
+    const { x, y } = g >= 1 ? { x: '0', y: '0' } : lageXY(e.lage, 'unten')
+    // Greenscreen-Effekte (Bibliothek): Hintergrund per Chroma Key entfernen
+    const key = e.chroma ? chromaFilter(e.chroma) : 'format=rgba'
+    teile.push(`[${idx}:v]${key},scale=${Math.round(o.breite * g)}:-2,fps=${o.fps},setpts=PTS-STARTPTS+${z(von)}/TB[vv${i}]`)
     teile.push(`[${v}][vv${i}]overlay=x='${x}':y='${y}':eof_action=pass[vvo${i}]`)
     v = `vvo${i}`
     if (e.ton) videoTon.push({ idx, zeit: von })

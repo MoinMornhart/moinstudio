@@ -7,6 +7,7 @@ import { renderSting, type StingFigur, type StingRender } from '../animation/sti
 import type { Bereich } from './rohschnitt'
 import { sichereKlaenge } from './klaenge'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
+import { bibPfad } from './bibliothek'
 
 /** Was die Aufträge für Effekte brauchen (ROADMAP E.2) */
 export interface EffektHilfe {
@@ -38,11 +39,23 @@ export async function ladeEffekte(ordner: string, dauer: number): Promise<Effekt
 
 /** Lädt die Effekte eines Projekts und legt Text-Bilder und Geräusche an; null, wenn es keine Effekte gibt. */
 export async function bereiteEffekteVor(daten: string, ordner: string, schnitt: { dauer: number; behalten: Bereich[] }, hilfe: EffektHilfe, format: { breite: number; hoehe: number; fps: number } = { breite: 1920, hoehe: 1080, fps: 30 }): Promise<VorbereiteteEffekte | null> {
-  // gespeichert in Originalzeit, gerendert in Schnittzeit
-  const liste = effekteInSchnittzeit(await ladeEffekte(ordner, schnitt.dauer), schnitt.behalten)
+  // gespeichert in Originalzeit, gerendert in Schnittzeit; Bibliotheks-Dateien („bib:<id>/<datei>“) auf diesem Gerät
+  // auflösen – fehlt eine Datei (Effekt gelöscht), fällt der Effekt weg statt das Rendern abzubrechen
+  const klaenge: Record<string, string> = { ...(await sichereKlaenge(hilfe.ffmpeg, join(hilfe.lokal, 'klaenge'))) }
+  const liste = effekteInSchnittzeit(await ladeEffekte(ordner, schnitt.dauer), schnitt.behalten).flatMap((e): Effekt[] => {
+    if ((e.art === 'video' || e.art === 'bild') && e.datei.startsWith('bib:')) {
+      const pfad = bibPfad(daten, e.datei)
+      return pfad ? [{ ...e, datei: pfad }] : []
+    }
+    if (e.art === 'geraeusch' && e.klang.startsWith('bib:')) {
+      const pfad = bibPfad(daten, e.klang)
+      if (!pfad) return []
+      klaenge[e.klang] = pfad
+    }
+    return [e]
+  })
   const laenge = schnitt.behalten.reduce((s, b) => s + b.ende - b.start, 0)
   if (!liste.length) return null
-  const klaenge = await sichereKlaenge(hilfe.ffmpeg, join(hilfe.lokal, 'klaenge'))
   const textBilder: VorbereiteteEffekte['textBilder'] = {}
   // Texte der Effekte (Schlüssel „i“) und der Intro-Karten (Schlüssel „i.j“)
   const texte: { schluessel: string; text: string; farbe?: string }[] = []

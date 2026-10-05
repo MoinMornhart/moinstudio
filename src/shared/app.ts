@@ -74,6 +74,12 @@ export const IPC = {
   schnittTranskriptStart: 'schnitt:transkript-start',
   schnittRohschnittStart: 'schnitt:rohschnitt-start',
   schnittZuordnen: 'schnitt:zuordnen',
+  schnittBib: 'schnitt:bib',
+  schnittBibSpeichern: 'schnitt:bib-speichern',
+  schnittBibLoeschen: 'schnitt:bib-loeschen',
+  schnittBibDatei: 'schnitt:bib-datei',
+  schnittBibVorschau: 'schnitt:bib-vorschau',
+  schnittBibPipette: 'schnitt:bib-pipette',
   schnittListe: 'schnitt:liste',
   schnittUmschalten: 'schnitt:umschalten',
   schnittBereich: 'schnitt:bereich',
@@ -279,6 +285,39 @@ export interface SchnittExport {
 }
 
 /** Schnitt-Projekt für die Oberfläche (ROADMAP 6.2) */
+export interface BibChroma {
+  farbe: string
+  toleranz: number
+  weichheit: number
+  spill: number
+}
+export type BibLage = 'oben-links' | 'oben' | 'oben-rechts' | 'links' | 'mitte' | 'rechts' | 'unten-links' | 'unten' | 'unten-rechts' | 'voll'
+/** Effekt aus der Bibliothek (Spiegel von src/main/schnitt/bibliothek.ts) */
+export interface BibEffektDaten {
+  id: string
+  name: string
+  video?: { datei: string; greenscreen: boolean; ton: boolean }
+  bild?: { datei: string; dauer: number }
+  sound?: { datei: string; lautstaerke: number }
+  chroma?: BibChroma
+  haeufigkeit: { modus: 'immer' | 'manchmal' | 'manuell'; jedes?: number; prozent?: number }
+  kanaele: string[]
+  typen: ('reaction' | 'gaming')[]
+  platzierung: { modus: 'fest' | 'ki'; bezug?: 'start' | 'ende'; sekunden?: number }
+  lage: BibLage
+  groesse: number
+  erstellt: string
+  zaehler?: number
+}
+export interface BibDateiErgebnis {
+  id: string
+  datei: string
+  dauer: number
+  chroma: BibChroma | null
+  /** Key-Farbe wurde automatisch erkannt (sonst Standard-Grün) */
+  erkannt: boolean
+}
+
 export interface SchnittProjekt {
   id: string
   name: string
@@ -519,6 +558,13 @@ export interface MoinApi {
   schnittRohschnittStart(id: string): Promise<string>
   /** Kanal und Videotyp per Knopf festlegen und den Schnitt starten (Philip, 05.10.: „die KI rät das nicht selbst“) */
   schnittZuordnen(id: string, kanal: string, typ: 'reaction' | 'gaming'): Promise<string>
+  /** Effekt-Bibliothek (eigene Effekte mit Video, Greenscreen, Bild, Sound) */
+  schnittBib(): Promise<BibEffektDaten[]>
+  schnittBibSpeichern(e: Partial<BibEffektDaten>): Promise<BibEffektDaten>
+  schnittBibLoeschen(id: string): Promise<void>
+  schnittBibDatei(id: string | null, rolle: 'video' | 'bild' | 'sound', greenscreen?: boolean): Promise<BibDateiErgebnis | null>
+  schnittBibVorschau(id: string, o: { video?: string; bild?: string; chroma?: BibChroma | null; zeit?: number; roh?: boolean }): Promise<string | null>
+  schnittBibPipette(id: string, datei: string, x: number, y: number, zeit: number): Promise<string>
   schnittListe(id: string): Promise<SchnittListe | null>
   /** Schnitt ändern (ROADMAP 6.5): Stelle an/aus, Bereich raus/zurück, Wunsch in Worten (Auftrag) */
   schnittUmschalten(id: string, index: number): Promise<SchnittListe>

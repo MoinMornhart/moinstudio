@@ -6,6 +6,11 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Schnitt: Effekt-Bibliothek. Eigene Effekte mit Namen anlegen (z. B. „Abonnieren-Animation“, „Vine-Boom“) aus Video mit Transparenz, Greenscreen-Video, Bild und/oder Sound. Alles per Knopf: Häufigkeit (in jedem Video / nur in manchen – jedes n-te oder X % / nur manuell), Kanal, Videotyp, Platzierung (fester Zeitpunkt nach dem Start oder vor dem Ende / KI entscheidet), Position im Bild und Größe. Die Bibliothek liegt im Datenordner, PC und Laptop teilen sie.
+- Greenscreen entfernen ohne Adobe: Die Hintergrundfarbe wird beim Hochladen automatisch erkannt, sonst per Pipette im Bild gewählt. Regler für Toleranz, Kantenweichheit und Spill (Grünstich am Rand) mit Live-Vorschau über einem Standbild aus deinem neuesten Projekt. Einstellungen werden pro Effekt gespeichert und beim Rendern genutzt; Videos mit Transparenz (WebM) behalten ihren Alphakanal.
+
 ## [0.49.0] - 2026-10-05
 
 > Schnitt: Kanal und Videotyp per Knopf, Regeln für Reaction und Gaming

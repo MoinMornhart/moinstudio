@@ -32,7 +32,7 @@ import { aendereKarte, ladeKarten } from '../planung/karten'
 
 /** Schnitt-Reiter (ROADMAP 6.x): Projekte, Import, Vorschau. */
 
-async function datenOrdner(settings: SettingsStore): Promise<string> {
+export async function datenOrdner(settings: SettingsStore): Promise<string> {
   if (process.env['MOIN_TEST_DATEN']) return process.env['MOIN_TEST_DATEN']
   const dir = (await settings.load()).dataDir
   if (!dir) throw new Error('Bitte zuerst in den Einstellungen einen Datenordner wählen.')
