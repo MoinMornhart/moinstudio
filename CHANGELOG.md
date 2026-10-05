@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-10-05
+
+> Schnitt: Timeline, Export in 1080p/60 fps mit YouTube-Lautheit
+
 ### Added
 
 - Schnitt: Timeline über der ganzen Aufnahme – oben der Schnitt (grün bleibt, rot fliegt raus; Klick auf Rot lässt die Stelle doch drin und zurück), darunter Spuren für Bibliotheks-Effekte, Bild & Text, Kamera & Tempo und Ton. Klick auf einen Effekt springt hin und schaltet ihn an/aus oder löscht ihn; Zoom-Regler für lange Streams. Timeline und Effektliste bleiben gleich.

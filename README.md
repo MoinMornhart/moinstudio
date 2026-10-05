@@ -48,11 +48,11 @@ Alles lässt sich auch aus **Claude Desktop** steuern: Thumbnails, `video_edit` 
 ## Neueste Änderungen
 
 <!-- CHANGELOG:START -->
+- **0.52.0** (2026-10-05): Schnitt: Timeline, Export in 1080p/60 fps mit YouTube-Lautheit
 - **0.51.0** (2026-10-05): Schnitt: Effekte aus der Bibliothek automatisch und per Wunsch
 - **0.50.1** (2026-10-05): Abhängigkeiten aktualisiert (Electron 44.5.1)
 - **0.50.0** (2026-10-05): Schnitt: eigene Effekt-Bibliothek mit Greenscreen-Entfernung
 - **0.49.0** (2026-10-05): Schnitt: Kanal und Videotyp per Knopf, Regeln für Reaction und Gaming
-- **0.48.3** (2026-10-04): Videos werden auf jedem Gerät gefunden
 <!-- CHANGELOG:END -->
 
 ## Installation
