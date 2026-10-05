@@ -6,6 +6,16 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Schnitt: Schalter **„Zuschauen“**. An: Du siehst live, wie geschnitten wird – die Schritte (Import, Transkript, Rohschnitt, Effekte, Vorschau, Export) mit Fortschritt und beim Rendern jede Sekunde das aktuelle Bild; nach den Effekten startet die Vorschau von selbst. Aus: Alles läuft im Hintergrund bis zum fertigen Export, dann kommt eine Windows-Benachrichtigung. Das Live-Bild liegt lokal, nicht in iCloud.
+
+### Fixed
+
+- Projekt nach iCloud-Konflikt nicht mehr gefunden: iCloud benannte projekt.json in „projekt 2.json“ und „projekt(1).json“ um – die Form „(1)“ wurde nicht erkannt. Jetzt werden alle Formen repariert, die neueste gültige Fassung gewinnt, fehlende Felder kommen aus der älteren, und die Kopien werden nach %LOCALAPPDATA%\MoinStudio\konflikt-sicherung verschoben statt gelöscht.
+- Effekt-Bibliothek: Einstellungen aus einer iCloud-Konfliktkopie („effekt 2.json“) gingen verloren – die Bibliothek nutzt jetzt dieselbe Reparatur.
+- Beim Öffnen eines Schnitt-Projekts erkennt MoinStudio aus den Dateien, was schon fertig ist (Transkript, Schnitt, Vorschau, Export – auch vom anderen Gerät), und was fehlt.
+
 ## [0.53.1] - 2026-10-05
 
 > Export mit Lautheit läuft wieder

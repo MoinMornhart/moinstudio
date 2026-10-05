@@ -371,8 +371,10 @@ export interface SchnittProjekt {
   wellenform: boolean
   transkript: boolean
   rohschnitt: boolean
-  einstellungen: { untertitel: 'aus' | 'an' | 'karaoke'; zooms: boolean }
+  einstellungen: { untertitel: 'aus' | 'an' | 'karaoke'; zooms: boolean; zuschauen: boolean }
   exportiert: boolean
+  /** Zuschauen: Live-Bild des laufenden Renders (moin-media://…?v=…), solange gerendert wird */
+  liveUrl: string | null
   /** Claudes Antwort auf den letzten Wunsch (ROADMAP E.5) */
   antwort: { wunsch: string; text: string; zeit: string } | null
   /** Stream-Highlights (ROADMAP 6.8): Anzahl oder null (noch nicht gesucht), Stand der Clips */
@@ -381,7 +383,7 @@ export interface SchnittProjekt {
   /** geschnittene Vorschau (ROADMAP 6.6), sobald gerendert */
   vorschauUrl: string | null
   /** laufender Auftrag (Import, Transkript …) */
-  auftrag: { state: string; progress: number | null; step: string; error: string | null } | null
+  auftrag: { state: string; progress: number | null; step: string; error: string | null; art: string } | null
 }
 
 export interface ThumbSkin {
@@ -620,7 +622,7 @@ export interface MoinApi {
   schnittBereich(id: string, start: number, ende: number, raus: boolean, text?: string): Promise<SchnittListe>
   schnittWunsch(id: string, wunsch: string): Promise<string>
   /** Untertitel/Zooms einstellen, geschnittene Vorschau rendern (Auftrag) */
-  schnittEinstellungen(id: string, patch: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean }): Promise<void>
+  schnittEinstellungen(id: string, patch: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean; zuschauen?: boolean }): Promise<void>
   schnittVorschau(id: string): Promise<string>
   /** Export für YouTube (ROADMAP 6.7): Auftrag, Ergebnis mit Prüfung/Kapiteln, Speichern unter, Übergabe ans Thumbnail */
   schnittExport(id: string): Promise<string>

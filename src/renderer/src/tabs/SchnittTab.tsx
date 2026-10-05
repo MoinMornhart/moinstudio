@@ -420,6 +420,52 @@ function Zuordnung({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void })
   )
 }
 
+/** Schritte vom Rohvideo bis zum fertigen Video – für die Anzeige beim Zuschauen */
+const SCHRITTE: { art: string[]; name: string }[] = [
+  { art: ['schnitt-import'], name: 'Import' },
+  { art: ['schnitt-transkript'], name: 'Transkript' },
+  { art: ['schnitt-rohschnitt'], name: 'Rohschnitt' },
+  { art: ['schnitt-bib-verteilen', 'schnitt-wunsch'], name: 'Effekte' },
+  { art: ['schnitt-vorschau'], name: 'Vorschau' },
+  { art: ['schnitt-export'], name: 'Export' }
+]
+
+/** Zuschauen (Philip, 05.10.): an = man sieht live, wie geschnitten wird (Schritte, Fortschritt, Live-Bild beim
+ *  Rendern); aus = alles läuft im Hintergrund bis zum fertigen Export, dann kommt eine Benachrichtigung. */
+function Zuschauen({ p, neuLaden }: { p: SchnittProjekt; neuLaden: () => void }): React.JSX.Element {
+  const a = p.auftrag
+  const an = p.einstellungen.zuschauen
+  const jetzt = a ? SCHRITTE.findIndex((s) => s.art.includes(a.art)) : -1
+  const umschalten = (wert: boolean): void => void window.moin.schnittEinstellungen(p.id, { zuschauen: wert }).then(neuLaden)
+  return (
+    <div className={`zuschauen${an && a ? ' aktiv' : ''}`}>
+      <div className="row" style={{ alignItems: 'center', marginTop: 0, justifyContent: 'space-between' }}>
+        <label className="row" style={{ alignItems: 'center', marginTop: 0 }} title="An: du siehst live, wie geschnitten und gerendert wird. Aus: alles läuft im Hintergrund bis zum fertigen Video, dann kommt eine Benachrichtigung.">
+          <input type="checkbox" checked={an} onChange={(e) => umschalten(e.target.checked)} /> <strong>Zuschauen</strong>
+          <span className="muted small">{an ? 'du siehst, wie geschnitten wird' : 'im Hintergrund – du bekommst nur das fertige Video'}</span>
+        </label>
+      </div>
+      {a && a.state === 'failed' && <p className="warn">Fehler: {a.error}</p>}
+      {a && a.state !== 'failed' && !an && <p className="muted small">Läuft im Hintergrund ({a.step || 'wartet'}) – du bekommst eine Nachricht, wenn das Video fertig ist.</p>}
+      {a && a.state !== 'failed' && an && (
+        <>
+          <ol className="zuschauen-schritte">
+            {SCHRITTE.map((s, i) => (
+              <li key={s.name} className={i < jetzt ? 'fertig' : i === jetzt ? 'jetzt' : ''}>
+                {i < jetzt ? '✓ ' : ''}
+                {s.name}
+              </li>
+            ))}
+          </ol>
+          <p className="zuschauen-text">{a.step || 'Wartet …'}</p>
+          {a.progress !== null && <progress max={100} value={a.progress} style={{ width: '100%' }} />}
+          {p.liveUrl ? <img className="schnitt-player zuschauen-live" src={p.liveUrl} alt="Live-Bild vom Rendern" /> : jetzt >= 4 ? <div className="thumb-placeholder schnitt-player">Gleich kommt das erste Bild …</div> : null}
+        </>
+      )}
+    </div>
+  )
+}
+
 function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt; zurueck: () => void; loeschen: () => void; neuLaden: () => void }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const [zeit, setZeit] = useState(0)
@@ -453,11 +499,7 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
       </div>
       <VideoName p={p} neuLaden={neuLaden} />
       {p.typ === null && <Zuordnung p={p} neuLaden={neuLaden} />}
-      {p.auftrag && (
-        <p className={p.auftrag.state === 'failed' ? 'warn' : 'muted'}>
-          {p.auftrag.state === 'failed' ? `Fehler: ${p.auftrag.error}` : `${p.auftrag.step || 'Wartet …'}${p.auftrag.progress !== null ? ` (${Math.round(p.auftrag.progress)} %)` : ''}`}
-        </p>
-      )}
+      <Zuschauen p={p} neuLaden={neuLaden} />
       {p.proxyUrl ? (
         <video ref={video} className="schnitt-player" src={p.proxyUrl} controls preload="metadata" onTimeUpdate={(e) => zeitUpdate(e.currentTarget.currentTime)} />
       ) : (

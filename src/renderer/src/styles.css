@@ -355,6 +355,15 @@ code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; }
 .kanal-knopf.on { box-shadow: 0 0 0 1px var(--accent) inset; }
 .kanal-knopf:disabled { opacity: 0.4; cursor: not-allowed; }
 .zuordnung { display: grid; gap: 8px; justify-items: start; padding: 14px; margin-bottom: 12px; border: 1px solid var(--accent); border-radius: 12px; background: var(--bg-2); }
+/* Zuschauen beim Schneiden (05.10.) */
+.zuschauen { display: grid; gap: 8px; padding: 10px 14px; margin-bottom: 12px; border: 1px solid var(--line, #333); border-radius: 12px; background: var(--bg-2); }
+.zuschauen.aktiv { border-color: var(--accent); }
+.zuschauen-schritte { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.zuschauen-schritte li { padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--bg-3, #2a2a30); color: var(--muted, #999); }
+.zuschauen-schritte li.fertig { color: var(--fg, #eee); }
+.zuschauen-schritte li.jetzt { background: var(--accent); color: #fff; font-weight: 600; }
+.zuschauen-text { margin: 0; font-size: 15px; }
+.zuschauen-live { width: 100%; height: auto; border-radius: 10px; }
 /* Timeline (Schnitt) */
 .zeitleiste { display: grid; gap: 8px; margin-top: 12px; }
 .zl-rahmen { display: grid; grid-template-columns: 110px 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg-2); }

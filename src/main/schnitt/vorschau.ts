@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { liveOrdner, livePfad } from './medien'
 import { join } from 'node:path'
 import type { JobContext } from '../jobs/queue'
 import { ffmpegMitFortschritt } from './import'
@@ -18,8 +19,11 @@ export type UntertitelArt = 'aus' | 'an' | 'karaoke'
 export interface SchnittEinstellungen {
   untertitel: UntertitelArt
   zooms: boolean
+  /** Zuschauen (Philip, 05.10.): an = Live-Bild beim Rendern, nach den Effekten automatisch die Vorschau; aus = alles im
+   *  Hintergrund bis zum fertigen Export, dann eine Benachrichtigung */
+  zuschauen: boolean
 }
-export const STANDARD: SchnittEinstellungen = { untertitel: 'aus', zooms: true }
+export const STANDARD: SchnittEinstellungen = { untertitel: 'aus', zooms: true, zuschauen: true }
 
 export const einstellungen = (p: Projekt): SchnittEinstellungen => ({ ...STANDARD, ...(p.einstellungen ?? {}) })
 
@@ -60,6 +64,14 @@ export interface VorschauPayload {
   hilfe?: EffektHilfe
 }
 
+/** Zuschauen: Live-Bild lokal anlegen (altes vorher weg, damit kein Bild vom letzten Mal erscheint) */
+export async function mitLiveBild(o: RenderOptionen, p: Projekt): Promise<void> {
+  if (!einstellungen(p).zuschauen) return
+  await mkdir(liveOrdner(), { recursive: true })
+  await rm(livePfad(p.id), { force: true })
+  o.live = livePfad(p.id)
+}
+
 export async function vorschauJob(p: VorschauPayload, ctx: JobContext<unknown>): Promise<{ projekt: string; laenge: number }> {
   const pr = await ladeProjekt(p.daten, p.projekt)
   if (!pr?.proxy || !pr.rohschnitt) throw new Error('Erst Import und Rohschnitt abwarten.')
@@ -73,6 +85,7 @@ export async function vorschauJob(p: VorschauPayload, ctx: JobContext<unknown>):
     ausgabe: 'vorschau.mp4',
     untertitelDatei: 'vorschau.ass'
   }, p.hilfe)
+  await mitLiveBild(o, pr)
   await writeFile(join(ordner, 'vorschau-filter.txt'), filterGraph(o))
   const laenge = o.laengeEnde ?? zeitAbbildung(o.liste.behalten).laenge
   await ffmpegMitFortschritt(p.ffmpeg, renderArgs(o, 'vorschau-filter.txt'), ctx, laenge, (a) => ctx.progress(a * 99, `Geschnittene Vorschau … ${Math.round(a * 100)} %`), ordner)

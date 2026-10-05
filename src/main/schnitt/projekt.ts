@@ -43,7 +43,7 @@ export interface Projekt {
   transkriptModell?: string
   rohschnitt?: boolean
   /** Untertitel und Zooms (ROADMAP 6.6) */
-  einstellungen?: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean }
+  einstellungen?: { untertitel?: 'aus' | 'an' | 'karaoke'; zooms?: boolean; zuschauen?: boolean }
   /** Zeitpunkt der letzten geschnittenen Vorschau */
   vorschau?: number
   /** Zeitpunkt des letzten Exports (ROADMAP 6.7) */
@@ -70,7 +70,40 @@ export async function ladeProjekt(daten: string, id: string): Promise<Projekt | 
   }
   // Rohvideo auf diesem Gerät: Pfade eines anderen Geräts (anderer Windows-Benutzer, iCloud, OneDrive) übertragen
   if (p.quelle?.pfad) p.quelle = { ...p.quelle, pfad: dateiAufDiesemGeraet(p.quelle.pfad, { ordner: projektOrdner(daten, id), groesse: p.quelle.groesse }) }
-  return p
+  return mitDateistand(p, projektOrdner(daten, id))
+}
+
+/**
+ * Stand aus den Dateien (Philip, 05.10.: „automatisch erkennen, wenn ich ein Projekt öffne, dass die Datei da ist, die
+ * Effekte da“): Was schon fertig im Projektordner liegt – z. B. vom anderen Gerät oder nach einem iCloud-Konflikt, bei
+ * dem projekt.json einen älteren Stand hatte –, gilt als fertig; was als fertig markiert ist, aber fehlt, nicht mehr.
+ * Dateien, die Stück für Stück entstehen (Transkript, Vorschau), zählen erst, wenn sie eine Minute ruhen oder der
+ * nächste Schritt schon da ist. Ändert nur die geladene Fassung, nie die Datei.
+ */
+export function mitDateistand(p: Projekt, ordner: string, jetzt = Date.now()): Projekt {
+  const info = (n: string): { groesse: number; zeit: number } => {
+    try {
+      const s = statSync(join(ordner, n))
+      return { groesse: s.size, zeit: Math.round(s.mtimeMs) }
+    } catch {
+      return { groesse: 0, zeit: 0 }
+    }
+  }
+  const da = (n: string): boolean => info(n).groesse > 0
+  const ruht = (n: string): boolean => da(n) && jetzt - info(n).zeit > 60_000
+  const neu: Projekt = { ...p }
+  if (da('proxy.mp4') && ruht('proxy.mp4')) neu.proxy = true
+  if (da('wellenform.json')) neu.wellenform = true
+  if (da('leiste.jpg')) neu.leiste = true
+  if (da('schnitt.json')) neu.rohschnitt = true
+  else delete neu.rohschnitt
+  if (da('transkript.jsonl') && (neu.rohschnitt || p.transkript)) neu.transkript = true
+  else if (!da('transkript.jsonl')) delete neu.transkript
+  if (da('vorschau.mp4') && (p.vorschau || ruht('vorschau.mp4'))) neu.vorschau = p.vorschau ?? info('vorschau.mp4').zeit
+  else delete neu.vorschau
+  if (da('export.mp4') && da('export.json')) neu.export = p.export ?? info('export.json').zeit
+  else delete neu.export
+  return neu
 }
 
 /** Die Ordner, die auf jedem Gerät unter dem eigenen Benutzer liegen (Teil hinter „C:\Users\<Name>\“ bleibt gleich). */

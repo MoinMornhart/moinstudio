@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import { dialog, ipcMain, Notification, shell, type BrowserWindow } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
@@ -21,9 +21,10 @@ import { einstellungen, vorschauJob, type VorschauPayload } from './vorschau'
 import { exportJob, kapitelText, type ExportErgebnis, type ExportPayload } from './export'
 import { clipsJob, highlightJob, type ClipsPayload, type Highlight, type HighlightPayload } from './highlights'
 import { readdir } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { copyFile } from 'node:fs/promises'
 import { importJob, type ImportPayload } from './import'
-import { medienUrl } from './medien'
+import { livePfad, medienUrl } from './medien'
 import type { EffektHilfe } from './effekt-vorbereitung'
 import { aendereProjekt, ladeProjekt, ladeProjekte, loescheProjekt, projektOrdner, speichereProjekt, type Projekt } from './projekt'
 import { liesMitKonfliktkopien } from '../data/jsonfile'
@@ -116,7 +117,8 @@ export function registerSchnittIpc(
       clipsStand: p.clips ?? null,
       antwort: p.antwort ?? null,
       vorschauUrl: p.vorschau ? `${medienUrl(join(ordner, 'vorschau.mp4'))}?v=${p.vorschau}` : null,
-      auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null } : null
+      auftrag: job && job.state !== 'done' ? { state: job.state, progress: job.progress, step: job.step, error: job.error ?? null, art: job.kind } : null,
+      liveUrl: job && job.state === 'running' && (job.kind === 'schnitt-vorschau' || job.kind === 'schnitt-export') && einstellungen(p).zuschauen && existsSync(livePfad(p.id)) ? `${medienUrl(livePfad(p.id))}?v=${Date.now()}` : null
     }
   }
 
@@ -173,13 +175,25 @@ export function registerSchnittIpc(
     return auftrag
   }
 
-  const starteVerteilen = async (id: string): Promise<string> => {
+  const starteVerteilen = async (id: string, weiter = true): Promise<string> => {
     const daten = await datenOrdner(settings)
     const projekt = await ladeProjekt(daten, id)
     if (!projekt) throw new Error('Projekt nicht gefunden.')
     const payload: VerteilPayload = { daten, projekt: id, claudeCli: await findClaudeCli() }
     const auftrag = await queue.enqueue('schnitt-bib-verteilen', `Schnitt: ${projekt.name} Effekte setzen`, payload)
     await aendereProjekt(daten, id, (neu) => ({ auftraege: [...(neu.auftraege ?? []), auftrag] }))
+    // Rohvideo rein, fertiges Video raus (Philip, 05.10.): mit Zuschauen die Vorschau mit Live-Bild, ohne gleich der
+    // Export im Hintergrund – nur „Bibliotheks-Effekte neu verteilen“ per Knopf läuft nicht weiter
+    if (weiter) {
+      void queue
+        .waitFor(auftrag)
+        .then(async (j) => {
+          if (j.state !== 'done') return
+          const p = await ladeProjekt(daten, id)
+          if (p) await (einstellungen(p).zuschauen ? starteVorschau(id) : starteExport(id))
+        })
+        .catch(() => undefined)
+    }
     return auftrag
   }
 
@@ -207,7 +221,7 @@ export function registerSchnittIpc(
   })
   biete(IPC.schnittTranskriptStart, async (id: unknown) => starteTranskript(String(id)))
   biete(IPC.schnittRohschnittStart, async (id: unknown) => starteRohschnitt(String(id)))
-  biete(IPC.schnittBibVerteilen, async (id: unknown) => starteVerteilen(String(id)))
+  biete(IPC.schnittBibVerteilen, async (id: unknown) => starteVerteilen(String(id), false))
   biete(IPC.schnittZuordnen, async (id: unknown, kanal: unknown, typ: unknown) => {
     if (!KANAELE.includes(kanal as (typeof KANAELE)[number])) throw new Error('Unbekannter Kanal.')
     if (!VIDEO_TYPEN.includes(typ as VideoTyp)) throw new Error('Unbekannter Videotyp.')
@@ -245,12 +259,13 @@ export function registerSchnittIpc(
   biete(IPC.schnittWunsch, (id: unknown, wunsch: unknown) => starteWunsch(id, wunsch))
   biete(IPC.schnittEinstellungen, async (id: unknown, patch: unknown) => {
     const daten = await datenOrdner(settings)
-    const q = (patch ?? {}) as { untertitel?: string; zooms?: boolean }
+    const q = (patch ?? {}) as { untertitel?: string; zooms?: boolean; zuschauen?: boolean }
     await aendereProjekt(daten, String(id), (p) => ({
       einstellungen: {
         ...p.einstellungen,
         ...(q.untertitel === 'aus' || q.untertitel === 'an' || q.untertitel === 'karaoke' ? { untertitel: q.untertitel } : {}),
-        ...(typeof q.zooms === 'boolean' ? { zooms: q.zooms } : {})
+        ...(typeof q.zooms === 'boolean' ? { zooms: q.zooms } : {}),
+        ...(typeof q.zuschauen === 'boolean' ? { zuschauen: q.zuschauen } : {})
       }
     }))
   })
@@ -280,7 +295,7 @@ export function registerSchnittIpc(
     return liste
   })
   // Export für YouTube (ROADMAP 6.7)
-  biete(IPC.schnittExport, async (id: unknown): Promise<string> => {
+  const starteExport = async (id: unknown): Promise<string> => {
     const daten = await datenOrdner(settings)
     const ffmpeg = await tools.exePath(FFMPEG)
     if (!ffmpeg) throw new Error('FFmpeg ist nicht installiert (Einstellungen → Werkzeuge).')
@@ -290,8 +305,22 @@ export function registerSchnittIpc(
     const payload: ExportPayload = { daten, projekt: p.id, ffmpeg, ffprobe: join(dirname(ffmpeg), 'ffprobe.exe'), encoder: profile ? ProfileStore.effective(profile).encoder : 'libx264', claudeCli: await findClaudeCli(), hilfe: await effektHilfeMitSting(ffmpeg, daten, tools, hardware) }
     const auftrag = await queue.enqueue('schnitt-export', `Schnitt: ${p.name} exportieren`, payload)
     await aendereProjekt(daten, p.id, (x) => ({ auftraege: [...(x.auftraege ?? []), auftrag] }))
+    // Ohne Zuschauen bekommt Philip nur das Ergebnis: Benachrichtigung, wenn das Video fertig ist (oder scheitert)
+    if (!einstellungen(p).zuschauen) {
+      void queue
+        .waitFor(auftrag)
+        .then((j) => {
+          if (!Notification.isSupported()) return
+          const fertig = j.state === 'done'
+          const n = new Notification({ title: fertig ? 'Video fertig geschnitten' : 'Schnitt hat nicht geklappt', body: fertig ? `„${p.name}“ ist exportiert und bereit für YouTube.` : `„${p.name}“: ${j.error ?? 'Fehler'}` })
+          n.on('click', () => getWindow()?.show())
+          n.show()
+        })
+        .catch(() => undefined)
+    }
     return auftrag
-  })
+  }
+  biete(IPC.schnittExport, starteExport)
   biete(IPC.schnittExportInfo, async (id: unknown) => {
     const daten = await datenOrdner(settings)
     const text = await readFile(join(projektOrdner(daten, String(id)), 'export.json'), 'utf8').catch(() => null)

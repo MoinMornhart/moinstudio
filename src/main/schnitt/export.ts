@@ -7,7 +7,7 @@ import { ffmpegMitFortschritt } from './import'
 import { aendereProjekt, ladeProjekt, projektOrdner } from './projekt'
 import { filterGraph, renderArgs, zeitAbbildung } from './render'
 import { liesAbschnitte } from './transkript'
-import { renderPlan } from './vorschau'
+import { renderPlan, mitLiveBild } from './vorschau'
 import type { EffektHilfe } from './effekt-vorbereitung'
 import type { VideoTyp } from './regeln'
 
@@ -227,6 +227,7 @@ Antworte nur mit JSON nach dem Schema.`
   if (pr.youtubeTitel) text.titel = [pr.youtubeTitel, ...text.titel.filter((t) => t !== pr.youtubeTitel)]
 
   await ctx.yield()
+  await mitLiveBild(plan, pr)
   await writeFile(join(ordner, 'export-filter.txt'), filterGraph(plan))
   await ffmpegMitFortschritt(p.ffmpeg, renderArgs(plan, 'export-filter.txt'), c, laenge, (a) => ctx.progress(8 + a * 88, `Export (${ziel.hoehe}p, ${p.encoder}) … ${Math.round(a * 100)} %`), ordner)
 

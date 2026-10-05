@@ -165,6 +165,8 @@ export interface RenderOptionen {
   laengeEnde?: number
   /** Ton auf YouTube-Lautheit bringen (−14 LUFS, Spitzen höchstens −1 dBTP) – nur beim Export */
   lautheit?: boolean
+  /** „Zuschauen“ (Philip, 05.10.): Dateiname im Arbeitsordner, in den FFmpeg jede Sekunde das aktuelle Bild schreibt */
+  live?: string
 }
 
 /** Effektteil des Graphen (nur ohne Hochformat): gleiche Eingaben für filterGraph und renderArgs */
@@ -193,7 +195,9 @@ export function auswahlAusdruck(stuecke: { start: number; ende: number }[]): str
 
 /** Filtergraph (kommt in eine Datei – bei Stunden-Streams wäre er für die Windows-Befehlszeile zu lang). */
 export function filterGraph(o: RenderOptionen): string {
-  const g = filterGraphRoh(o)
+  const roh = filterGraphRoh(o)
+  // Zuschauen: das fertige Bild zusätzlich einmal pro Sekunde klein als Live-Bild ausgeben
+  const g = o.live ? `${roh.split('[v]').join('[vfertig]')};[vfertig]split=2[v][vl];[vl]fps=1,scale=640:-2[vlive]` : roh
   // [a] ist immer nur Ausgang des Graphen: umbenennen und die Lautheits-Normalisierung dahinter hängen
   // Nur die Marke „[a]“ ersetzen – /[a]/ ohne Backslashes traf jedes einzelne „a“ (scale → sc[aroh]le) und jeder Export
   // mit Lautheit scheiterte (Laptop 05.10.)
@@ -228,5 +232,6 @@ function filterGraphRoh(o: RenderOptionen): string {
 
 export function renderArgs(o: RenderOptionen, graphDatei: string): string[] {
   const eingaben = (effektTeil(o)?.eingaben ?? []).flatMap((e) => [...e.vor, '-i', e.datei])
-  return ['-i', o.quelle, ...eingaben, '-/filter_complex', graphDatei, '-map', '[v]', ...(o.audio ? ['-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'] : []), ...o.encoder, '-movflags', '+faststart', o.ausgabe]
+  const live = o.live ? ['-map', '[vlive]', '-update', '1', '-q:v', '5', '-f', 'image2', o.live] : []
+  return ['-i', o.quelle, ...eingaben, '-/filter_complex', graphDatei, '-map', '[v]', ...(o.audio ? ['-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'] : []), ...o.encoder, '-movflags', '+faststart', o.ausgabe, ...live]
 }
