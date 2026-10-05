@@ -6,6 +6,10 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-10-05
+
+> Planung: Kalender-Abgleich mit Apple Kalender, Google und Outlook
+
 ### Added
 
 - Planung: Kalender-Abgleich. **Apple Kalender (iCloud)** in beide Richtungen – Upload-Termine erscheinen im eigenen Kalender „MoinStudio“ auf iPhone, iPad und Mac; verschiebst du dort einen Termin, übernimmt die Planung die neue Zeit; deine anderen iCloud-Kalender erscheinen in der Planung (einzeln ausblendbar). **Google, Outlook und alle anderen Kalender** per geheimem iCal-Link (mit Farbe, an/aus). Abgleich alle 5 Minuten und wenige Sekunden nach jeder Kartenänderung, auch vom anderen Gerät; „Jetzt abgleichen“ sofort. Termine anderer Kalender stehen gepunktet im Monats- und Wochenkalender, ganztägige über alle ihre Tage, Wiederholungen und Zeitzonen (auch Outlook) werden richtig aufgelöst.
