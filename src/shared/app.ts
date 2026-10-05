@@ -80,6 +80,7 @@ export const IPC = {
   schnittBibDatei: 'schnitt:bib-datei',
   schnittBibVorschau: 'schnitt:bib-vorschau',
   schnittBibPipette: 'schnitt:bib-pipette',
+  schnittBibVerteilen: 'schnitt:bib-verteilen',
   schnittListe: 'schnitt:liste',
   schnittUmschalten: 'schnitt:umschalten',
   schnittBereich: 'schnitt:bereich',
@@ -296,9 +297,9 @@ export type BibLage = 'oben-links' | 'oben' | 'oben-rechts' | 'links' | 'mitte' 
 export interface BibEffektDaten {
   id: string
   name: string
-  video?: { datei: string; greenscreen: boolean; ton: boolean }
+  video?: { datei: string; greenscreen: boolean; ton: boolean; dauer?: number }
   bild?: { datei: string; dauer: number }
-  sound?: { datei: string; lautstaerke: number }
+  sound?: { datei: string; lautstaerke: number; dauer?: number }
   chroma?: BibChroma
   haeufigkeit: { modus: 'immer' | 'manchmal' | 'manuell'; jedes?: number; prozent?: number }
   kanaele: string[]
@@ -565,6 +566,8 @@ export interface MoinApi {
   schnittBibDatei(id: string | null, rolle: 'video' | 'bild' | 'sound', greenscreen?: boolean): Promise<BibDateiErgebnis | null>
   schnittBibVorschau(id: string, o: { video?: string; bild?: string; chroma?: BibChroma | null; zeit?: number; roh?: boolean }): Promise<string | null>
   schnittBibPipette(id: string, datei: string, x: number, y: number, zeit: number): Promise<string>
+  /** Effekte aus der Bibliothek (neu) ins Projekt setzen; automatisch gesetzte werden ersetzt. Gibt die Auftrags-ID zurück. */
+  schnittBibVerteilen(id: string): Promise<string>
   schnittListe(id: string): Promise<SchnittListe | null>
   /** Schnitt ändern (ROADMAP 6.5): Stelle an/aus, Bereich raus/zurück, Wunsch in Worten (Auftrag) */
   schnittUmschalten(id: string, index: number): Promise<SchnittListe>

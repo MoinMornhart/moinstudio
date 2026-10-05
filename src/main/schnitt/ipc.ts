@@ -16,6 +16,7 @@ import { liesAbschnitte, transkriptJob, type Abschnitt, type TranskriptPayload }
 import { rohschnittJob, type RohschnittPayload, type Schnittliste } from './rohschnitt'
 import { findClaudeCli } from '../claude/cli'
 import { bereichSetzen, umschalten, wunschJob, type WunschPayload } from './bearbeiten'
+import { verteilJob, type VerteilPayload } from './platzierung'
 import { einstellungen, vorschauJob, type VorschauPayload } from './vorschau'
 import { exportJob, kapitelText, type ExportErgebnis, type ExportPayload } from './export'
 import { clipsJob, highlightJob, type ClipsPayload, type Highlight, type HighlightPayload } from './highlights'
@@ -88,6 +89,7 @@ export function registerSchnittIpc(
   queue.register('schnitt-transkript', transkriptJob)
   queue.register('schnitt-rohschnitt', rohschnittJob)
   queue.register('schnitt-wunsch', wunschJob)
+  queue.register('schnitt-bib-verteilen', verteilJob)
   queue.register('schnitt-vorschau', vorschauJob)
   queue.register('schnitt-export', exportJob)
   queue.register('schnitt-highlights', highlightJob)
@@ -166,6 +168,18 @@ export function registerSchnittIpc(
     const payload: RohschnittPayload = { daten, projekt: id, claudeCli: await findClaudeCli() }
     const auftrag = await queue.enqueue('schnitt-rohschnitt', `Schnitt: ${projekt.name} Rohschnitt`, payload)
     await aendereProjekt(daten, id, (neu) => ({ auftraege: [...(neu.auftraege ?? []), auftrag] }))
+    // direkt danach (die Warteschlange läuft der Reihe nach): Effekte aus der Bibliothek setzen
+    await starteVerteilen(id)
+    return auftrag
+  }
+
+  const starteVerteilen = async (id: string): Promise<string> => {
+    const daten = await datenOrdner(settings)
+    const projekt = await ladeProjekt(daten, id)
+    if (!projekt) throw new Error('Projekt nicht gefunden.')
+    const payload: VerteilPayload = { daten, projekt: id, claudeCli: await findClaudeCli() }
+    const auftrag = await queue.enqueue('schnitt-bib-verteilen', `Schnitt: ${projekt.name} Effekte setzen`, payload)
+    await aendereProjekt(daten, id, (neu) => ({ auftraege: [...(neu.auftraege ?? []), auftrag] }))
     return auftrag
   }
 
@@ -193,6 +207,7 @@ export function registerSchnittIpc(
   })
   biete(IPC.schnittTranskriptStart, async (id: unknown) => starteTranskript(String(id)))
   biete(IPC.schnittRohschnittStart, async (id: unknown) => starteRohschnitt(String(id)))
+  biete(IPC.schnittBibVerteilen, async (id: unknown) => starteVerteilen(String(id)))
   biete(IPC.schnittZuordnen, async (id: unknown, kanal: unknown, typ: unknown) => {
     if (!KANAELE.includes(kanal as (typeof KANAELE)[number])) throw new Error('Unbekannter Kanal.')
     if (!VIDEO_TYPEN.includes(typ as VideoTyp)) throw new Error('Unbekannter Videotyp.')

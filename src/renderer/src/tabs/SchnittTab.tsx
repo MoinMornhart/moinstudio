@@ -498,6 +498,9 @@ function ProjektAnsicht({ p, zurueck, loeschen, neuLaden }: { p: SchnittProjekt;
             <button className="btn primary" disabled={!!p.auftrag} onClick={() => void window.moin.schnittVorschau(p.id).then(neuLaden)}>
               Vorschau rendern
             </button>
+            <button className="btn" disabled={!!p.auftrag} title="Effekte aus deiner Bibliothek nach ihren Einstellungen (neu) setzen – automatisch gesetzte werden ersetzt" onClick={() => void window.moin.schnittBibVerteilen(p.id).then(neuLaden)}>
+              Bibliotheks-Effekte neu verteilen
+            </button>
           </div>
           <EffektListe p={p} springe={springe} neuLaden={neuLaden} />
           {p.vorschauUrl && <video className="schnitt-player" src={p.vorschauUrl} controls preload="metadata" style={{ marginTop: 10 }} />}

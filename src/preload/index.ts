@@ -102,6 +102,7 @@ const api: MoinApi = {
   schnittBibDatei: (id: string | null, rolle: string, greenscreen?: boolean) => ipcRenderer.invoke(IPC.schnittBibDatei, id, rolle, greenscreen),
   schnittBibVorschau: (id: string, o: unknown) => ipcRenderer.invoke(IPC.schnittBibVorschau, id, o),
   schnittBibPipette: (id: string, datei: string, x: number, y: number, zeit: number) => ipcRenderer.invoke(IPC.schnittBibPipette, id, datei, x, y, zeit),
+  schnittBibVerteilen: (id: string) => ipcRenderer.invoke(IPC.schnittBibVerteilen, id),
   schnittListe: (id: string) => ipcRenderer.invoke(IPC.schnittListe, id),
   schnittUmschalten: (id: string, index: number) => ipcRenderer.invoke(IPC.schnittUmschalten, id, index),
   schnittBereich: (id: string, start: number, ende: number, raus: boolean, text?: string) => ipcRenderer.invoke(IPC.schnittBereich, id, start, ende, raus, text),

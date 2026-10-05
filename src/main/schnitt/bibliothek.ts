@@ -30,9 +30,9 @@ export interface BibEffekt {
   id: string
   name: string
   /** Video mit Transparenz (Alpha) oder mit grünem/blauem Hintergrund (dann `chroma`) */
-  video?: { datei: string; greenscreen: boolean; ton: boolean }
+  video?: { datei: string; greenscreen: boolean; ton: boolean; /** Sekunden */ dauer?: number }
   bild?: { datei: string; dauer: number }
-  sound?: { datei: string; lautstaerke: number }
+  sound?: { datei: string; lautstaerke: number; dauer?: number }
   chroma?: Chroma
   haeufigkeit: { modus: 'immer' | 'manchmal' | 'manuell'; /** jedes n-te Video */ jedes?: number; /** oder Prozent der Videos */ prozent?: number }
   kanaele: string[]
@@ -44,6 +44,8 @@ export interface BibEffekt {
   erstellt: string
   /** wie oft der Effekt automatisch eingesetzt wurde (für „jedes n-te Video“) */
   zaehler?: number
+  /** Projekte, für die schon entschieden wurde (für „jedes n-te Video“, neu verteilen zählt nicht doppelt) */
+  gesehen?: string[]
 }
 
 export const STANDARD_CHROMA: Chroma = { farbe: '#00ff00', toleranz: 0.3, weichheit: 0.1, spill: 0.5 }
@@ -65,9 +67,9 @@ export function pruefeBibEffekt(roh: Partial<BibEffekt>, alt?: BibEffekt): BibEf
   return {
     id: alt?.id ?? b.id ?? randomUUID().slice(0, 8),
     name,
-    ...(b.video ? { video: { datei: b.video.datei, greenscreen: !!b.video.greenscreen, ton: !!b.video.ton } } : {}),
+    ...(b.video ? { video: { datei: b.video.datei, greenscreen: !!b.video.greenscreen, ton: !!b.video.ton, ...(b.video.dauer ? { dauer: klemme(b.video.dauer, 0.1, 600, 3) } : {}) } } : {}),
     ...(b.bild ? { bild: { datei: b.bild.datei, dauer: klemme(b.bild.dauer, 0.3, 30, 2) } } : {}),
-    ...(b.sound ? { sound: { datei: b.sound.datei, lautstaerke: klemme(b.sound.lautstaerke, 0, 2, 1) } } : {}),
+    ...(b.sound ? { sound: { datei: b.sound.datei, lautstaerke: klemme(b.sound.lautstaerke, 0, 2, 1), ...(b.sound.dauer ? { dauer: klemme(b.sound.dauer, 0.1, 600, 1) } : {}) } } : {}),
     ...(b.video?.greenscreen ? { chroma: { farbe: /^#[0-9a-f]{6}$/i.test(b.chroma?.farbe ?? '') ? b.chroma!.farbe : STANDARD_CHROMA.farbe, toleranz: klemme(b.chroma?.toleranz, 0, 1, STANDARD_CHROMA.toleranz), weichheit: klemme(b.chroma?.weichheit, 0, 1, STANDARD_CHROMA.weichheit), spill: klemme(b.chroma?.spill, 0, 1, STANDARD_CHROMA.spill) } } : {}),
     haeufigkeit: { modus, ...(modus === 'manchmal' ? (b.haeufigkeit?.prozent ? { prozent: klemme(b.haeufigkeit.prozent, 1, 100, 50) } : { jedes: Math.round(klemme(b.haeufigkeit?.jedes, 2, 50, 3)) }) : {}) },
     kanaele: kanaele.length ? kanaele : ['MoinMornhart', 'MoinMorni'],
@@ -76,7 +78,8 @@ export function pruefeBibEffekt(roh: Partial<BibEffekt>, alt?: BibEffekt): BibEf
     lage: (LAGEN as readonly string[]).includes(b.lage ?? '') ? b.lage! : 'unten-rechts',
     groesse: klemme(b.groesse, 0.1, 1, 0.35),
     erstellt: alt?.erstellt ?? b.erstellt ?? new Date().toISOString(),
-    ...(alt?.zaehler !== undefined ? { zaehler: alt.zaehler } : {})
+    ...(alt?.zaehler !== undefined ? { zaehler: alt.zaehler } : {}),
+    ...(alt?.gesehen ? { gesehen: alt.gesehen } : {})
   }
 }
 

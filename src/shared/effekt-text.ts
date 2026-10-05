@@ -4,6 +4,9 @@ const zahl = (x: unknown): string => (typeof x === 'number' ? String(Math.round(
 
 /** Effekt in einfachen Worten (für Philip) */
 export function effektText(e: SchnittEffekt): string {
+  // aus der Effekt-Bibliothek: Philips eigener Name, automatisch gesetzt oder per Wunsch
+  const bib = e['bib'] as { name?: string; auto?: boolean } | undefined
+  if (bib?.name) return `„${bib.name}“${e.art === 'geraeusch' ? ' (Sound)' : ''}${bib.auto ? ' · automatisch' : ''}`
   switch (e.art) {
     case 'tempo':
       return (e['faktor'] as number) < 1 ? `Zeitlupe (×${zahl(e['faktor'])})` : `Zeitraffer (×${zahl(e['faktor'])})`

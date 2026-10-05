@@ -6,6 +6,15 @@ Neue Einträge kommen unter „Unreleased“. `node scripts/release.mts` macht d
 
 ## [Unreleased]
 
+### Added
+
+- Schnitt: Effekte aus der Bibliothek werden nach dem Rohschnitt automatisch gesetzt – je nach ihren Knöpfen (Kanal, Videotyp, in jedem Video / jedes n-te / X % der Videos). „Fester Zeitpunkt“ landet genau dort (z. B. 10 s vor dem Ende), „KI entscheidet“ sucht Claude eine passende Stelle aus dem Transkript. Feste Grenzen: nicht im Hook (erste 15 s), nicht auf lauten Höhepunkten, nie zwei Effekte gleichzeitig, mindestens 20 s Abstand. Passt Claudes Vorschlag nicht, verteilt eine Regel den Effekt auf ein Satzende. Mit „Bibliotheks-Effekte neu verteilen“ geht das jederzeit noch einmal; von Hand gesetzte Effekte bleiben.
+- Wünsche in Worten kennen die Bibliothek: „Füge bei 2:14 den Vine-Boom ein“ oder „Pack die Abo-Animation in dieses Video“ setzt genau diesen Effekt mit seinen gespeicherten Einstellungen. In der Effektliste stehen Bibliotheks-Effekte mit ihrem Namen.
+
+### Fixed
+
+- Effekt-Bibliothek: Quelltext wieder im Projektstil formatiert.
+
 ## [0.50.1] - 2026-10-05
 
 > Abhängigkeiten aktualisiert (Electron 44.5.1)
